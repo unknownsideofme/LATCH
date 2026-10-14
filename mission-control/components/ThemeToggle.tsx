@@ -37,6 +37,7 @@ export function ThemeToggle() {
 
   return (
     <Button
+      id="theme-toggle-btn"
       variant="ghost"
       size="icon"
       className="h-8 w-8 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elev)] rounded-md transition-colors"

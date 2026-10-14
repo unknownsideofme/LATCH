@@ -60,6 +60,7 @@ export function Sidebar() {
             return (
               <button
                 key={t.id}
+                id={`tab-${t.id}`}
                 type="button"
                 className={`${ui.sideNavItem} ${isActive ? ui.sideNavItemActive : ""}`}
                 onClick={() => setTab(t.id)}
