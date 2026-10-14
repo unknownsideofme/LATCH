@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "reverse-engineering",
+  "owner": "plurigrid",
+  "repo": "asi",
+  "path": "plugins/asi/skills/reverse-engineering",
+  "branch": "main",
+  "sha": "be89b002ccccdcdca622210ea2b5746b0c18ccb8",
+  "source": "manual"
+}
