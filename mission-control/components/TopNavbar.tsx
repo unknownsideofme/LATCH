@@ -144,9 +144,9 @@ export function TopNavbar() {
   return (
     <div className={ui.navbar}>
       <div className={ui.navBrand}>
-        <img src="/logo_transparent.png" alt="./relay" className={ui.navBrandLogo} />
+        <img src="/logo_transparent.png" alt="./latch" className={ui.navBrandLogo} />
         <span className={ui.navBrandText}>
-          <span className={ui.navBrandSlash}>./</span>relay
+          <span className={ui.navBrandSlash}>./</span>latch
         </span>
       </div>
 

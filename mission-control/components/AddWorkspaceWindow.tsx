@@ -257,7 +257,7 @@ export function AddWorkspaceWindow() {
               <div className={ui.awPaneHead}>
                 <h3>Your GitHub repositories</h3>
                 <p>
-                  Repositories your signed-in GitHub account can push to. Pick one and Relay clones it and wires up the
+                  Repositories your signed-in GitHub account can push to. Pick one and Latch clones it and wires up the
                   coordinator.
                 </p>
               </div>
@@ -279,7 +279,7 @@ export function AddWorkspaceWindow() {
                   <div className={ui.awEmpty}>Reading your repositories from GitHub…</div>
                 ) : repoError === "gh_not_installed" ? (
                   <div className={ui.awEmpty}>
-                    GitHub CLI isn&apos;t installed, so Relay can&apos;t list your repositories.
+                    GitHub CLI isn&apos;t installed, so Latch can&apos;t list your repositories.
                     <br />
                     Install it with <code>winget install GitHub.cli</code>, then run <code>gh auth login</code>.
                     <br />
@@ -397,7 +397,7 @@ export function AddWorkspaceWindow() {
             <>
               <div className={ui.awPaneHead}>
                 <h3>Add a local repository</h3>
-                <p>Point Relay at a folder that already exists on this machine. Nothing is copied or moved.</p>
+                <p>Point Latch at a folder that already exists on this machine. Nothing is copied or moved.</p>
               </div>
 
               {folder ? (

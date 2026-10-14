@@ -53,7 +53,7 @@ function GraphView({ graph }: { graph: NonNullable<Dashboard["graph"]> }) {
       </p>
       {layout.length === 0 ? (
         <p style={{ color: "var(--muted)" }}>
-          No source files found in this workspace yet. Open Coordinator after `relay serve` is running so the graph can build.
+          No source files found in this workspace yet. Open Coordinator after `latch serve` is running so the graph can build.
         </p>
       ) : (
         <div className={ui.graphWrap}>
@@ -165,7 +165,7 @@ export function FileLocksPanel() {
       <article className={ui.card} style={{ marginBottom: 10 }}>
         <h3>Collisions prevented{roomScope ? " (room)" : ""}</h3>
         <p style={{ fontSize: "1.35rem", margin: "0.2rem 0 0.5rem" }}>
-          <strong>{saved}</strong> saved by Relay
+          <strong>{saved}</strong> saved by Latch
         </p>
         {memberLine ? (
           <p style={{ color: "var(--muted)", marginTop: 0, marginBottom: "0.35rem" }}>{memberLine}</p>

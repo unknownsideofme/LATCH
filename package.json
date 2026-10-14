@@ -1,5 +1,5 @@
 {
-  "name": "relay",
+  "name": "latch",
   "version": "0.1.0",
   "private": true,
   "description": "GitHub Desktop for AI agents — coordination, locks, and Mission Control.",
@@ -7,6 +7,7 @@
     "mission-control"
   ],
   "bin": {
+    "latch": "cli/relay.js",
     "relay": "cli/relay.js"
   },
   "scripts": {
@@ -15,9 +16,12 @@
     "dev:ui": "npm run dev -w mission-control",
     "start": "node backend/server.js --port 3001",
     "coordinator": "node backend/coordinator/server.js",
+    "check:db": "node backend/supabase/check-connection.js",
     "test": "node --test \"backend/**/*.test.js\""
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.3",
     "@vscode/tree-sitter-wasm": "^0.3.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",

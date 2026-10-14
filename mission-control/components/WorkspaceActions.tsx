@@ -22,7 +22,7 @@ export function WorkspaceActions({ projectId }: { projectId?: string | null }) {
         Leave workspace
       </button>
       <button className={`${ui.chip} ${ui.ghost}`} onClick={() => run(removeWorkspace)}>
-        Remove from Relay
+        Remove from Latch
       </button>
       {hint ? <p style={{ color: "var(--amber)", width: "100%", margin: "8px 0 0" }}>{hint}</p> : null}
     </div>

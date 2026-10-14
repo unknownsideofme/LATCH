@@ -299,7 +299,7 @@ export function TeamPanel() {
                 <h3 style={{ marginBottom: 4 }}>Invite someone who isn&apos;t listed</h3>
                 <p style={{ color: "var(--muted)", marginTop: 0 }}>
                   They still have to be a collaborator on this GitHub repo. After you invite, they just hit Join —
-                  you do not need to send a link unless they are not running Relay yet.
+                  you do not need to send a link unless they are not running Latch yet.
                 </p>
                 <div className={ui.actions} style={{ justifyContent: "flex-start", alignItems: "center" }}>
                   <input
@@ -396,7 +396,7 @@ export function TeamPanel() {
                   className={ui.field}
                   value={joinPath}
                   onChange={(e) => setJoinPath(e.target.value)}
-                  placeholder="Leave blank to use ~/Documents/Relay/<host repo>"
+                  placeholder="Leave blank to use ~/Documents/Latch/<host repo>"
                 />
                 <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <input type="checkbox" checked={seed} onChange={(e) => setSeed(e.target.checked)} />

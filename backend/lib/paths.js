@@ -3,10 +3,16 @@ const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
 
-function homeRelayDir() {
-  const dir = path.join(os.homedir(), ".relay");
+function homeLatchDir() {
+  const latchDir = path.join(os.homedir(), ".latch");
+  const relayDir = path.join(os.homedir(), ".relay");
+  const dir = fs.existsSync(latchDir) ? latchDir : (fs.existsSync(relayDir) ? relayDir : latchDir);
   fs.mkdirSync(dir, { recursive: true });
   return dir;
+}
+
+function homeRelayDir() {
+  return homeLatchDir();
 }
 
 function tryMkdir(dir) {
@@ -76,6 +82,7 @@ function locksDirFor(workspacePath) {
 }
 
 module.exports = {
+  homeLatchDir,
   homeRelayDir,
   dataDir,
   registryPath,

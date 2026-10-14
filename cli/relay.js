@@ -8,21 +8,21 @@ const cmd = process.argv[2] || "help";
 const rest = process.argv.slice(3);
 
 function help() {
-  console.log(`Relay — GitHub Desktop for AI agents
+  console.log(`Latch — GitHub Desktop for AI agents (alias: relay)
 
-  relay login              Sign in with GitHub (uses gh CLI, or device flow if GITHUB_CLIENT_ID is set)
-  relay logout             Clear the local session
-  relay whoami             Show the signed-in GitHub user
-  relay clone <url> [dir]  git clone + register workspace + install agent hooks
-  relay add <path>         Attach an existing local repo
-  relay init [path]        Wire hooks, MCP, and relay-os instructions (default: cwd)
-  relay serve              Start API on 127.0.0.1:3001 and Mission Control on :3002
-  relay serve --no-ui      Start API + coordinator only
-  relay push               Send your dirty working-tree files to the shared room
-  relay pull               Apply the host's current dirty files onto this clone
-  relay status             Health check
-  relay mcp-url            Print the MCP config for this room's shared context endpoint
-  relay doctor             Why the Coordinator board is empty (run it on the machine that sees nothing)
+  latch login              Sign in with GitHub (uses gh CLI, or device flow if GITHUB_CLIENT_ID is set)
+  latch logout             Clear the local session
+  latch whoami             Show the signed-in GitHub user
+  latch clone <url> [dir]  git clone + register workspace + install agent hooks
+  latch add <path>         Attach an existing local repo
+  latch init [path]        Wire hooks, MCP, and latch-os instructions (default: cwd)
+  latch serve              Start API on 127.0.0.1:3001 and Mission Control on :3002
+  latch serve --no-ui      Start API + coordinator only
+  latch push               Send your dirty working-tree files to the shared room
+  latch pull               Apply the host's current dirty files onto this clone
+  latch status             Health check
+  latch mcp-url            Print the MCP config for this room's shared context endpoint
+  latch doctor             Why the Coordinator board is empty (run it on the machine that sees nothing)
 `);
 }
 

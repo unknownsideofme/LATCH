@@ -3,7 +3,7 @@ import "./globals.css";
 import { RelayProvider } from "@/lib/RelayContext";
 
 export const metadata: Metadata = {
-  title: "./relay",
+  title: "./latch",
   description: "GitHub Desktop for AI agents",
   icons: {
     icon: "/logo_transparent.png",

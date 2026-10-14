@@ -581,3 +581,6 @@ export function useRelay() {
   if (!ctx) throw new Error("useRelay outside provider");
   return ctx;
 }
+
+export const useLatch = useRelay;
+export const LatchProvider = RelayProvider;

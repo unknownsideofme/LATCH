@@ -9,10 +9,10 @@ export function LoginGate() {
   return (
     <div className={ui.loginGate}>
       <div className={ui.loginCard}>
-        <div className={ui.kicker}>./relay</div>
+        <div className={ui.kicker}>./latch</div>
         <h1>Sign in</h1>
         <p style={{ color: "var(--muted)" }}>
-          Run <code>relay login</code> (uses GitHub CLI). Continue with GitHub needs{" "}
+          Run <code>latch login</code> (uses GitHub CLI). Continue with GitHub needs{" "}
           <code>GITHUB_CLIENT_ID</code>. The names below only impersonate a teammate on this machine.
         </p>
         <a className={`${ui.chip} ${ui.full}`} href={apiUrl("/api/auth/github")} style={{ display: "block", textAlign: "center", marginTop: 12 }}>
