@@ -179,7 +179,7 @@ export function FileLocksPanel() {
       </article>
 
       <div className={ui.rowBetween} style={{ marginBottom: 10 }}>
-        <div className={ui.kicker}>Coordinator</div>
+        <div className={ui.kicker}>Ongoing Sessions</div>
         <div style={{ display: "flex", gap: 6 }}>
           <button
             className={`${ui.chip} ${view === "board" ? "" : ui.ghost}`}

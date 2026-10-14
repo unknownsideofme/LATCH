@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { WorkspaceRail } from "./WorkspaceRail";
+import { WorkspaceDrawer } from "./WorkspaceDrawer";
 import { Sidebar } from "./Sidebar";
 import { TopNavbar } from "./TopNavbar";
 import { ProjectDashboard } from "./ProjectDashboard";
@@ -16,7 +16,7 @@ function PaneHandle({ side }: { side: "left" | "right" }) {
   const { startDrag, nudge, reset, dragging } = usePanes();
   const pos =
     side === "left"
-      ? { left: "calc(var(--rail-w) + var(--pane-left) - 3px)" }
+      ? { left: "calc(var(--pane-left) - 3px)" }
       : { right: "calc(var(--pane-right) - 3px)" };
   return (
     <div
@@ -42,7 +42,6 @@ function PaneHandle({ side }: { side: "left" | "right" }) {
 function ShellInner() {
   const { left, right, leftOpen, rightOpen, dragging } = usePanes();
   const style = {
-    "--rail-w": "60px",
     "--pane-left": leftOpen ? `${left}px` : "0px",
     "--pane-right": rightOpen ? `${right}px` : "0px",
   } as CSSProperties;
@@ -53,7 +52,7 @@ function ShellInner() {
       style={style}
     >
       <TopNavbar />
-      <WorkspaceRail />
+      <WorkspaceDrawer />
       <Sidebar />
       <div className={ui.main}>
         <div className={ui.body}>

@@ -21,11 +21,13 @@ type RelayState = {
   selectedProjectId: string | null;
   tab: TabId;
   addOpen: boolean;
+  drawerOpen: boolean;
   loading: boolean;
   syncing: boolean;
   lastFetchedAt: number | null;
   setTab: (tab: TabId) => void;
   setAddOpen: (open: boolean) => void;
+  setDrawerOpen: (open: boolean) => void;
   login: (loginName: string) => Promise<void>;
   logout: () => Promise<void>;
   selectProject: (id: string) => Promise<void>;
@@ -82,6 +84,7 @@ export function RelayProvider({ children }: { children: ReactNode }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("activity");
   const [addOpen, setAddOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
@@ -572,11 +575,13 @@ export function RelayProvider({ children }: { children: ReactNode }) {
       selectedProjectId,
       tab,
       addOpen,
+      drawerOpen,
       loading,
       syncing,
       lastFetchedAt,
       setTab,
       setAddOpen,
+      setDrawerOpen,
       login,
       logout,
       selectProject,
@@ -596,7 +601,7 @@ export function RelayProvider({ children }: { children: ReactNode }) {
       dismissToast,
       joinRoom,
     }),
-    [user, users, projects, dashboard, selectedProjectId, tab, addOpen, loading, syncing, lastFetchedAt, notices, toasts, unreadNotices]
+    [user, users, projects, dashboard, selectedProjectId, tab, addOpen, drawerOpen, loading, syncing, lastFetchedAt, notices, toasts, unreadNotices]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

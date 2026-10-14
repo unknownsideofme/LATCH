@@ -132,7 +132,8 @@ function AccountMenu() {
 }
 
 export function TopNavbar() {
-  const { projects, dashboard, selectedProjectId, sync, syncing, lastFetchedAt } = useRelay();
+  const { projects, dashboard, selectedProjectId, sync, syncing, lastFetchedAt, drawerOpen, setDrawerOpen } =
+    useRelay();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -144,21 +145,38 @@ export function TopNavbar() {
   return (
     <div className={ui.navbar}>
       <div className={ui.navBrand}>
+        <button
+          type="button"
+          className={`${ui.menuBtn} ${drawerOpen ? ui.menuBtnActive : ""}`}
+          onClick={() => setDrawerOpen(!drawerOpen)}
+          aria-label="Toggle workspaces menu"
+          title="Workspaces (3-line menu)"
+        >
+          <span className={ui.menuBar} />
+          <span className={ui.menuBar} />
+          <span className={ui.menuBar} />
+        </button>
         <img src="/logo_transparent.png" alt="./latch" className={ui.navBrandLogo} />
         <span className={ui.navBrandText}>
           <span className={ui.navBrandSlash}>./</span>latch
         </span>
       </div>
 
-      <div className={ui.navProject}>
+      <div
+        className={ui.navProject}
+        onClick={() => setDrawerOpen(!drawerOpen)}
+        style={{ cursor: "pointer" }}
+        title="Click to switch workspace"
+      >
         {project ? (
           <>
             <span className={ui.navProjectDot} style={{ background: project.color || "var(--accent)" }} />
             <span className={ui.navProjectName}>{project.name}</span>
             <span className={ui.navProjectPath}>{project.path}</span>
+            <span className={ui.navProjectChevron} aria-hidden>▾</span>
           </>
         ) : (
-          <span className={ui.navProjectPath}>No workspace selected</span>
+          <span className={ui.navProjectPath}>No workspace selected — click to choose</span>
         )}
       </div>
 
