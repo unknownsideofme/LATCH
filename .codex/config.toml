@@ -65,6 +65,9 @@ RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
 RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
 
 [mcp_servers.relay.env]
+RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
+
+[mcp_servers.relay.env]
 RELAY_WORKSPACE_PATH = "C:/Users/unnat/Documents/GitHub/relayBrainv3"
 
 [mcp_servers.relay.env]

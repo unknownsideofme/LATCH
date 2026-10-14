@@ -90,6 +90,7 @@ function createAgentRoutes({ sse, watcher, presence, lockTable, lockService, wor
   router.post("/api/connect", (req, res) => {
     const { projectId, agent } = req.body || {};
     const project = loadRegistry().projects.find((p) => p.id === projectId) || ContextService.currentProject();
+    if (!project) return res.status(404).json({ error: "no_project" });
     const memory = loadMemory(project.id);
     const row = memory.agents.find((a) => a.label === agent || a.id === agent);
     if (row) {

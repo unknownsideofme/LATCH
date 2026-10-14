@@ -54,6 +54,17 @@ type RelayState = {
 
 const Ctx = createContext<RelayState | null>(null);
 
+function dedupeProjects(list: Project[]): Project[] {
+  if (!Array.isArray(list)) return [];
+  const map = new Map<string, Project>();
+  for (const p of list) {
+    if (p && p.id) {
+      map.set(p.id, p);
+    }
+  }
+  return Array.from(map.values());
+}
+
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(apiUrl(url), {
     ...init,
@@ -165,7 +176,7 @@ export function RelayProvider({ children }: { children: ReactNode }) {
     ]);
     setUser(session.user);
     setUsers(session.users);
-    setProjects(proj.projects);
+    setProjects(dedupeProjects(proj.projects));
     const alreadyPicked = selectedRef.current;
     const selected = id || alreadyPicked || session.projectId || proj.projects[0]?.id;
     if (selected && !alreadyPicked) applySelection(selected);
@@ -305,7 +316,7 @@ export function RelayProvider({ children }: { children: ReactNode }) {
     });
     ev.addEventListener("projects", (e) => {
       const data = JSON.parse((e as MessageEvent).data);
-      if (data.projects) setProjects(data.projects);
+      if (data.projects) setProjects(dedupeProjects(data.projects));
     });
     return () => ev.close();
   }, [selectedProjectId, fetchDash]);
@@ -384,32 +395,47 @@ export function RelayProvider({ children }: { children: ReactNode }) {
   const handshake = async (agent: Agent) => {
     const id = selectedRef.current;
     if (!id) return;
-    await json("/api/handshake", {
-      method: "POST",
-      body: JSON.stringify({ projectId: id, agent: agent.label }),
-    });
-    setTimeout(() => connectAgent(agent), 700);
+    try {
+      await json("/api/handshake", {
+        method: "POST",
+        body: JSON.stringify({ projectId: id, agent: agent.label }),
+      });
+    } catch (err) {
+      console.warn("Handshake failed:", err);
+    }
+    setTimeout(() => {
+      connectAgent(agent).catch((err) => {
+        console.warn("connectAgent after handshake failed:", err);
+      });
+    }, 700);
   };
 
   const connectAgent = async (agent: Agent) => {
     const id = selectedRef.current;
     if (!id) return;
-    const { agent: row } = await json<{ agent: Agent }>("/api/connect", {
-      method: "POST",
-      body: JSON.stringify({ projectId: id, agent: agent.label }),
-    });
-    setDashboard((d) =>
-      d && d.project.id === id
-        ? {
-            ...d,
-            agents: d.agents.map((a) =>
-              a.id === row.id || (a.label === row.label && (a.ownerLogin || "") === (row.ownerLogin || ""))
-                ? row
-                : a
-            ),
-          }
-        : d
-    );
+    try {
+      const data = await json<{ agent?: Agent }>("/api/connect", {
+        method: "POST",
+        body: JSON.stringify({ projectId: id, agent: agent.label }),
+      });
+      const row = data?.agent;
+      if (row) {
+        setDashboard((d) =>
+          d && d.project.id === id
+            ? {
+                ...d,
+                agents: d.agents.map((a) =>
+                  a.id === row.id || (a.label === row.label && (a.ownerLogin || "") === (row.ownerLogin || ""))
+                    ? row
+                    : a
+                ),
+              }
+            : d
+        );
+      }
+    } catch (err) {
+      console.warn("connectAgent failed:", err);
+    }
   };
 
   const addProject = async (body: { name?: string; path?: string; remoteUrl?: string; mode: "clone" | "local" }) => {
@@ -417,7 +443,7 @@ export function RelayProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify(body),
     });
-    setProjects((p) => [...p, project]);
+    setProjects((p) => dedupeProjects([...p.filter((item) => item.id !== project.id), project]));
     setAddOpen(false);
     await selectProject(project.id);
   };

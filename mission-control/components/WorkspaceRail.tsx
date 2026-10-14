@@ -25,6 +25,8 @@ export function WorkspaceRail() {
   const activeId = selectedProjectId || dashboard?.project.id;
   const [menuId, setMenuId] = useState<string | null>(null);
 
+  const uniqueProjects = Array.from(new Map(projects.map((p) => [p.id, p])).values());
+
   useEffect(() => {
     if (!menuId) return;
     const close = () => setMenuId(null);
@@ -34,7 +36,7 @@ export function WorkspaceRail() {
 
   return (
     <aside className={ui.rail}>
-      {projects.map((p) => (
+      {uniqueProjects.map((p) => (
         <button
           key={p.id}
           className={`${ui.wsBtn} ${activeId === p.id ? ui.active : ""}`}

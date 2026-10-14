@@ -268,7 +268,7 @@ function Board() {
           nodeTypes={nodeTypes} edgeTypes={edgeTypes}
           fitView proOptions={{ hideAttribution: true }}
           minZoom={0.15} maxZoom={1.8}
-          nodesDraggable nodesConnectable={false} elementsSelectable
+          nodesDraggable={false} nodesConnectable={false} elementsSelectable
         >
           <Background color="#161616" gap={22} size={1} />
           <Controls showInteractive={false} />

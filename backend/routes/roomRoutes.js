@@ -187,7 +187,22 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
     if (!room.open) {
       const code = req.body?.code;
       const proofGistId = req.body?.proofGistId;
-      if (!code) {
+      const check = await ContextService.collaboratorCheck(project, user.login);
+
+      if (code) {
+        const redeemed = redeemInvite(room, code, user.login);
+        if (!redeemed.ok && !check.allowed) {
+          return res.status(403).json({
+            error: redeemed.reason,
+            invitedLogin: redeemed.invitedLogin,
+            hint:
+              redeemed.reason === "invite_wrong_user"
+                ? `That invite was issued to @${redeemed.invitedLogin}.`
+                : "Ask the host to invite you from the Team tab.",
+          });
+        }
+        if (redeemed.ok && !redeemed.rejoin) markAccepted(redeemed.invite, user.login);
+      } else if (!check.allowed) {
         if (!proofGistId || !room.roomId || !room.nonce) {
           return res.status(403).json({
             error: "invite_required",
@@ -207,25 +222,6 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
           });
         }
       }
-      const redeemed = redeemInvite(room, code, user.login);
-      if (!redeemed.ok) {
-        return res.status(403).json({
-          error: redeemed.reason,
-          invitedLogin: redeemed.invitedLogin,
-          hint:
-            redeemed.reason === "invite_wrong_user"
-              ? `That invite was issued to @${redeemed.invitedLogin}.`
-              : "Ask the host to invite you from the Team tab.",
-        });
-      }
-      const check = await ContextService.collaboratorCheck(project, user.login);
-      if (!check.allowed) {
-        return res.status(403).json({
-          error: "not_a_collaborator",
-          hint: `@${user.login} is not a collaborator on this repository.`,
-        });
-      }
-      if (!redeemed.rejoin) markAccepted(redeemed.invite, user.login);
     }
 
     const token = issueMemberToken(room, user.login);
