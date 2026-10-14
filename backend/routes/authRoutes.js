@@ -32,7 +32,9 @@ function createAuthRoutes({ sse }) {
   });
 
   router.get("/api/auth/github", (req, res) => {
-    const redirect = `${req.protocol}://${req.get("host")}/api/auth/github/callback`;
+    const redirect =
+      process.env.GITHUB_REDIRECT_URI ||
+      `${UI_ORIGIN}/api/auth/github/callback`;
     const url = authorizeUrl(redirect);
     if (!url) {
       return res.status(501).json({
@@ -44,9 +46,16 @@ function createAuthRoutes({ sse }) {
   });
 
   router.get("/api/auth/github/callback", async (req, res) => {
-    const redirect = `${req.protocol}://${req.get("host")}/api/auth/github/callback`;
+    const redirect =
+      process.env.GITHUB_REDIRECT_URI ||
+      `${UI_ORIGIN}/api/auth/github/callback`;
     try {
-      const result = await exchangeCode(req.query.code, redirect);
+      let result = await exchangeCode(req.query.code, redirect);
+      if (result.error && !process.env.GITHUB_REDIRECT_URI) {
+        const fallback = `${req.protocol}://${req.get("host")}/api/auth/github/callback`;
+        const alt = await exchangeCode(req.query.code, fallback);
+        if (!alt.error) result = alt;
+      }
       if (result.error) return res.status(400).json(result);
       const reg = loadRegistry();
       let user = reg.users.find((u) => u.login === result.user.login);

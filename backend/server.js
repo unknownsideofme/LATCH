@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
+require("./config/env");
+
 const http = require("http");
 const { createCoordinator, listen, writeState } = require("./coordinator/server");
 const { SseHub } = require("./lib/sseHub");

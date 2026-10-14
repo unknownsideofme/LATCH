@@ -1,5 +1,7 @@
 "use strict";
 
+require("./config/env");
+
 const express = require("express");
 const cors = require("cors");
 const { UI_ORIGIN } = require("./config/constants");

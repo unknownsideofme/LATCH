@@ -350,6 +350,7 @@ module.exports = {
   markLeft,
   dropMember,
   membersView,
+  inviteView: (room) => require("./roomAuth").inviteView(room),
   mintRoomId,
   NGROK_HINT,
 };

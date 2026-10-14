@@ -58,6 +58,10 @@ class RoomService {
     return typeof this.wssRef === "function" ? this.wssRef() : this.wssRef;
   }
 
+  broadcastRoom(obj) {
+    if (this.wss) broadcast(this.wss, obj);
+  }
+
   initListeners() {
     this.roomControl.onReplay = ({ rejected }) => {
       if (!rejected?.length) return;

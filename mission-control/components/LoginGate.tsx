@@ -15,7 +15,7 @@ export function LoginGate() {
           Run <code>latch login</code> (uses GitHub CLI). Continue with GitHub needs{" "}
           <code>GITHUB_CLIENT_ID</code>. The names below only impersonate a teammate on this machine.
         </p>
-        <a className={`${ui.chip} ${ui.full}`} href={apiUrl("/api/auth/github")} style={{ display: "block", textAlign: "center", marginTop: 12 }}>
+        <a className={`${ui.chip} ${ui.full}`} href="/api/auth/github" style={{ display: "block", textAlign: "center", marginTop: 12 }}>
           Continue with GitHub
         </a>
         {users.map((u) => (

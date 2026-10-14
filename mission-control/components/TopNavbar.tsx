@@ -106,7 +106,7 @@ function AccountMenu() {
           {/* Without this, a machine with one registered user gets a "switch
               account" section with nothing in it. Same entry point the login
               gate offers. */}
-          <a className={ui.navMenuItem} href={apiUrl("/api/auth/github")}>
+          <a className={ui.navMenuItem} href="/api/auth/github">
             <span>Add another account ↗</span>
           </a>
           <div className={ui.navMenuSep} />
@@ -166,9 +166,10 @@ export function TopNavbar() {
         <span
           className={`${ui.navStatus} ${syncing ? ui.navStatusLive : ""}`}
           title={syncing ? "Syncing…" : fetchedLabel(fetched, now)}
+          suppressHydrationWarning
         >
           <span className={ui.navStatusDot} />
-          <span className={ui.navStatusText}>{syncing ? "Syncing…" : fetchedLabel(fetched, now)}</span>
+          <span className={ui.navStatusText} suppressHydrationWarning>{syncing ? "Syncing…" : fetchedLabel(fetched, now)}</span>
         </span>
         <button
           className={`${ui.navSync} ${syncing ? ui.navSyncing : ""}`}

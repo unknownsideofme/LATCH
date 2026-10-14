@@ -31,7 +31,7 @@ export function GlobalHeader() {
         <div className={ui.path}>{project.path}</div>
       </div>
       <div className={ui.syncCluster}>
-        <span className={`${ui.syncMeta} ${syncing ? ui.syncLive : ""}`}>
+        <span className={`${ui.syncMeta} ${syncing ? ui.syncLive : ""}`} suppressHydrationWarning>
           {syncing ? "Syncing…" : `Fetched ${fetchedLabel(fetched, now)}`}
         </span>
         <button className={ui.syncBtn} onClick={sync} disabled={syncing}>
