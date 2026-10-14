@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
 import { apiUrl } from "@/lib/api";
 import type { OpenRoom, Room } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import ui from "@/styles/ui.module.css";
 
 function inviteLabel(state: string) {
@@ -210,27 +212,41 @@ export function TeamPanel() {
                   {c.agentActive ? `${c.agentLabel} running` : c.online ? "online" : "offline"}
                 </span>
                 {incoming ? (
-                  <button
-                    className={ui.syncBtn}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-7 text-xs px-2.5 font-semibold"
                     disabled={busy}
                     onClick={() => join({ hostLogin: incoming.hostLogin, roomId: incoming.roomId, gistId: incoming.gistId || undefined })}
                   >
                     {busyLogin === c.login ? "Joining…" : "Join"}
-                  </button>
+                  </Button>
                 ) : null}
                 {canInvite && !incoming ? (
                   pending ? (
                     <span style={{ color: "var(--faint)" }}>invited</span>
                   ) : (
-                    <button className={ui.syncBtn} disabled={busy} onClick={() => invite(c.login)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs px-2.5 font-semibold"
+                      disabled={busy}
+                      onClick={() => invite(c.login)}
+                    >
                       {busyLogin === c.login ? "Inviting…" : "Invite"}
-                    </button>
+                    </Button>
                   )
                 ) : null}
                 {hosting && inRoom && !mine && c.role !== "host" ? (
-                  <button className={`${ui.chip} ${ui.ghost}`} disabled={busy} onClick={() => removeMember(c.login)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-[var(--red)] hover:bg-[var(--red-dim)]"
+                    disabled={busy}
+                    onClick={() => removeMember(c.login)}
+                  >
                     Remove
-                  </button>
+                  </Button>
                 ) : null}
               </span>
             </div>
@@ -272,14 +288,21 @@ export function TeamPanel() {
                 Mirroring into <code>{room.projectPath}</code> — locks, patches and chat history are shared with the host.
               </p>
             ) : null}
-            <div className={ui.actions} style={{ justifyContent: "flex-start" }}>
+            <div className={ui.actions} style={{ justifyContent: "flex-start", gap: 8 }}>
               {room.url ? (
-                <button className={ui.syncBtn} onClick={() => navigator.clipboard.writeText(room.url)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold"
+                  onClick={() => navigator.clipboard.writeText(room.url)}
+                >
                   Copy tunnel
-                </button>
+                </Button>
               ) : null}
-              <button
-                className={`${ui.chip} ${ui.ghost}`}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-[var(--red)] hover:bg-[var(--red-dim)]"
                 disabled={busy}
                 onClick={async () => {
                   setBusy(true);
@@ -291,20 +314,19 @@ export function TeamPanel() {
                 }}
               >
                 Leave room
-              </button>
+              </Button>
             </div>
             {hosting ? (
               <>
-                <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "16px 0" }} />
+                <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "16px 0" }} />
                 <h3 style={{ marginBottom: 4 }}>Invite someone who isn&apos;t listed</h3>
                 <p style={{ color: "var(--muted)", marginTop: 0 }}>
                   They still have to be a collaborator on this GitHub repo. After you invite, they just hit Join —
                   you do not need to send a link unless they are not running Latch yet.
                 </p>
-                <div className={ui.actions} style={{ justifyContent: "flex-start", alignItems: "center" }}>
-                  <input
-                    className={ui.field}
-                    style={{ maxWidth: 260 }}
+                <div className={ui.actions} style={{ justifyContent: "flex-start", alignItems: "center", gap: 8 }}>
+                  <Input
+                    className="max-w-[260px] h-8 text-xs"
                     value={inviteLogin}
                     onChange={(e) => setInviteLogin(e.target.value)}
                     placeholder="github-username"
@@ -312,9 +334,15 @@ export function TeamPanel() {
                       if (e.key === "Enter") invite(inviteLogin);
                     }}
                   />
-                  <button className={ui.syncBtn} onClick={() => invite(inviteLogin)} disabled={busy || !inviteLogin.trim()}>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-8 text-xs font-semibold"
+                    onClick={() => invite(inviteLogin)}
+                    disabled={busy || !inviteLogin.trim()}
+                  >
                     Invite
-                  </button>
+                  </Button>
                 </div>
                 {issued ? (
                   <div className={ui.card} style={{ marginTop: 10 }}>
@@ -322,13 +350,23 @@ export function TeamPanel() {
                       @{issued.login} can Join from their Team tab. A backup link is here if they need it:
                     </p>
                     <code style={{ wordBreak: "break-all" }}>{issued.link}</code>
-                    <div className={ui.actions} style={{ justifyContent: "flex-start", marginTop: 8 }}>
-                      <button className={ui.syncBtn} onClick={() => navigator.clipboard.writeText(issued.link)}>
+                    <div className={ui.actions} style={{ justifyContent: "flex-start", marginTop: 8, gap: 8 }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs font-semibold"
+                        onClick={() => navigator.clipboard.writeText(issued.link)}
+                      >
                         Copy invite link
-                      </button>
-                      <button className={`${ui.chip} ${ui.ghost}`} onClick={() => setIssued(null)}>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setIssued(null)}
+                      >
                         Done
-                      </button>
+                      </Button>
                     </div>
                     {issued.warning ? <p style={{ color: "var(--amber)" }}>{issued.warning}</p> : null}
                   </div>
@@ -342,9 +380,15 @@ export function TeamPanel() {
                           @{i.login} <span style={{ color: "var(--faint)" }}>· {inviteLabel(i.state)}</span>
                         </span>
                         {i.state === "pending" ? (
-                          <button className={`${ui.chip} ${ui.ghost}`} disabled={busy} onClick={() => revoke(i.id)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs text-[var(--red)] hover:bg-[var(--red-dim)] px-2"
+                            disabled={busy}
+                            onClick={() => revoke(i.id)}
+                          >
                             Revoke
-                          </button>
+                          </Button>
                         ) : null}
                       </div>
                     ))}
@@ -365,49 +409,73 @@ export function TeamPanel() {
                     <span>
                       @{r.hostLogin} is hosting{r.projectName ? ` ${r.projectName}` : ""}
                     </span>
-                    <button
-                      className={ui.syncBtn}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-7 text-xs font-semibold"
                       disabled={busy}
                       onClick={() => join({ hostLogin: r.hostLogin, roomId: r.roomId, gistId: r.gistId || undefined })}
                     >
                       Join
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
             ) : null}
-            <button className={ui.syncBtn} onClick={share} disabled={busy}>
-              {busy ? "Starting…" : "Share this workspace"}
-            </button>
-            <button className={`${ui.chip} ${ui.ghost}`} onClick={() => setLinkOpen((v) => !v)} style={{ marginLeft: 8 }}>
-              {linkOpen ? "Hide invite link" : "Have an invite link?"}
-            </button>
+            <div className="flex items-center gap-3">
+              <Button variant="default" size="sm" className="h-8 text-xs font-semibold" onClick={share} disabled={busy}>
+                {busy ? "Starting…" : "Share this workspace"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-medium"
+                onClick={() => setLinkOpen((v) => !v)}
+              >
+                {linkOpen ? "Hide invite link" : "Have an invite link?"}
+              </Button>
+            </div>
             {linkOpen ? (
-              <>
-                <label>Paste the invite link</label>
-                <input
-                  className={ui.field}
-                  value={joinUrl}
-                  onChange={(e) => setJoinUrl(e.target.value)}
-                  placeholder="https://abc.ngrok-free.app/?relay_invite=…"
-                />
-                <label>Folder to mirror into (optional)</label>
-                <input
-                  className={ui.field}
-                  value={joinPath}
-                  onChange={(e) => setJoinPath(e.target.value)}
-                  placeholder="Leave blank to use ~/Documents/Latch/<host repo>"
-                />
-                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <input type="checkbox" checked={seed} onChange={(e) => setSeed(e.target.checked)} />
+              <div className="space-y-3 mt-3 pt-3 border-t border-[var(--border)]">
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted)] block mb-1">Paste the invite link</label>
+                  <Input
+                    className="h-8 text-xs"
+                    value={joinUrl}
+                    onChange={(e) => setJoinUrl(e.target.value)}
+                    placeholder="https://abc.ngrok-free.app/?relay_invite=…"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted)] block mb-1">Folder to mirror into (optional)</label>
+                  <Input
+                    className="h-8 text-xs"
+                    value={joinPath}
+                    onChange={(e) => setJoinPath(e.target.value)}
+                    placeholder="Leave blank to use ~/Documents/Latch/<host repo>"
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-xs text-[var(--text)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="accent-[var(--accent)]"
+                    checked={seed}
+                    onChange={(e) => setSeed(e.target.checked)}
+                  />
                   Copy the host&apos;s codebase on join
                 </label>
-                <div className={ui.actions} style={{ justifyContent: "flex-start" }}>
-                  <button className={ui.syncBtn} onClick={() => join({ url: joinUrl })} disabled={busy || !joinUrl}>
+                <div className="pt-1">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-8 text-xs font-semibold"
+                    onClick={() => join({ url: joinUrl })}
+                    disabled={busy || !joinUrl}
+                  >
                     Join room
-                  </button>
+                  </Button>
                 </div>
-              </>
+              </div>
             ) : null}
           </>
         )}

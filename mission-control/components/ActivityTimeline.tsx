@@ -3,6 +3,7 @@
 import { useRelay } from "@/lib/RelayContext";
 import { AgentLogo, UserAvatar } from "@/components/Identity";
 import { MarkdownView, plainPreview } from "@/lib/markdown";
+import { Badge } from "@/components/ui/badge";
 import ui from "@/styles/ui.module.css";
 
 function timeAgo(ts?: number) {
@@ -33,15 +34,18 @@ export function ActivityTimeline() {
               <span>
                 {ev.kind === "code_edit" ? "✎" : ev.role === "user" ? "›" : <AgentLogo agent={ev.agent} size={14} />}
               </span>
-              <p>
+              <div className={ui.feedRowContent}>
                 <strong>{ev.agent}</strong>{" "}
-                <span className={ev.mine ? `${ui.badge} ${ui.mine}` : `${ui.badge} ${ui.theirs}`}>
-                  <UserAvatar login={ev.ownerLogin} size={12} />
+                <Badge
+                  variant={ev.mine ? "default" : "secondary"}
+                  className="text-[10px] px-1.5 py-0 h-4 gap-1 inline-flex items-center font-normal"
+                >
+                  <UserAvatar login={ev.ownerLogin} size={11} />
                   {ev.mine ? "you" : `@${ev.ownerLogin}`}
-                </span>{" "}
+                </Badge>{" "}
                 {ev.role === "user" ? `You: ${plainPreview(body)}` : plainPreview(body)}
-              </p>
-              <small>{timeAgo(ev.ts)}</small>
+              </div>
+              <small className="font-[var(--mono)] text-[11px] text-[var(--muted)]">{timeAgo(ev.ts)}</small>
             </summary>
             {formatted || String(body || "").length > 140 ? (
               <div className={ui.feedBody}>

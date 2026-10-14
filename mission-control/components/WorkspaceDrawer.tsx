@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import ui from "@/styles/ui.module.css";
 
 function inkFor(hex?: string) {
@@ -121,7 +123,11 @@ export function WorkspaceDrawer() {
                   <div className={ui.drawerItemPath}>{p.path}</div>
                 </div>
 
-                {isActive && <span className={ui.drawerItemActiveBadge}>Active</span>}
+                {isActive && (
+                  <Badge variant="default" className="text-[10px] px-2 py-0 h-5 font-semibold bg-[var(--accent)] text-white">
+                    Active
+                  </Badge>
+                )}
 
                 <button
                   className={ui.drawerItemMoreBtn}
@@ -170,8 +176,9 @@ export function WorkspaceDrawer() {
         ) : null}
 
         <div className={ui.drawerFoot}>
-          <button
-            className={ui.drawerAddBtn}
+          <Button
+            variant="default"
+            className="w-full h-9 gap-2 font-semibold text-[13px] bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white shadow-xs"
             onClick={() => {
               setDrawerOpen(false);
               setAddOpen(true);
@@ -179,7 +186,7 @@ export function WorkspaceDrawer() {
           >
             <span>+</span>
             <span>Add workspace</span>
-          </button>
+          </Button>
           <div className={ui.drawerEscHint}>Press Esc to close</div>
         </div>
       </aside>

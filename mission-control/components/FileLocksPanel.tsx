@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import { useRelay } from "@/lib/RelayContext";
 import { apiUrl } from "@/lib/api";
 import type { Dashboard } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import ui from "@/styles/ui.module.css";
 
 // React Flow touches `window`, so it must not render on the server.
@@ -69,15 +71,15 @@ function GraphView({ graph }: { graph: NonNullable<Dashboard["graph"]> }) {
                   y1={a.y}
                   x2={b.x}
                   y2={b.y}
-                  stroke={a.locked || b.locked ? "#f5a524" : "#3a3f4a"}
-                  strokeWidth={a.locked || b.locked ? 1.6 : 1}
+                  stroke={a.locked || b.locked ? "var(--copper)" : "var(--border)"}
+                  strokeWidth={a.locked || b.locked ? 1.8 : 1.2}
                 />
               );
             })}
             {layout.map((n) => (
               <g key={n.id}>
-                <circle cx={n.x} cy={n.y} r={n.locked ? 8 : 5} fill={n.locked ? "#f5a524" : n.cyclic ? "#b794f4" : "#3dd68c"} />
-                <text x={n.x + 12} y={n.y + 4} fill="#c9cdd6" fontSize="10" fontFamily="IBM Plex Mono, monospace">
+                <circle cx={n.x} cy={n.y} r={n.locked ? 8 : 5} fill={n.locked ? "var(--copper)" : n.cyclic ? "var(--violet)" : "var(--green)"} />
+                <text x={n.x + 12} y={n.y + 4} fill="var(--text)" fontSize="11" fontFamily="var(--mono)">
                   {n.id.split("/").slice(-2).join("/")}
                 </text>
               </g>
@@ -90,7 +92,7 @@ function GraphView({ graph }: { graph: NonNullable<Dashboard["graph"]> }) {
           {graph.nodes.filter((n) => n.locked).map((n) => (
             <div key={n.id} className={ui.lockRow}>
               <code>{n.id}</code>
-              <span style={{ color: "var(--amber)" }}>LOCKED</span>
+              <span style={{ color: "var(--copper)" }}>LOCKED</span>
             </div>
           ))}
         </div>
@@ -164,8 +166,8 @@ export function FileLocksPanel() {
     <>
       <article className={ui.card} style={{ marginBottom: 10 }}>
         <h3>Collisions prevented{roomScope ? " (room)" : ""}</h3>
-        <p style={{ fontSize: "1.35rem", margin: "0.2rem 0 0.5rem" }}>
-          <strong>{saved}</strong> saved by Latch
+        <p style={{ fontSize: "1.45rem", margin: "0.2rem 0 0.5rem", fontFamily: "var(--font-display)" }}>
+          <strong className="text-[var(--accent)] font-bold">{saved}</strong> saved by Latch
         </p>
         {memberLine ? (
           <p style={{ color: "var(--muted)", marginTop: 0, marginBottom: "0.35rem" }}>{memberLine}</p>
@@ -181,18 +183,22 @@ export function FileLocksPanel() {
       <div className={ui.rowBetween} style={{ marginBottom: 10 }}>
         <div className={ui.kicker}>Ongoing Sessions</div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button
-            className={`${ui.chip} ${view === "board" ? "" : ui.ghost}`}
+          <Button
+            variant={view === "board" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-3 font-semibold"
             onClick={() => setView("board")}
           >
             Board
-          </button>
-          <button
-            className={`${ui.chip} ${view === "list" ? "" : ui.ghost}`}
+          </Button>
+          <Button
+            variant={view === "list" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-3 font-semibold"
             onClick={() => setView("list")}
           >
             List
-          </button>
+          </Button>
         </div>
       </div>
 

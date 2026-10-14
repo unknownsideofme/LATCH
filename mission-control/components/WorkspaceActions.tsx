@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
+import { Button } from "@/components/ui/button";
 import ui from "@/styles/ui.module.css";
 
 export function WorkspaceActions({ projectId }: { projectId?: string | null }) {
@@ -17,13 +18,13 @@ export function WorkspaceActions({ projectId }: { projectId?: string | null }) {
   };
 
   return (
-    <div className={ui.actions} style={{ justifyContent: "flex-start", marginTop: 10, flexWrap: "wrap" }}>
-      <button className={`${ui.chip} ${ui.ghost}`} onClick={() => run(leaveWorkspace)}>
+    <div className="flex items-center gap-2 mt-4 flex-wrap">
+      <Button variant="outline" size="sm" className="h-8 text-xs font-medium" onClick={() => run(leaveWorkspace)}>
         Leave workspace
-      </button>
-      <button className={`${ui.chip} ${ui.ghost}`} onClick={() => run(removeWorkspace)}>
+      </Button>
+      <Button variant="destructive" size="sm" className="h-8 text-xs font-medium" onClick={() => run(removeWorkspace)}>
         Remove from Latch
-      </button>
+      </Button>
       {hint ? <p style={{ color: "var(--amber)", width: "100%", margin: "8px 0 0" }}>{hint}</p> : null}
     </div>
   );

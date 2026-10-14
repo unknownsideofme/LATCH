@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
 import type { Notice } from "@/lib/types";
+import { Button } from "@/components/ui/button";
 import ui from "@/styles/ui.module.css";
 
 function ago(ts: number) {
@@ -79,9 +80,14 @@ export function NoticeBell() {
           <div className={ui.noticeMenuHead}>
             <strong>Notifications</strong>
             {notices.length ? (
-              <button type="button" className={`${ui.chip} ${ui.ghost}`} onClick={() => markAllNoticesRead()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs text-[var(--muted)] hover:text-[var(--text)] px-2"
+                onClick={() => markAllNoticesRead()}
+              >
                 Mark all read
-              </button>
+              </Button>
             ) : null}
           </div>
           {notices.length === 0 ? (
@@ -102,9 +108,10 @@ export function NoticeBell() {
                 </div>
                 <div className={ui.noticeItemActions}>
                   {n.action === "join" ? (
-                    <button
-                      type="button"
-                      className={ui.syncBtn}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-6 text-xs font-semibold px-2"
                       disabled={joining === n.id}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -112,18 +119,19 @@ export function NoticeBell() {
                       }}
                     >
                       {joining === n.id ? "Joining…" : "Join"}
-                    </button>
+                    </Button>
                   ) : null}
-                  <button
-                    type="button"
-                    className={`${ui.chip} ${ui.ghost}`}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs px-2"
                     onClick={(e) => {
                       e.stopPropagation();
                       dismissNotice({ id: n.id });
                     }}
                   >
                     Dismiss
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))
@@ -166,20 +174,27 @@ export function NoticeToasts() {
           {n.body ? <p>{n.body}</p> : null}
           <div className={ui.noticeToastActions}>
             {n.action === "join" ? (
-              <button type="button" className={ui.syncBtn} disabled={joining === n.id} onClick={() => join(n)}>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-7 text-xs font-semibold"
+                disabled={joining === n.id}
+                onClick={() => join(n)}
+              >
                 {joining === n.id ? "Joining…" : "Join"}
-              </button>
+              </Button>
             ) : null}
-            <button
-              type="button"
-              className={`${ui.chip} ${ui.ghost}`}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
               onClick={() => {
                 dismissToast(n.id);
                 if (n.action === "join") dismissNotice({ id: n.id });
               }}
             >
               Dismiss
-            </button>
+            </Button>
           </div>
         </div>
       ))}

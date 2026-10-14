@@ -35,79 +35,73 @@
 
 .navbar {
   grid-area: navbar;
-  --nav-line: rgba(255, 255, 255, 0.06);
+  --nav-line: var(--border);
   display: flex;
   align-items: center;
   gap: 20px;
   padding: 0 24px;
-  /* A hairline, not a rule: the header should read as part of the page. */
-  border-bottom: 1px solid var(--nav-line);
+  border-bottom: 1px solid var(--border);
   background: var(--bg-rail);
-  /* The account menu hangs below this 48px row, so the blanket `overflow:
-     hidden` on every grid child clipped it away entirely — the menu opened,
-     it just had nowhere to be drawn. Nothing in here can overflow sideways:
-     the brand and the right cluster are flex:none and the project label
-     ellipsizes at min-width 0. */
   overflow: visible;
 }
 .navBrand {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   flex: none;
 }
 .navBrandLogo {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
   flex: none;
 }
-/* Wordmark reads like a path, so it's set in the mono face. */
 .navBrandText {
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text);
   line-height: 1;
   white-space: nowrap;
 }
-.navBrandSlash { color: var(--faint); }
+.navBrandSlash { color: var(--accent); }
 .navProject {
   display: flex;
   align-items: center;
   gap: 9px;
   min-width: 0;
   flex: 1;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 6px 10px;
+  border-radius: 7px;
   transition: background 130ms ease;
 }
 .navProject:hover {
   background: var(--elev);
 }
 .navProjectChevron {
-  font-size: 11px;
-  color: var(--faint);
+  font-size: 12px;
+  color: var(--muted);
   margin-left: 4px;
 }
 .navProjectDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
   flex: none;
 }
 .navProjectName {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--muted);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
   white-space: nowrap;
   flex: none;
 }
 .navProjectPath {
   font-family: var(--mono);
-  font-size: 10.5px;
-  color: var(--faint);
+  font-size: 12px;
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -319,7 +313,7 @@
 .drawerBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--scrim);
   z-index: 998;
   opacity: 0;
   pointer-events: none;
@@ -335,14 +329,14 @@
   top: 0;
   bottom: 0;
   left: 0;
-  width: 340px;
+  width: 350px;
   max-width: calc(100vw - 32px);
-  background: var(--bg-rail);
+  background: var(--panel);
   border-right: 1px solid var(--border);
   z-index: 999;
   display: flex;
   flex-direction: column;
-  box-shadow: 18px 0 45px rgba(0, 0, 0, 0.5);
+  box-shadow: 18px 0 45px rgba(48, 41, 37, 0.16);
   transform: translateX(-100%);
   transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -354,9 +348,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--panel);
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-rail);
 }
 .drawerTitleWrap {
   display: flex;
@@ -364,24 +358,26 @@
   gap: 10px;
 }
 .drawerTitle {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text);
 }
 .drawerCount {
   display: inline-block;
-  padding: 2px 7px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
   border-radius: 999px;
   background: var(--elev);
   color: var(--muted);
+  font-family: var(--font);
 }
 .drawerClose {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -399,19 +395,19 @@
 .drawerList {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .drawerItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  background: var(--panel-2);
+  padding: 12px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--border-soft);
+  background: var(--card);
   cursor: pointer;
   text-align: left;
   transition: all 130ms ease;
@@ -421,11 +417,12 @@
 }
 .drawerItem:hover {
   background: var(--elev);
-  border-color: var(--border-soft);
+  border-color: var(--border);
 }
 .drawerItemActive {
-  background: var(--elev);
+  background: var(--card);
   border-color: var(--accent);
+  box-shadow: 0 1px 6px rgba(122, 52, 56, 0.12);
 }
 .drawerItemTile {
   width: 36px;
@@ -951,19 +948,21 @@
 }
 
 .card {
-  background: var(--bg);
-  border: 0;
-  border-radius: 0;
-  padding: 4px 0 14px;
-  margin-bottom: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
 }
 .card h3 {
-  margin: 0 0 7px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--muted);
+  font-family: var(--font-display);
 }
 .rowBetween { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
@@ -988,10 +987,10 @@
    needs a couple of steps above the page — but only a couple, and never more
    edge than a hairline. No new hues: the same monochrome ramp, finer. */
 .chatPage {
-  --chat-surface: #0e0e0e;
-  --chat-edge: #171717;
-  --chat-mine: #141414;
-  --chat-text: #dcdcdc;
+  --chat-surface: var(--card);
+  --chat-edge: var(--border);
+  --chat-mine: var(--panel);
+  --chat-text: var(--text);
 }
 
 .thread {
@@ -1127,16 +1126,23 @@
   white-space: nowrap;
 }
 .turnNameAgent { color: var(--blue); }
-.turnOwner,
+.turnOwner {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--faint);
+  white-space: nowrap;
+}
 .turnTime {
-  font-size: 10.5px;
+  font-family: var(--mono);
+  font-size: 11px;
   font-weight: 500;
   color: var(--faint);
   white-space: nowrap;
 }
 /* Assistant copy is the page: no fill, no border, just measure and rhythm. */
 .prose {
-  font-size: 13px;
+  font-family: var(--font-warm);
+  font-size: 14px;
   line-height: 1.65;
   color: var(--chat-text);
   min-width: 0;
@@ -1153,17 +1159,17 @@
 .prose :global(.md) pre,
 .asideBody :global(.md) pre {
   background: var(--chat-surface);
-  border: 0;
+  border: 1px solid var(--border-soft);
   border-radius: 6px;
   padding: 9px 11px;
 }
 .prose :global(.md-inline) {
   background: var(--chat-surface);
-  border: 0;
+  border: 1px solid var(--border-soft);
   padding: 1px 5px;
 }
 .prose :global(.md) blockquote {
-  border-left: 2px solid var(--chat-edge);
+  border-left: 2px solid var(--accent);
   padding-left: 12px;
   color: var(--muted);
 }
@@ -1171,9 +1177,11 @@
 
 .userMsg {
   background: var(--chat-mine);
+  border: 1px solid var(--border-soft);
   border-radius: 8px;
-  padding: 7px 11px;
-  font-size: 12.5px;
+  padding: 8px 12px;
+  font-family: var(--font-warm);
+  font-size: 13.5px;
   line-height: 1.55;
   color: var(--chat-text);
   min-width: 0;
@@ -1222,7 +1230,8 @@
   border-bottom: 1px solid var(--border-soft);
   align-items: start;
 }
-.feedRow p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.feedRow p,
+.feedRowContent { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .feedRow strong { color: var(--text); font-weight: 650; }
 .feedRow small { color: var(--faint); font-size: 10px; }
 .feedDetails { border-bottom: 1px solid var(--border-soft); }
@@ -1381,10 +1390,10 @@
   font-weight: 700;
 }
 .statValue {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--text);
-  font-family: var(--mono);
+  font-family: var(--font-display);
   line-height: 1.2;
   margin: 2px 0 1px;
 }
@@ -1432,7 +1441,7 @@
   color: var(--text);
 }
 .choice:hover { border-color: var(--accent); background: var(--elev); }
-.on { border-color: var(--accent); background: var(--accent-deep); }
+.on { border-color: var(--accent); background: var(--accent); color: #fff; }
 .field {
   width: 100%;
   background: var(--elev);
@@ -1441,8 +1450,8 @@
   border-radius: 6px;
   padding: 9px 11px;
   margin: 8px 0 12px;
-  color-scheme: dark;
-  font-size: 12.5px;
+  color-scheme: light;
+  font-size: 13.5px;
 }
 .field:focus { border-color: var(--accent); outline: none; }
 .actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -1523,9 +1532,13 @@
 }
 .awNavItem:hover { background: var(--panel-2); color: var(--text); }
 .awNavItemOn {
-  background: var(--accent-deep);
+  background: var(--accent);
   border-color: var(--accent-edge);
-  color: var(--text);
+  color: #FFFFFF;
+}
+.awNavItemOn:hover {
+  background: var(--accent-hover);
+  color: #FFFFFF;
 }
 .awNavIcon {
   width: 26px;
@@ -1538,7 +1551,7 @@
   font-size: 13px;
   flex: none;
 }
-.awNavItemOn .awNavIcon { border-color: var(--accent); color: var(--accent); }
+.awNavItemOn .awNavIcon { border-color: rgba(255,255,255,0.4); color: #FFFFFF; background: rgba(255,255,255,0.15); }
 .awNavItemText { min-width: 0; }
 .awNavItemText small {
   display: block;
@@ -1546,6 +1559,9 @@
   font-weight: 500;
   color: var(--faint);
   margin-top: 1px;
+}
+.awNavItemOn .awNavItemText small {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .awPane {
@@ -1592,8 +1608,8 @@
 }
 .awRepoRow:last-child { border-bottom: 0; }
 .awRepoRow:hover { background: var(--panel-2); }
-.awRepoRowOn { background: var(--accent-deep); }
-.awRepoRowOn:hover { background: var(--accent-deep); }
+.awRepoRowOn { background: #F5EAEB; border-left: 3px solid var(--accent); }
+.awRepoRowOn:hover { background: #EFE0E2; }
 .awRepoAvatar {
   width: 30px;
   height: 30px;
@@ -2203,14 +2219,14 @@
 .sideNav {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 6px 0;
+  gap: 4px;
+  padding: 8px 0;
 }
 .sideNavItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 11px;
+  padding: 9px 12px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
@@ -2226,28 +2242,30 @@
   border-color: var(--border-soft);
 }
 .sideNavItemActive {
-  background: var(--elev);
-  color: var(--text);
+  background: var(--card);
+  color: var(--accent);
   border-color: var(--accent);
+  box-shadow: 0 1px 4px rgba(48, 41, 37, 0.06);
 }
 .sideNavIcon {
-  font-size: 13.5px;
+  font-size: 14.5px;
   display: grid;
   place-items: center;
   flex: none;
-  width: 20px;
+  width: 22px;
   color: var(--accent);
 }
 .sideNavBody {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 1.5px;
   flex: 1;
   min-width: 0;
 }
 .sideNavLabel {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -2255,8 +2273,8 @@
   color: var(--text);
 }
 .sideNavKicker {
-  font-size: 9.5px;
-  color: var(--faint);
+  font-size: 10.5px;
+  color: var(--muted);
   line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
@@ -2428,4 +2446,167 @@
   font-size: 10px;
   line-height: 1.35;
 }
+
+/* ------------------------------ Code Edits Slide-out Sidebar ------------------------------ */
+
+.patchDrawerBackdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: 998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+.patchDrawerBackdropOpen {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.patchDrawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 680px;
+  max-width: calc(100vw - 32px);
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -18px 0 45px rgba(0, 0, 0, 0.28);
+  transform: translateX(100%);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.patchDrawerOpen {
+  transform: translateX(0);
+}
+
+.patchDrawerHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-rail);
+  flex: none;
+}
+.patchDrawerFileTitle {
+  font-family: var(--mono);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+  word-break: break-all;
+  line-height: 1.35;
+  margin: 0 0 6px;
+}
+.patchDrawerMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.patchDrawerClose {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--elev);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  cursor: pointer;
+  transition: all 130ms ease;
+}
+.patchDrawerClose:hover {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.patchDrawerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--panel);
+  flex: none;
+}
+
+.patchDrawerContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+  min-height: 0;
+}
+
+.patchItemCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 140ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.patchItemCard:hover {
+  border-color: var(--accent);
+  background: var(--elev);
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+.patchItemCardActive {
+  border-color: var(--accent);
+  background: var(--elev);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.patchItemMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.patchItemFile {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.patchItemSub {
+  font-size: 11.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.patchItemInspect {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  opacity: 0.85;
+}
+.patchItemCard:hover .patchItemInspect {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
 

@@ -57,9 +57,9 @@
 .ugroup {
   width: 100%;
   height: 100%;
-  border: 1px dashed #242424;
+  border: 1px dashed var(--border);
   border-radius: 12px;
-  background: #050505;
+  background: var(--elev);
 }
 .uhead {
   position: absolute;
@@ -93,8 +93,8 @@
   padding: 8px 12px 8px 9px;
   width: 218px;
 }
-.agentOn { border-color: #1d3a1d; }
-.agentClash { border-color: #4a1d1d; }
+.agentOn { border-color: var(--holding); }
+.agentClash { border-color: var(--clash); }
 .alogo { width: 26px; height: 26px; flex: none; object-fit: contain; }
 .alogoFallback {
   width: 26px; height: 26px; border-radius: 7px; flex: none;
@@ -118,12 +118,12 @@
   padding: 9px 12px;
   width: 236px;
 }
-.fileLocked { border-color: #1d3a1d; }
-.fileClash { border-color: #4a1d1d; }
+.fileLocked { border-color: var(--holding); }
+.fileClash { border-color: var(--clash); }
 .fn { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 12px; font-weight: 600; }
 .fname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ring { width: 15px; height: 15px; flex: none; }
-.ringBg { fill: none; stroke: #242424; stroke-width: 2.5; }
+.ringBg { fill: none; stroke: var(--border-soft); stroke-width: 2.5; }
 .fp {
   color: var(--faint); font-size: 9.5px; font-family: var(--mono);
   margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -137,8 +137,8 @@
   font-size: 8.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
   padding: 2px 6px; border-radius: 4px; flex: none;
 }
-.pClash { background: #2a0f0f; color: var(--clash); }
-.pWait { background: #2a2109; color: var(--waiting); }
+.pClash { background: var(--red-dim); color: var(--clash); }
+.pWait { background: var(--yellow-dim); color: var(--waiting); }
 
 /* ------------------------------ edges ------------------------------ */
 .eHold { stroke: var(--holding); stroke-width: 2.5; }
@@ -184,8 +184,8 @@
   font-family: var(--font); color: var(--text);
 }
 .canvas :global(.react-flow__controls-button) {
-  background: var(--elev); border: 0; border-bottom: 1px solid #000; fill: #aaa;
+  background: var(--elev); border: 0; border-bottom: 1px solid var(--border); fill: var(--muted);
 }
 .canvas :global(.react-flow__controls-button:hover) { background: var(--elev-2); }
-.canvas :global(.react-flow__minimap) { background: #080808; }
+.canvas :global(.react-flow__minimap) { background: var(--panel-2); border: 1px solid var(--border); }
 .canvas :global(.react-flow__attribution) { display: none; }

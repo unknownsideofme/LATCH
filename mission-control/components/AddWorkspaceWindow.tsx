@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
 import { apiUrl } from "@/lib/api";
 import { DirectoryPicker } from "./DirectoryPicker";
+import { Button } from "@/components/ui/button";
 import ui from "@/styles/ui.module.css";
 
 type Repo = {
@@ -464,18 +465,26 @@ export function AddWorkspaceWindow() {
                 </>
               )}
             </div>
-            <button className={`${ui.chip} ${ui.ghost}`} onClick={close}>
-              Cancel
-            </button>
-            <button className={ui.syncBtn} onClick={submit} disabled={!canSubmit || busy}>
-              {busy
-                ? "Working…"
-                : source === "room"
-                  ? "Join room"
-                  : source === "local"
-                    ? "Add repository"
-                    : "Clone repository"}
-            </button>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="default" className="h-9 px-4 text-xs font-semibold" onClick={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                size="default"
+                className="h-9 px-4 text-xs font-semibold"
+                onClick={submit}
+                disabled={!canSubmit || busy}
+              >
+                {busy
+                  ? "Working…"
+                  : source === "room"
+                    ? "Join room"
+                    : source === "local"
+                      ? "Add repository"
+                      : "Clone repository"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

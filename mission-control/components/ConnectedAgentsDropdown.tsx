@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
 import type { Agent } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import ui from "@/styles/ui.module.css";
 
 // Brand icon + ring accent
@@ -51,14 +53,20 @@ function AgentRow({ agent }: { agent: Agent }) {
           {agent.sessionId && agent.status === "connected" ? ` · ${agent.sessionId}` : ""}
         </span>
       </div>
-      {!mine && <span className={`${ui.badge} ${ui.theirs}`}>theirs</span>}
-      <button
-        className={`${ui.chip} ${agent.status === "connected" ? "" : ui.ghost}`}
+      {!mine && (
+        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 border border-[var(--border-soft)]">
+          theirs
+        </Badge>
+      )}
+      <Button
+        variant={agent.status === "connected" ? "default" : "outline"}
+        size="sm"
+        className="h-7 text-xs px-2.5 font-medium"
         onClick={() => handshake(agent)}
         disabled={agent.status === "handshaking"}
       >
         {label}
-      </button>
+      </Button>
     </div>
   );
 }

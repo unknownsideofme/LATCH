@@ -2,6 +2,7 @@
 
 import { useRelay } from "@/lib/RelayContext";
 import { MarkdownView, plainPreview } from "@/lib/markdown";
+import { Badge } from "@/components/ui/badge";
 import ui from "@/styles/ui.module.css";
 
 export function MemoryPanel() {
@@ -10,14 +11,14 @@ export function MemoryPanel() {
   return (
     <>
       <article className={ui.card}>
-        <h3>memory.json</h3>
+        <h3 className="font-[var(--mono)] text-sm font-semibold">memory.json</h3>
         <p style={{ color: "var(--muted)", margin: "4px 0 0" }}>
           {dashboard.memory?.historyCount ?? dashboard.history?.length ?? 0} events · {dashboard.memory?.chatCount ?? dashboard.chats.length} chats · {dashboard.memory?.editCount ?? dashboard.edits.length} edits
         </p>
       </article>
       {(dashboard.conflicts || []).map((c) => (
         <article className={ui.card} key={c.file}>
-          <h3>Conflict · {c.file}</h3>
+          <h3 className="font-[var(--mono)] text-sm font-semibold text-[var(--red)]">Conflict · {c.file}</h3>
           <p style={{ color: "var(--amber)", margin: "4px 0 0" }}>{c.agents.join(" + ")}</p>
         </article>
       ))}
@@ -25,7 +26,12 @@ export function MemoryPanel() {
         <details className={ui.card} key={seg.id}>
           <summary className={ui.rowBetween}>
             <h3>{seg.agent} · {seg.events.length}</h3>
-            <span className={seg.mine ? `${ui.badge} ${ui.mine}` : `${ui.badge} ${ui.theirs}`}>{seg.mine ? "you" : `@${seg.ownerLogin}`}</span>
+            <Badge
+              variant={seg.mine ? "default" : "secondary"}
+              className="text-[11px] px-2 py-0.5 font-medium"
+            >
+              {seg.mine ? "you" : `@${seg.ownerLogin}`}
+            </Badge>
           </summary>
           <p className={ui.clamp} style={{ color: "var(--muted)", margin: "8px 0 0" }}>
             {seg.events.map((ev) => ev.file || plainPreview(ev.text || "", 80)).filter(Boolean).slice(0, 3).join(" · ")}

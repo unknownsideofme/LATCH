@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
 import { apiUrl } from "@/lib/api";
 import { NoticeBell } from "./NoticeCenter";
+import { ThemeToggle } from "./ThemeToggle";
+import { Button } from "@/components/ui/button";
 import ui from "@/styles/ui.module.css";
 
 function fetchedLabel(ts: number | null, now: number) {
@@ -189,15 +191,18 @@ export function TopNavbar() {
           <span className={ui.navStatusDot} />
           <span className={ui.navStatusText} suppressHydrationWarning>{syncing ? "Syncing…" : fetchedLabel(fetched, now)}</span>
         </span>
-        <button
-          className={`${ui.navSync} ${syncing ? ui.navSyncing : ""}`}
+        <Button
+          variant="outline"
+          size="sm"
+          className={`h-7 px-2.5 gap-1.5 font-medium border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elev)] shadow-none text-[12.5px] ${syncing ? ui.navSyncing : ""}`}
           onClick={sync}
           disabled={syncing || !project}
           title="Sync this workspace"
         >
           <span className={ui.navSyncGlyph} aria-hidden>↻</span>
-          <span className={ui.navSyncLabel}>Sync</span>
-        </button>
+          <span>Sync</span>
+        </Button>
+        <ThemeToggle />
         <NoticeBell />
         <AccountMenu />
       </div>

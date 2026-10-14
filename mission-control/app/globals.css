@@ -1,206 +1,417 @@
 :root {
   /* ==========================================================================
-     OrbitOS 2.0 theme — monochrome.
-     Pure black surfaces, white as the only chrome accent. Colour appears ONLY
-     where it carries meaning (agent brand logos, lock/conflict status, diffs).
-
-     Hard rule kept from the last pass: every surface is a SOLID colour. No
-     rgba-over-black, no backdrop blur, no see-through chips.
+     LATCH Architectural Theme — Complete Light Tokens
+     - Main Background: #F2EEE8
+     - Cards: #FFFCF8
+     - Elevated Surfaces: #FFFFFF
+     - Primary Text: #302925
+     - Secondary Text: #776F67
+     - Primary Accent: #7A3438
+     - Accent Hover: #64292D
+     - Copper Highlight: #C28C62
+     - Borders: #DDD3C9
+     - Subtle Surface: #EAE3DA
+     - Success: #34734B
+     - Warning: #91601E
+     - Error: #B53F3F
      ========================================================================== */
 
-  /* Surfaces — flat black. Chrome is separated by spacing and type, not by
-     grey fills or bright edges. Borders are hairlines you feel, not see. */
-  --bg: #000000;
-  --bg-rail: #000000;
-  --panel: #000000;
-  --panel-2: #070707;
-  --elev: #0b0b0b;
-  --elev-2: #161616;
-  --border: #1a1a1a;
-  --border-soft: #101010;
-  --sunken: #060606;
-  --scrim: #000000;
+  color-scheme: light;
 
-  /* Type */
-  --text: #ffffff;
-  --muted: #8c8c8c;
-  --faint: #5a5a5a;
-  --code: #d0d0d0;
+  /* Surfaces */
+  --bg: #F2EEE8;
+  --bg-rail: #EAE3DA;
+  --panel: #F7F3ED;
+  --panel-2: #FFFCF8;
+  --card: #FFFCF8;
+  --card-foreground: #302925;
+  --elev: #FFFFFF;
+  --elev-2: #F2EEE8;
+  --border: #DDD3C9;
+  --border-soft: #EAE3DA;
+  --sunken: #EAE3DA;
+  --subtle: #EAE3DA;
+  --scrim: rgba(48, 41, 37, 0.55);
 
-  /* Accent = white. Buttons invert to black ink. */
-  --accent: #ffffff;
-  --accent-hover: #e2e2e2;
-  --accent-deep: #1a1a1a;
-  --accent-edge: #3d3d3d;
-  --accent-ink: #000000;
+  /* Typography */
+  --font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Manrope", sans-serif;
+  --font-warm: "DM Sans", "Manrope", sans-serif;
+  --mono: "IBM Plex Mono", "SF Mono", monospace;
 
-  /* Back-compat: older rules still reference --amber as "the accent". */
-  --amber: #ffffff;
-  --amber-dim: #1a1a1a;
+  /* Type Colors */
+  --text: #302925;
+  --foreground: #302925;
+  --muted: #776F67;
+  --muted-foreground: #776F67;
+  --faint: #9A9188;
+  --code: #5A272A;
 
-  /* Status — the only colour in the chrome, because it means something */
-  --green: #3dd68c;
-  --green-dim: #0b2419;
-  --red: #ff6b6b;
-  --red-dim: #2a1212;
-  --red-edge: #4d2020;
-  --red-text: #ffb4b0;
-  --yellow: #e3b341;
-  --yellow-dim: #2a2109;
-  --blue: #6cb6ff;
-  --blue-dim: #0e1c2b;
-  --blue-edge: #24384d;
-  --violet: #b794f4;
-  --violet-dim: #1c1329;
-  --diff-add: #6ee7a0;
-  --diff-del: #ff8d8d;
+  /* Primary Accent = Burgundy */
+  --accent: #7A3438;
+  --accent-hover: #64292D;
+  --accent-deep: #522225;
+  --accent-edge: #94454A;
+  --accent-ink: #FFFFFF;
+  --primary: #7A3438;
+  --primary-foreground: #FFFFFF;
 
-  /* Coordinator board STATE colours.
-     Validated against the black surface: all clear 3:1, and each state also
-     ships an icon + word in the UI so meaning never rests on colour alone.
-     (Agent identity is NOT colour-coded — only three hues stay separable for
-     colour-blind viewers under all-pairs testing, and there are five agents.) */
-  --holding: #0ca30c;
-  --waiting: #fab219;
-  --clash:   #d03b3b;
-  --idle:    #6a6a6a;
+  /* Secondary Accent = Copper */
+  --copper: #C28C62;
+  --copper-hover: #AB7850;
+  --copper-ink: #FFFFFF;
+  --secondary: #C28C62;
+  --secondary-foreground: #FFFFFF;
 
-  /* Per-agent brand accents — logos keep their own identity */
-  --agent-claude: #d97757;
-  --agent-cursor: #b9c0cc;
-  --agent-codex: #10a37f;
-  --agent-copilot: #6cb6ff;
-  --agent-antigravity: #4285f4;
+  /* Back-compat aliases */
+  --amber: #C28C62;
+  --amber-dim: #F4EAE0;
 
-  --shadow: 0 18px 50px rgba(0, 0, 0, 0.75);
-  --radius: 3px;
-  --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", "Cascadia Code", ui-monospace, monospace;
+  /* Semantic Statuses */
+  --green: #34734B;
+  --green-dim: #E8F4EC;
+  --red: #B53F3F;
+  --red-dim: #FBEBED;
+  --red-edge: #E0B4B6;
+  --red-text: #7A1C20;
+  --yellow: #91601E;
+  --yellow-dim: #FAF1E0;
+  --blue: #2E6592;
+  --blue-dim: #EAF1F7;
+  --blue-edge: #BED2E3;
+  --violet: #73488F;
+  --violet-dim: #F3EDF7;
+  --diff-add: #34734B;
+  --diff-del: #B53F3F;
+
+  /* Coordinator board STATE colours */
+  --holding: #34734B;
+  --waiting: #91601E;
+  --clash:   #B53F3F;
+  --idle:    #776F67;
+
+  /* Agent brand accents */
+  --agent-claude: #C46243;
+  --agent-cursor: #5A6578;
+  --agent-codex: #0F8567;
+  --agent-copilot: #2E6592;
+  --agent-antigravity: #3367D6;
+
+  --shadow: 0 4px 20px rgba(48, 41, 37, 0.08), 0 1px 3px rgba(48, 41, 37, 0.05);
+  --shadow-lg: 0 14px 38px rgba(48, 41, 37, 0.12), 0 4px 12px rgba(48, 41, 37, 0.06);
+  --radius: 8px;
+}
+
+/* ==========================================================================
+   LATCH Architectural Theme — Complete Dark Mode Tokens
+   - Main Background: #211D1B
+   - Cards: #2B2522
+   - Elevated Surfaces: #342B27
+   - Primary Text: #F2EEE8
+   - Secondary Text: #B8ACA4
+   - Primary Accent: #A85459
+   - Accent Hover: #BC686C
+   - Copper Highlight: #D8A17D
+   - Borders: #51413B
+   - Subtle Surface: #302925
+   - Success: #8FC3A0
+   - Warning: #E7BB79
+   - Error: #F08D86
+   ========================================================================== */
+
+:root[data-theme="dark"],
+html.dark {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg: #211D1B;
+  --bg-rail: #1C1917;
+  --panel: #27211E;
+  --panel-2: #2B2522;
+  --card: #2B2522;
+  --card-foreground: #F2EEE8;
+  --elev: #342B27;
+  --elev-2: #3E342F;
+  --border: #51413B;
+  --border-soft: #3E322D;
+  --sunken: #1C1816;
+  --subtle: #302925;
+  --scrim: rgba(0, 0, 0, 0.72);
+
+  /* Type Colors */
+  --text: #F2EEE8;
+  --foreground: #F2EEE8;
+  --muted: #B8ACA4;
+  --muted-foreground: #B8ACA4;
+  --faint: #8A7E76;
+  --code: #E8B4B8;
+
+  /* Primary Accent = Burgundy */
+  --accent: #A85459;
+  --accent-hover: #BC686C;
+  --accent-deep: #4E2528;
+  --accent-edge: #C27075;
+  --accent-ink: #FFFFFF;
+  --primary: #A85459;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary Accent = Copper */
+  --copper: #D8A17D;
+  --copper-hover: #E4B595;
+  --copper-ink: #1C1917;
+  --secondary: #D8A17D;
+  --secondary-foreground: #1C1917;
+
+  /* Back-compat aliases */
+  --amber: #D8A17D;
+  --amber-dim: #382A1E;
+
+  /* Semantic Statuses */
+  --green: #8FC3A0;
+  --green-dim: #1C2D22;
+  --red: #F08D86;
+  --red-dim: #381B1A;
+  --red-edge: #6B2E2C;
+  --red-text: #F8B4B0;
+  --yellow: #E7BB79;
+  --yellow-dim: #32281A;
+  --blue: #7EAED6;
+  --blue-dim: #1A2833;
+  --blue-edge: #2E4557;
+  --violet: #BFA0D6;
+  --violet-dim: #2A1D33;
+  --diff-add: #8FC3A0;
+  --diff-del: #F08D86;
+
+  /* Coordinator board STATE colours */
+  --holding: #8FC3A0;
+  --waiting: #E7BB79;
+  --clash:   #F08D86;
+  --idle:    #8A7E76;
+
+  /* Agent brand accents (adjusted for dark mode visibility) */
+  --agent-claude: #DE7B5C;
+  --agent-cursor: #8E98AA;
+  --agent-codex: #1EB890;
+  --agent-copilot: #5A94C7;
+  --agent-antigravity: #5C8BF0;
+
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 14px 38px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    /* Surfaces */
+    --bg: #211D1B;
+    --bg-rail: #1C1917;
+    --panel: #27211E;
+    --panel-2: #2B2522;
+    --card: #2B2522;
+    --card-foreground: #F2EEE8;
+    --elev: #342B27;
+    --elev-2: #3E342F;
+    --border: #51413B;
+    --border-soft: #3E322D;
+    --sunken: #1C1816;
+    --subtle: #302925;
+    --scrim: rgba(0, 0, 0, 0.72);
+
+    /* Type Colors */
+    --text: #F2EEE8;
+    --foreground: #F2EEE8;
+    --muted: #B8ACA4;
+    --muted-foreground: #B8ACA4;
+    --faint: #8A7E76;
+    --code: #E8B4B8;
+
+    /* Primary Accent = Burgundy */
+    --accent: #A85459;
+    --accent-hover: #BC686C;
+    --accent-deep: #4E2528;
+    --accent-edge: #C27075;
+    --accent-ink: #FFFFFF;
+    --primary: #A85459;
+    --primary-foreground: #FFFFFF;
+
+    /* Secondary Accent = Copper */
+    --copper: #D8A17D;
+    --copper-hover: #E4B595;
+    --copper-ink: #1C1917;
+    --secondary: #D8A17D;
+    --secondary-foreground: #1C1917;
+
+    /* Back-compat aliases */
+    --amber: #D8A17D;
+    --amber-dim: #382A1E;
+
+    /* Semantic Statuses */
+    --green: #8FC3A0;
+    --green-dim: #1C2D22;
+    --red: #F08D86;
+    --red-dim: #381B1A;
+    --red-edge: #6B2E2C;
+    --red-text: #F8B4B0;
+    --yellow: #E7BB79;
+    --yellow-dim: #32281A;
+    --blue: #7EAED6;
+    --blue-dim: #1A2833;
+    --blue-edge: #2E4557;
+    --violet: #BFA0D6;
+    --violet-dim: #2A1D33;
+    --diff-add: #8FC3A0;
+    --diff-del: #F08D86;
+
+    /* Coordinator board STATE colours */
+    --holding: #8FC3A0;
+    --waiting: #E7BB79;
+    --clash:   #F08D86;
+    --idle:    #8A7E76;
+
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 14px 38px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
 }
 
 * { box-sizing: border-box; }
-html, body, #__next { height: 100%; overflow: hidden; color-scheme: dark; }
+html, body, #__next { height: 100%; overflow: hidden; }
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 13px;
-  letter-spacing: 0.01em;
+  font-size: 14.5px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
-button, input, textarea, select { font-family: inherit; color: inherit; background: var(--elev); }
+button, input, textarea, select {
+  font-family: var(--font);
+  color: inherit;
+  background: var(--elev);
+}
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 a { color: var(--accent); }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #333333 transparent;
+  scrollbar-color: var(--border) transparent;
 }
-*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: var(--border);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-*::-webkit-scrollbar-thumb:hover { background: #4a4a4a; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: padding-box; }
 *::-webkit-scrollbar-corner { background: transparent; }
 
-/* Solid panel (OrbitOS "glass" panel, de-transparent) */
+/* Solid panel */
 .glass-panel {
-  background: var(--panel);
+  background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: var(--shadow);
 }
 
 .section-title {
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--faint);
-  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-weight: 750;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-family: var(--font-display);
 }
 
 @keyframes pulse-active {
-  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35); }
-  70% { box-shadow: 0 0 0 7px rgba(255, 255, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(122, 52, 56, 0.4); }
+  70% { box-shadow: 0 0 0 7px rgba(122, 52, 56, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(122, 52, 56, 0); }
 }
 
 @keyframes pulse-warning {
-  0% { box-shadow: 0 0 0 0 rgba(227, 179, 65, 0.4); }
-  70% { box-shadow: 0 0 0 7px rgba(227, 179, 65, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(227, 179, 65, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(184, 122, 30, 0.4); }
+  70% { box-shadow: 0 0 0 7px rgba(184, 122, 30, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(184, 122, 30, 0); }
 }
 
 @keyframes pulse-critical {
-  0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
-  70% { box-shadow: 0 0 0 7px rgba(255, 107, 107, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(168, 50, 54, 0.4); }
+  70% { box-shadow: 0 0 0 7px rgba(168, 50, 54, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(168, 50, 54, 0); }
 }
 
 .md {
   word-break: break-word;
   overflow-wrap: anywhere;
+  font-family: var(--font-sans);
 }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
-.md p { margin: 0 0 0.65em; line-height: 1.5; }
+.md p { margin: 0 0 0.65em; line-height: 1.55; }
 .md p:last-child { margin-bottom: 0; }
 .md h1, .md h2, .md h3, .md h4 {
   margin: 0.85em 0 0.4em;
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.3;
   color: var(--text);
+  font-family: var(--font);
 }
-.md h1 { font-size: 15px; }
-.md h2 { font-size: 14px; }
-.md h3, .md h4 { font-size: 13px; }
+.md h1 { font-size: 17px; }
+.md h2 { font-size: 15.5px; }
+.md h3, .md h4 { font-size: 14px; }
 .md ul, .md ol { margin: 0.4em 0 0.7em; padding-left: 1.3em; }
-.md li { margin: 0.2em 0; }
+.md li { margin: 0.25em 0; }
 .md li > p { margin: 0; }
 .md blockquote {
   margin: 0.5em 0;
-  padding: 4px 0 4px 10px;
-  border-left: 2px solid var(--accent);
+  padding: 4px 0 4px 12px;
+  border-left: 3px solid var(--accent);
   color: var(--muted);
+  background: var(--panel);
+  border-radius: 0 4px 4px 0;
 }
 .md hr {
   border: 0;
   border-top: 1px solid var(--border);
-  margin: 10px 0;
+  margin: 12px 0;
 }
 .md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .md table {
   width: 100%;
   border-collapse: collapse;
   margin: 0.6em 0;
-  font-size: 11px;
+  font-size: 12.5px;
+  font-family: var(--font-sans);
 }
 .md th, .md td {
   border: 1px solid var(--border);
-  padding: 4px 7px;
+  padding: 6px 10px;
   text-align: left;
 }
-.md th { background: var(--elev); color: var(--text); }
+.md th { background: var(--elev); color: var(--text); font-weight: 650; }
 .md pre {
   margin: 0.55em 0;
-  padding: 8px 10px;
-  background: var(--sunken);
+  padding: 10px 12px;
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: auto;
@@ -208,19 +419,20 @@ a { color: var(--accent); }
 }
 .md-code {
   font-family: var(--mono);
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--code);
   white-space: pre;
   display: block;
 }
 .md-inline {
   font-family: var(--mono);
-  font-size: 0.92em;
+  font-size: 0.9em;
   background: var(--elev);
   border: 1px solid var(--border-soft);
-  border-radius: 3px;
-  padding: 0 4px;
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--code);
 }
 .md-img { max-width: 100%; border-radius: var(--radius); margin: 6px 0; }
 .md-clamp {
@@ -229,7 +441,7 @@ a { color: var(--accent); }
   -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
   mask-image: linear-gradient(to bottom, #000 62%, transparent);
 }
-.md strong { font-weight: 650; color: var(--text); }
+.md strong { font-weight: 700; color: var(--text); }
 .md em { color: var(--text); }
 .md input[type="checkbox"] {
   accent-color: var(--accent);
