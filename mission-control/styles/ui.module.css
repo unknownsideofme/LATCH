@@ -1358,6 +1358,51 @@
   font-weight: 700;
 }
 
+.statGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.statCard {
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.statLabel {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 700;
+}
+.statValue {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--mono);
+  line-height: 1.2;
+  margin: 2px 0 1px;
+}
+.statValueAccent {
+  color: var(--accent);
+}
+.statValueWarning {
+  color: var(--yellow);
+}
+.statSub {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ------------------------------ Modals ------------------------------ */
 
 .modalBack {
