@@ -286,9 +286,25 @@
     }
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", ready);
-  } else {
-    ready();
+  if (typeof document !== "undefined") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", ready);
+    } else {
+      ready();
+    }
+  }
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+      esc: esc,
+      wrap: wrap,
+      hlBash: hlBash,
+      hlJson: hlJson,
+      hlDiff: hlDiff,
+      hlOutput: hlOutput,
+      HIGHLIGHTERS: HIGHLIGHTERS,
+      decorate: decorate,
+      ready: ready,
+    };
   }
 })();

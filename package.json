@@ -17,7 +17,12 @@
     "start": "node backend/server.js --port 3001",
     "coordinator": "node backend/coordinator/server.js",
     "check:db": "node backend/supabase/check-connection.js",
-    "test": "node --test \"backend/**/*.test.js\""
+    "test": "node --test \"tests/**/*.test.js\"",
+    "test:backend": "node --test \"tests/backend/**/*.test.js\"",
+    "test:mission-control": "node --test \"tests/mission-control/**/*.test.js\"",
+    "test:landing": "node --test \"tests/landing/**/*.test.js\"",
+    "test:unit": "node --test \"tests/**/unit/*.test.js\"",
+    "test:e2e": "node --test \"tests/**/e2e/*.test.js\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

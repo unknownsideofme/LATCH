@@ -51,7 +51,7 @@ export type GEdge = { id: string; agentId: string; fileId: string; kind: EdgeKin
 
 export type LockGraph = { users: GUser[]; files: GFile[]; edges: GEdge[]; empty: boolean };
 
-function parseAgentId(agentId: string) {
+export function parseAgentId(agentId: string) {
   let raw = String(agentId || "");
   let loginFromAt: string | null = null;
   const atIdx = raw.lastIndexOf("@");
@@ -64,7 +64,7 @@ function parseAgentId(agentId: string) {
 }
 
 /** Stable per-agent key. The session segment churns on every new run. */
-function agentKey(agentId: string) {
+export function agentKey(agentId: string) {
   const { label, host, login } = parseAgentId(agentId);
   return `${login ? login + "::" : ""}${label}:${host}`;
 }
@@ -79,7 +79,7 @@ function agentKey(agentId: string) {
  *   3. otherwise, if every lock came from one host, it is this user,
  *   4. otherwise fall back to grouping by hostname.
  */
-function makeResolveUser(
+export function makeResolveUser(
   locks: { agentId: string; holder?: FileLock["holder"] }[],
   me: User | null,
   collaborators: Collaborator[],

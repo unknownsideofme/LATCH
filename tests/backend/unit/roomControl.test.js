@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert");
-const { RoomControl } = require("./roomControl");
+const { RoomControl } = require("../../../backend/lib/roomControl");
 
 // A socket that answers every rpc, so flush() can be observed end to end.
 function fakeSocket({ fail = false, sent = [] } = {}) {

@@ -584,4 +584,21 @@ function neuralize() {
     addClass("ellipse", "animateCircles");
 }
 
-neuralize();
+if (typeof document !== "undefined") {
+    neuralize();
+}
+
+if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+        complimentary,
+        complimentary2,
+        complimentary3,
+        corrected,
+        randNum,
+        addClass,
+        setColors,
+        animateSVGs,
+        neuralize,
+        svg,
+    };
+}

@@ -2,15 +2,20 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { isSupabaseConfigured, loadSupabaseConfig } = require("./client");
-const { SupabaseLockAdapter } = require("./SupabaseLockAdapter");
-const { SupabaseSyncAdapter } = require("./SupabaseSyncAdapter");
+const { isSupabaseConfigured, loadSupabaseConfig } = require("../../../backend/supabase/client");
+const { SupabaseLockAdapter } = require("../../../backend/supabase/SupabaseLockAdapter");
+const { SupabaseSyncAdapter } = require("../../../backend/supabase/SupabaseSyncAdapter");
 
 test("Supabase: config loader returns object", () => {
   const config = loadSupabaseConfig();
   assert.ok(typeof config === "object");
   assert.ok("url" in config);
   assert.ok("key" in config);
+});
+
+test("Supabase: isSupabaseConfigured returns boolean", () => {
+  const configured = isSupabaseConfigured();
+  assert.equal(typeof configured, "boolean");
 });
 
 test("Supabase: lock adapter initializes and handles unconfigured environment gracefully", async () => {
@@ -35,6 +40,13 @@ test("Supabase: lock adapter initializes and handles unconfigured environment gr
       agentId: "test-agent",
     });
     assert.equal(releaseResult, null);
+
+    const hbResult = await adapter.heartbeat({
+      workspaceId: "test-ws",
+      file: "test.ts",
+      agentId: "test-agent",
+    });
+    assert.equal(hbResult, null);
   }
 });
 
@@ -50,5 +62,8 @@ test("Supabase: sync adapter initializes and handles unconfigured environment gr
       ownerLogin: "dev",
     });
     assert.equal(published, false);
+
+    const read = await sync.getPendingPatches("test-ws", 0);
+    assert.deepEqual(read, []);
   }
 });

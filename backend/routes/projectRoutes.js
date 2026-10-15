@@ -413,6 +413,7 @@ function createProjectRoutes({
       limit,
     });
     let written = null;
+    if (writeFile) {
       const latchOut = path.join(project.path, ".latch", "latch_ask.md");
       const relayOut = path.join(project.path, ".relay", "relay_ask.md");
       try {

@@ -3,7 +3,7 @@
 // so it can shell out to the GitHub CLI directly — the Latch backend is not
 // involved and is not modified by this feature.
 
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server.js';
 import { spawn } from 'child_process';
 
 type GhRepo = {
