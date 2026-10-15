@@ -52,14 +52,21 @@ export type GEdge = { id: string; agentId: string; fileId: string; kind: EdgeKin
 export type LockGraph = { users: GUser[]; files: GFile[]; edges: GEdge[]; empty: boolean };
 
 function parseAgentId(agentId: string) {
-  const [label, host, session] = String(agentId || "").split(":");
-  return { label: label || "agent", host: host || "", session: session || "" };
+  let raw = String(agentId || "");
+  let loginFromAt: string | null = null;
+  const atIdx = raw.lastIndexOf("@");
+  if (atIdx !== -1) {
+    loginFromAt = raw.slice(atIdx + 1);
+    raw = raw.slice(0, atIdx);
+  }
+  const [label, host, session] = raw.split(":");
+  return { label: label || "agent", host: host || "", session: session || "", login: loginFromAt };
 }
 
 /** Stable per-agent key. The session segment churns on every new run. */
 function agentKey(agentId: string) {
-  const { label, host } = parseAgentId(agentId);
-  return `${label}:${host}`;
+  const { label, host, login } = parseAgentId(agentId);
+  return `${login ? login + "::" : ""}${label}:${host}`;
 }
 
 /**
@@ -68,8 +75,9 @@ function agentKey(agentId: string) {
  * Locks identify a MACHINE, not a GitHub account: the hook sends
  * `holder: { label, host }` even though the type declares `login`. So:
  *   1. use holder.login when it is ever populated (future-proof),
- *   2. otherwise, if every lock came from one host, it is this user,
- *   3. otherwise fall back to grouping by hostname.
+ *   2. otherwise, if agentId ends with @login, use that,
+ *   3. otherwise, if every lock came from one host, it is this user,
+ *   4. otherwise fall back to grouping by hostname.
  */
 function makeResolveUser(
   locks: { agentId: string; holder?: FileLock["holder"] }[],
@@ -83,14 +91,15 @@ function makeResolveUser(
   const singleHost = hosts.size <= 1 && !shared;
 
   return (agentId: string, holder?: FileLock["holder"]): { key: string; login: string; name: string; avatarUrl: string | null } => {
-    const login = (holder as { login?: string } | null | undefined)?.login;
+    const parsed = parseAgentId(agentId);
+    const login = (holder as { login?: string } | null | undefined)?.login || parsed.login;
     if (login) {
       // Logins reach us from three places (hook, room roster, GitHub) and only
       // agree case-insensitively.
       const c = collaborators.find((x) => String(x.login).toLowerCase() === String(login).toLowerCase());
       return { key: login.toLowerCase(), login, name: c?.name || login, avatarUrl: c?.avatarUrl || null };
     }
-    const { host } = parseAgentId(agentId);
+    const host = parsed.host;
     if (singleHost && me) {
       return { key: me.login, login: me.login, name: me.name || me.login, avatarUrl: me.avatarUrl || null };
     }
@@ -136,15 +145,19 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
     };
 
     const ensureAgent = (agentId: string, holder: FileLock["holder"] | undefined) => {
-      const key = agentKey(agentId);
-      if (!agents.has(key)) {
-        const { label, host } = parseAgentId(agentId);
-        const u = ensureUser(resolveUser(agentId, holder));
-        const a: GAgent = { id: key, label: holder?.label || label, host, userKey: u.key, state: "idle" };
-        agents.set(key, a);
-        u.agents.push(a);
+      const u = ensureUser(resolveUser(agentId, holder));
+      const { label, host } = parseAgentId(agentId);
+      const cleanLabel = holder?.label || label;
+      let existing = u.agents.find((a) => a.label.toLowerCase() === cleanLabel.toLowerCase());
+      if (existing) {
+        if (host && !existing.host) existing.host = host;
+        return existing;
       }
-      return agents.get(key)!;
+      const key = `${u.key}::${cleanLabel.toLowerCase()}${host ? ":" + host : ""}`;
+      const a: GAgent = { id: key, label: cleanLabel, host, userKey: u.key, state: "idle" };
+      agents.set(key, a);
+      u.agents.push(a);
+      return a;
     };
 
     // --- files + hold edges from WRITE locks only. Reads are presence, not
@@ -206,20 +219,26 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
     for (const edit of dashboard?.edits ?? []) {
       const fileId = String(edit.file || "").replace(/\\/g, "/");
       if (!fileId || now - (edit.ts || 0) > GLOW_MS) continue;
-      if (files.has(fileId)) continue;
-      files.set(fileId, {
-        id: fileId, path: fileId, holder: null, reader: null,
-        ttl: 0, secondsLeft: 0, waiting: 0, clashUsers: [],
-      });
+      if (!files.has(fileId)) {
+        files.set(fileId, {
+          id: fileId, path: fileId, holder: null, reader: null,
+          ttl: 0, secondsLeft: 0, waiting: 0, clashUsers: [],
+        });
+      }
       const f = files.get(fileId)!;
       const agentId = `${edit.agent}:${edit.ownerLogin || "local"}`;
       const agent = ensureAgent(agentId, { label: edit.agent, login: edit.ownerLogin });
       const left = Math.max(0, GLOW_MS - (now - edit.ts));
-      f.holder = agent.label;
-      f.ttl = left / GLOW_MS;
-      f.secondsLeft = Math.ceil(left / 1000);
+      if (!f.holder) {
+        f.holder = agent.label;
+        f.ttl = left / GLOW_MS;
+        f.secondsLeft = Math.ceil(left / 1000);
+      }
       agent.state = "hold";
-      edges.push({ id: `e-${agent.id}-${fileId}`, agentId: agent.id, fileId, kind: "hold" });
+      const edgeId = `e-${agent.id}-${fileId}`;
+      if (!edges.some((e) => e.id === edgeId || (e.agentId === agent.id && e.fileId === fileId))) {
+        edges.push({ id: edgeId, agentId: agent.id, fileId, kind: "hold" });
+      }
     }
 
     // --- clash: one file, two distinct people ---
@@ -260,14 +279,13 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
     for (const a of known) {
       if (a.status !== "connected") continue;
       const label = String(a.label || "");
-      // match on label, not on a synthesised key — an agent that holds a lock is
-      // keyed "claude:HOST" and must not be duplicated as a second idle node
-      const already = [...agents.values()].some(
+      const u = ensureUser(resolveUser(a.id || label, { label: a.label, login: a.ownerLogin }));
+      const already = u.agents.some(
         (x) => x.label.toLowerCase() === label.toLowerCase()
       );
       if (already) continue;
-      const u = ensureUser(resolveUser(label, null));
-      const node: GAgent = { id: `idle:${label}`, label, host: "", userKey: u.key, state: "idle" };
+      const nodeId = `${u.key}::idle:${label.toLowerCase()}`;
+      const node: GAgent = { id: nodeId, label, host: "", userKey: u.key, state: "idle" };
       agents.set(node.id, node);
       u.agents.push(node);
     }

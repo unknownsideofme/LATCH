@@ -125,7 +125,7 @@ class GuestClient {
         if (msg.type === "locks") {
           const current = loadRoom();
           if (msg.workspaceId && current?.hostProjectId && msg.workspaceId !== current.hostProjectId) return;
-          this.roomService.roomLocks.accept(msg.locks);
+          this.roomService.roomLocks.accept(msg.locks, { reads: msg.reads });
           return;
         }
         if (msg.type === "state" || msg.type === "hello") {

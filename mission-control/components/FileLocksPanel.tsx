@@ -141,16 +141,33 @@ export function FileLocksPanel() {
   const connected = dashboard?.agents.filter((a) => a.status === "connected") || [];
   const locks = dashboard?.locks || [];
   const reads = dashboard?.reads || [];
-  const fromLocks = [...new Map(locks.map((l) => [l.agentId, l])).values()].map((l) => {
+
+  const sessionMap = new Map<string, { id: string; label: string; sessionId?: string; ownerLogin?: string }>();
+  for (const a of connected) {
+    const key = `${a.ownerLogin || "local"}::${a.label}`;
+    sessionMap.set(key, {
+      id: a.id,
+      label: a.label,
+      sessionId: a.sessionId,
+      ownerLogin: a.ownerLogin,
+    });
+  }
+  for (const l of locks) {
     const parsed = parseAgent(l.agentId);
-    return {
-      id: l.agentId,
-      label: l.holder?.label || parsed.label,
-      sessionId: parsed.session,
-      ownerLogin: l.holder?.login || parsed.machine,
-    };
-  });
-  const sessions = connected.length ? connected : fromLocks;
+    const atMatch = String(l.agentId || "").match(/@([^:]+)$/);
+    const owner = l.holder?.login || (atMatch ? atMatch[1] : parsed.machine);
+    const label = l.holder?.label || parsed.label;
+    const key = `${owner || "local"}::${label}`;
+    if (!sessionMap.has(key)) {
+      sessionMap.set(key, {
+        id: l.agentId,
+        label,
+        sessionId: parsed.session,
+        ownerLogin: owner,
+      });
+    }
+  }
+  const sessions = Array.from(sessionMap.values());
   const collisions = dashboard?.stats?.collisions;
   const saved = collisions?.totalSaved ?? 0;
   const roomScope = collisions?.scope === "room";

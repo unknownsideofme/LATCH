@@ -125,10 +125,11 @@ async function main() {
   lockTable.on("change", (evt) => {
     const ws = evt?.entry?.workspaceId || evt?.workspaceId;
     const room = loadRoom();
+    const curr = ContextService.currentProject();
     const project = ws
       ? loadRegistry().projects.find((p) => normalizeCompare(p.path) === normalizeCompare(ws)) ||
-        loadRegistry().projects.find((p) => p.id === room?.hostProjectId)
-      : null;
+        loadRegistry().projects.find((p) => p.id === room?.hostProjectId) || curr
+      : (curr || (room?.hostProjectId ? loadRegistry().projects.find((p) => p.id === room?.hostProjectId) : null));
     const scope = project
       ? lockService.lockScope(project.id)
       : room?.role === "guest" && room.projectId

@@ -1,8 +1,11 @@
 
 
 [mcp_servers.relay]
-command = "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node"
-args = ["/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"]
+command = "C:/Program Files/nodejs/node.exe"
+args = ["C:/latch/LATCH/backend/mcp/server.js"]
+
+[mcp_servers.relay.env]
+RELAY_WORKSPACE_PATH = "C:/latch/LATCH"
 
 [mcp_servers.relay.env]
 RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"

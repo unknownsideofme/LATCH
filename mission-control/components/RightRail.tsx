@@ -12,9 +12,9 @@ function formatTokens(count: number): string {
 
 export function RightRail() {
   const { dashboard } = useRelay();
-  if (!dashboard) return <aside className={ui.right} />;
 
   const { totalTokens, avgTokens } = useMemo(() => {
+    if (!dashboard) return { totalTokens: 0, avgTokens: 0 };
     let chars = 0;
     for (const h of dashboard.history || []) {
       chars += (h.text || "").length + (h.diff || "").length;
@@ -31,7 +31,9 @@ export function RightRail() {
     const events = Math.max(1, (dashboard.history || []).length);
     const avg = Math.round(tokens / events);
     return { totalTokens: tokens, avgTokens: avg };
-  }, [dashboard.history, dashboard.chats, dashboard.edits]);
+  }, [dashboard?.history, dashboard?.chats, dashboard?.edits]);
+
+  if (!dashboard) return <aside className={ui.right} />;
 
   const activeLocks = (dashboard.locks || []).filter((l) => !l.released).length;
   const conflictsCount = (dashboard.conflicts || []).length;
