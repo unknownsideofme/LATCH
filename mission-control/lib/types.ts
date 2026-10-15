@@ -256,7 +256,6 @@ export type Dashboard = {
 };
 
 export type TabId =
-  | "activity"
   | "chat"
   | "edits"
   | "locks"

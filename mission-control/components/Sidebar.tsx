@@ -19,12 +19,13 @@ export function agentBrand(label: string) {
   return AGENTS.find((a) => a.match.some((m) => l.includes(m))) || null;
 }
 
-const NAV_TABS: { id: TabId; label: string; icon: string; kicker: string }[] = [
-  { id: "activity", label: "Activity", icon: "⚡", kicker: "Live stream" },
-  { id: "edits", label: "Code Edits", icon: "✎", kicker: "Patches & time-travel" },
-  { id: "locks", label: "Ongoing Sessions", icon: "🔒", kicker: "Board & locks" },
-  { id: "team", label: "Invites", icon: "👥", kicker: "Collaborators" },
-  { id: "memory", label: "Memory", icon: "🧠", kicker: "Context digest" },
+import { IconLock, IconFileCode, IconUsers, IconBrain } from "@/components/ui/icons";
+
+const NAV_TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; kicker: string }[] = [
+  { id: "locks", label: "Ongoing Sessions", icon: IconLock, kicker: "Board & locks" },
+  { id: "edits", label: "Code Edits", icon: IconFileCode, kicker: "Patches & time-travel" },
+  { id: "team", label: "Invites", icon: IconUsers, kicker: "Collaborators" },
+  { id: "memory", label: "Memory", icon: IconBrain, kicker: "Context digest" },
 ];
 
 export function Sidebar() {
@@ -65,7 +66,7 @@ export function Sidebar() {
                 className={`${ui.sideNavItem} ${isActive ? ui.sideNavItemActive : ""}`}
                 onClick={() => setTab(t.id)}
               >
-                <span className={ui.sideNavIcon}>{t.icon}</span>
+                <span className={ui.sideNavIcon}><t.icon size={16} /></span>
                 <div className={ui.sideNavBody}>
                   <span className={ui.sideNavLabel}>{t.label}</span>
                   <span className={ui.sideNavKicker}>{t.kicker}</span>

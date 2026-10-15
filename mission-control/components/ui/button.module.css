@@ -1,0 +1,150 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-family: var(--font);
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: all 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: -0.01em;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* --- Sizes --- */
+.sizeDefault {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.sizeSm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  border-radius: 5px;
+}
+
+.sizeLg {
+  height: 42px;
+  padding: 0 20px;
+  font-size: 14.5px;
+  border-radius: 8px;
+}
+
+.sizeIcon {
+  height: 30px;
+  width: 30px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+/* --- Variants --- */
+.variantDefault {
+  background: var(--accent);
+  color: var(--accent-ink, #ffffff);
+  border-color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.variantDefault:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 2px 6px rgba(122, 52, 56, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.variantOutline {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.variantOutline:hover:not(:disabled) {
+  background: var(--elev);
+  border-color: var(--muted);
+  color: var(--text);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.variantSecondary {
+  background: var(--elev);
+  color: var(--text);
+  border-color: var(--border-soft);
+}
+
+.variantSecondary:hover:not(:disabled) {
+  background: var(--elev-2);
+  border-color: var(--border);
+}
+
+.variantGhost {
+  background: transparent;
+  color: var(--muted);
+  border-color: transparent;
+}
+
+.variantGhost:hover:not(:disabled) {
+  background: var(--elev);
+  color: var(--text);
+}
+
+.variantDestructive {
+  background: var(--red-dim);
+  color: var(--red);
+  border-color: var(--red-edge, var(--border));
+}
+
+.variantDestructive:hover:not(:disabled) {
+  background: var(--red);
+  color: #ffffff;
+  border-color: var(--red);
+  box-shadow: 0 2px 6px rgba(181, 63, 63, 0.3);
+}
+
+.variantCopper {
+  background: var(--copper);
+  color: #ffffff;
+  border-color: var(--copper);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.variantCopper:hover:not(:disabled) {
+  background: var(--copper-hover);
+  border-color: var(--copper-hover);
+}
+
+.variantLink {
+  background: transparent;
+  color: var(--accent);
+  border-color: transparent;
+  padding: 0;
+  height: auto;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.variantLink:hover:not(:disabled) {
+  color: var(--accent-hover);
+}

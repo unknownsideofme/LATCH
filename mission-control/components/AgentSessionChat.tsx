@@ -5,6 +5,7 @@ import { AgentLogo, UserAvatar, UserTag } from "@/components/Identity";
 import { useRelay } from "@/lib/RelayContext";
 import { ExpandableMarkdown, MarkdownView, plainPreview } from "@/lib/markdown";
 import type { ChatMessage, ChatThread } from "@/lib/types";
+import { IconFileCode, IconBrain } from "@/components/ui/icons";
 import ui from "@/styles/ui.module.css";
 
 // Combined view flattens every session into one stream; a room with a few long
@@ -66,7 +67,9 @@ function ArtifactRow({ m }: { m: ChatMessage }) {
   return (
     <details className={ui.aside}>
       <summary>
-        <span className={ui.asideMark}>{isEdit ? "✎" : "◇"}</span>
+        <span className={ui.asideMark} style={{ display: "inline-flex", alignItems: "center" }}>
+          {isEdit ? <IconFileCode size={13} /> : <IconBrain size={13} />}
+        </span>
         <span className={ui.asideLabel}>{isEdit ? m.file || "Edit" : "Thinking"}</span>
       </summary>
       {body ? (

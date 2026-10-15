@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { IconX, IconCheck, IconCopy } from "@/components/ui/icons";
 import ui from "@/styles/ui.module.css";
 
 function Diff({ text }: { text?: string }) {
@@ -198,7 +199,7 @@ export function CodeEdits() {
                 title="Close drawer (Esc)"
                 aria-label="Close drawer"
               >
-                ✕
+                <IconX size={16} />
               </button>
             </div>
 
@@ -218,7 +219,15 @@ export function CodeEdits() {
                 onClick={copyDiff}
                 disabled={!selectedPatch.diff}
               >
-                <span>{copied ? "✓ Copied Diff" : "Copy Diff"}</span>
+                {copied ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <IconCheck size={14} /> Copied Diff
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5">
+                    <IconCopy size={14} /> Copy Diff
+                  </span>
+                )}
               </Button>
             </div>
 

@@ -2,7 +2,6 @@
 
 import { useRelay } from "@/lib/RelayContext";
 import type { TabId } from "@/lib/types";
-import { ActivityTimeline } from "./ActivityTimeline";
 import { CodeEdits } from "./CodeEdits";
 import { LayoutSwitcher } from "./LayoutSwitcher";
 import { ConnectedAgentsDropdown } from "./ConnectedAgentsDropdown";
@@ -12,8 +11,7 @@ import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
 import ui from "@/styles/ui.module.css";
 
-const TAB_TITLES: Record<TabId, { title: string; subtitle: string }> = {
-  activity: { title: "Activity", subtitle: "Live multi-agent and user operations" },
+const TAB_TITLES: Partial<Record<TabId, { title: string; subtitle: string }>> = {
   chat: { title: "Chat Stream", subtitle: "Agent conversation transcript and tool logs" },
   edits: { title: "Code Edits", subtitle: "Lamport causal cuts & slide-out diff viewer" },
   locks: { title: "Ongoing Sessions", subtitle: "Coordinator board, file locks & graph" },
@@ -44,7 +42,6 @@ export function ProjectDashboard() {
       </div>
       <div className={ui.panelWrap}>
         <div className={ui.panelScroll}>
-          {tab === "activity" && <ActivityTimeline />}
           {tab === "edits" && <CodeEdits />}
           {tab === "locks" && <FileLocksPanel />}
           {tab === "team" && <TeamPanel />}

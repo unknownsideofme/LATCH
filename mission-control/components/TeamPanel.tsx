@@ -6,6 +6,7 @@ import { apiUrl } from "@/lib/api";
 import type { OpenRoom, Room } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { IconCheck, IconCopy } from "@/components/ui/icons";
 import ui from "@/styles/ui.module.css";
 
 function inviteLabel(state: string) {
@@ -32,6 +33,7 @@ export function TeamPanel() {
   const [inviteLogin, setInviteLogin] = useState("");
   const [issued, setIssued] = useState<{ login: string; link: string; warning?: string } | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [copiedTunnel, setCopiedTunnel] = useState(false);
 
   useEffect(() => {
     setRoom(dashboard?.room || null);
@@ -279,54 +281,119 @@ export function TeamPanel() {
               ) : null}
             </p>
             {room.url ? (
-              <p>
-                Tunnel: <code>{room.url}</code>
-              </p>
-            ) : null}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  background: "var(--sunken)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 7,
+                  padding: "8px 12px",
+                  margin: "12px 0",
+                  maxWidth: "100%",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, overflow: "hidden" }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      color: "var(--muted)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Tunnel
+                  </span>
+                  <code
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: 12,
+                      color: "var(--text)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {room.url}
+                  </code>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="inline-flex items-center gap-1.5"
+                    onClick={() => {
+                      navigator.clipboard.writeText(room.url);
+                      setCopiedTunnel(true);
+                      setTimeout(() => setCopiedTunnel(false), 2000);
+                    }}
+                  >
+                    {copiedTunnel ? (
+                      <>
+                        <IconCheck size={14} /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <IconCopy size={14} /> Copy tunnel
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      await fetch(apiUrl("/api/room/leave"), { method: "POST" });
+                      setRoom(null);
+                      setIssued(null);
+                      setBusy(false);
+                      await sync();
+                    }}
+                  >
+                    Leave room
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ margin: "10px 0" }}>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    await fetch(apiUrl("/api/room/leave"), { method: "POST" });
+                    setRoom(null);
+                    setIssued(null);
+                    setBusy(false);
+                    await sync();
+                  }}
+                >
+                  Leave room
+                </Button>
+              </div>
+            )}
             {room.role === "guest" && room.projectPath ? (
-              <p style={{ color: "var(--muted)" }}>
+              <p style={{ color: "var(--muted)", fontSize: 12, margin: "6px 0 12px" }}>
                 Mirroring into <code>{room.projectPath}</code> — locks, patches and chat history are shared with the host.
               </p>
             ) : null}
-            <div className={ui.actions} style={{ justifyContent: "flex-start", gap: 8 }}>
-              {room.url ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs font-semibold"
-                  onClick={() => navigator.clipboard.writeText(room.url)}
-                >
-                  Copy tunnel
-                </Button>
-              ) : null}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs text-[var(--red)] hover:bg-[var(--red-dim)]"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  await fetch(apiUrl("/api/room/leave"), { method: "POST" });
-                  setRoom(null);
-                  setIssued(null);
-                  setBusy(false);
-                  await sync();
-                }}
-              >
-                Leave room
-              </Button>
-            </div>
             {hosting ? (
               <>
-                <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "16px 0" }} />
+                <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "18px 0" }} />
                 <h3 style={{ marginBottom: 4 }}>Invite someone who isn&apos;t listed</h3>
-                <p style={{ color: "var(--muted)", marginTop: 0 }}>
+                <p style={{ color: "var(--muted)", margin: "0 0 10px", fontSize: 12.5 }}>
                   They still have to be a collaborator on this GitHub repo. After you invite, they just hit Join —
                   you do not need to send a link unless they are not running Latch yet.
                 </p>
-                <div className={ui.actions} style={{ justifyContent: "flex-start", alignItems: "center", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, maxWidth: 380 }}>
                   <Input
-                    className="max-w-[260px] h-8 text-xs"
+                    style={{ flex: 1 }}
                     value={inviteLogin}
                     onChange={(e) => setInviteLogin(e.target.value)}
                     placeholder="github-username"
@@ -337,11 +404,10 @@ export function TeamPanel() {
                   <Button
                     variant="default"
                     size="sm"
-                    className="h-8 text-xs font-semibold"
                     onClick={() => invite(inviteLogin)}
                     disabled={busy || !inviteLogin.trim()}
                   >
-                    Invite
+                    {busyLogin === inviteLogin.trim() ? "Inviting…" : "Invite"}
                   </Button>
                 </div>
                 {issued ? (
@@ -481,14 +547,6 @@ export function TeamPanel() {
         )}
         {hint ? <p style={{ color: "var(--amber)" }}>{hint}</p> : null}
       </article>
-      {dashboard.activity.map((item) => (
-        <article className={ui.card} key={item.id}>
-          <div className={ui.rowBetween}>
-            <h3>{item.text}</h3>
-            <span className={item.mine ? `${ui.badge} ${ui.mine}` : `${ui.badge} ${ui.theirs}`}>@{item.ownerLogin}</span>
-          </div>
-        </article>
-      ))}
     </>
   );
 }

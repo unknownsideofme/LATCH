@@ -5,6 +5,7 @@
 // hand-typing an absolute path.
 
 import { useCallback, useEffect, useState } from "react";
+import { IconFolder } from "@/components/ui/icons";
 import ui from "@/styles/ui.module.css";
 
 type Entry = { name: string; path: string; isDir: boolean };
@@ -77,7 +78,7 @@ export function DirectoryPicker({
         ) : (
           entries.map((e) => (
             <button type="button" key={e.path} className={ui.dirPickerRow} onDoubleClick={() => navigate(e.path)} onClick={() => navigate(e.path)}>
-              <span className={ui.dirPickerIcon} style={{ opacity: 0.6 }}>📁</span>
+              <span className={ui.dirPickerIcon} style={{ opacity: 0.8, display: "inline-flex", alignItems: "center" }}><IconFolder size={15} /></span>
               <span className={ui.dirPickerName}>{e.name}</span>
             </button>
           ))

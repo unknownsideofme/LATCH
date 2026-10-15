@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { IconX, IconMoreVertical, IconPlus } from "@/components/ui/icons";
 import ui from "@/styles/ui.module.css";
 
 function inkFor(hex?: string) {
@@ -89,7 +90,7 @@ export function WorkspaceDrawer() {
             title="Close menu (Esc)"
             aria-label="Close menu"
           >
-            ✕
+            <IconX size={16} />
           </button>
         </div>
 
@@ -137,7 +138,7 @@ export function WorkspaceDrawer() {
                     setMenuId(menuId === p.id ? null : p.id);
                   }}
                 >
-                  ⋮
+                  <IconMoreVertical size={14} />
                 </button>
               </div>
             );
@@ -184,7 +185,7 @@ export function WorkspaceDrawer() {
               setAddOpen(true);
             }}
           >
-            <span>+</span>
+            <IconPlus size={14} />
             <span>Add workspace</span>
           </Button>
           <div className={ui.drawerEscHint}>Press Esc to close</div>

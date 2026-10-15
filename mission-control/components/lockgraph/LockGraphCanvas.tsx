@@ -8,6 +8,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useRelay } from "@/lib/RelayContext";
+import { IconAlertTriangle, IconCheck } from "@/components/ui/icons";
 import { useLockGraph, type EdgeKind, type GFile, type GUser } from "./useLockGraph";
 import g from "./lockgraph.module.css";
 
@@ -82,8 +83,13 @@ function FileNode({ data }: NodeProps) {
             style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }} />
         </svg>
         <span className={g.fname} title={d.path}>{d.path.split("/").pop()}</span>
-        {clash ? <span className={`${g.pill} ${g.pClash}`}>⚠ {d.clashUsers.length} people</span>
-          : d.waiting > 0 ? <span className={`${g.pill} ${g.pWait}`}>{d.waiting} more</span> : null}
+        {clash ? (
+          <span className={`${g.pill} ${g.pClash}`} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+            <IconAlertTriangle size={12} /> {d.clashUsers.length} people
+          </span>
+        ) : d.waiting > 0 ? (
+          <span className={`${g.pill} ${g.pWait}`}>{d.waiting} more</span>
+        ) : null}
       </div>
       <div className={g.fp}>{d.path}</div>
       <div className={g.who} style={clash ? { color: "var(--clash)" } : undefined}>
@@ -253,11 +259,11 @@ function Board() {
           <span className={g.lg}><svg width="34" height="9"><line x1="0" y1="5" x2="32" y2="5" stroke="var(--clash)" strokeWidth="2.5" strokeDasharray="7 5" /></svg><b>Clash</b></span>
         </div>
         <div className={g.toggles}>
-          <button className={`${g.tog} ${animate ? g.togOn : ""}`} onClick={() => setAnimate((v) => !v)}>
-            {animate ? "✓" : "○"} Motion
+          <button className={`${g.tog} ${animate ? g.togOn : ""}`} onClick={() => setAnimate((v) => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {animate && <IconCheck size={11} />} Motion
           </button>
-          <button className={`${g.tog} ${showWaiting ? g.togOn : ""}`} onClick={() => setShowWaiting((v) => !v)}>
-            {showWaiting ? "✓" : "○"} Recent editors
+          <button className={`${g.tog} ${showWaiting ? g.togOn : ""}`} onClick={() => setShowWaiting((v) => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {showWaiting && <IconCheck size={11} />} Recent editors
           </button>
         </div>
       </div>

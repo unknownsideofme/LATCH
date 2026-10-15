@@ -82,7 +82,7 @@ export function RelayProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabId>("activity");
+  const [tab, setTab] = useState<TabId>("locks");
   const [addOpen, setAddOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);

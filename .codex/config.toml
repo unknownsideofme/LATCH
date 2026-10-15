@@ -8,6 +8,9 @@ args = ["C:/latch/LATCH/backend/mcp/server.js"]
 RELAY_WORKSPACE_PATH = "C:/latch/LATCH"
 
 [mcp_servers.relay.env]
+RELAY_WORKSPACE_PATH = "C:/latch/LATCH"
+
+[mcp_servers.relay.env]
 RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
 
 [mcp_servers.relay.env]

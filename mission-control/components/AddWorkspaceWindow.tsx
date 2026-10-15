@@ -5,6 +5,7 @@ import { useRelay } from "@/lib/RelayContext";
 import { apiUrl } from "@/lib/api";
 import { DirectoryPicker } from "./DirectoryPicker";
 import { Button } from "@/components/ui/button";
+import { IconX, IconStar, IconFolder, IconGitBranch, IconDownload, IconShare } from "@/components/ui/icons";
 import ui from "@/styles/ui.module.css";
 
 type Repo = {
@@ -211,11 +212,11 @@ export function AddWorkspaceWindow() {
           ? Boolean(folder)
           : Boolean(roomUrl.trim());
 
-  const NAV: { id: Source; icon: string; title: string; sub: string }[] = [
-    { id: "github", icon: "◈", title: "Your repositories", sub: user ? `@${user.login}` : "From GitHub" },
-    { id: "clone", icon: "⤓", title: "Custom git clone", sub: "Paste any git URL" },
-    { id: "local", icon: "▤", title: "Add local repository", sub: "Browse this computer" },
-    { id: "room", icon: "⇄", title: "Join a shared room", sub: "Someone else's coordinator" },
+  const NAV: { id: Source; icon: React.ReactNode; title: string; sub: string }[] = [
+    { id: "github", icon: <IconGitBranch size={16} />, title: "Your repositories", sub: user ? `@${user.login}` : "From GitHub" },
+    { id: "clone", icon: <IconDownload size={16} />, title: "Custom git clone", sub: "Paste any git URL" },
+    { id: "local", icon: <IconFolder size={16} />, title: "Add local repository", sub: "Browse this computer" },
+    { id: "room", icon: <IconShare size={16} />, title: "Join a shared room", sub: "Someone else's coordinator" },
   ];
 
   return (
@@ -227,7 +228,7 @@ export function AddWorkspaceWindow() {
           <span>Clone from GitHub, attach a folder you already have, or join a friend&apos;s room.</span>
         </div>
         <button className={ui.awClose} onClick={close} title="Close (Esc)">
-          ✕
+          <IconX size={16} />
         </button>
       </div>
 
@@ -334,7 +335,11 @@ export function AddWorkspaceWindow() {
                                 {r.language}
                               </span>
                             )}
-                            {r.stars > 0 && <span>★ {r.stars}</span>}
+                            {r.stars > 0 && (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                <IconStar size={12} /> {r.stars}
+                              </span>
+                            )}
                             {r.updatedAt && <span>Updated {ago(r.updatedAt)}</span>}
                           </span>
                         </span>
@@ -413,7 +418,9 @@ export function AddWorkspaceWindow() {
                 </>
               ) : (
                 <div className={ui.awBigDrop}>
-                  <div className={ui.awBigDropIcon}>▤</div>
+                  <div className={ui.awBigDropIcon} style={{ display: "flex", justifyContent: "center" }}>
+                    <IconFolder size={36} />
+                  </div>
                   <p>Browse this computer to pick the repository folder.</p>
                   <button className={ui.syncBtn} onClick={() => setShowPicker(true)}>
                     Choose folder…

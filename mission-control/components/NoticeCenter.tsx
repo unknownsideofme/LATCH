@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRelay } from "@/lib/RelayContext";
 import type { Notice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { IconBell } from "@/components/ui/icons";
 import ui from "@/styles/ui.module.css";
 
 function ago(ts: number) {
@@ -72,7 +73,7 @@ export function NoticeBell() {
         title={unreadNotices ? `${unreadNotices} unread` : "Notifications"}
         aria-label={unreadNotices ? `${unreadNotices} unread notifications` : "Notifications"}
       >
-        <span aria-hidden>🔔</span>
+        <IconBell size={16} />
         {unreadNotices ? <span className={ui.noticeDot} /> : null}
       </button>
       {open && (

@@ -5,6 +5,7 @@ import { useRelay } from "@/lib/RelayContext";
 import type { Agent } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { IconChevronDown, IconChevronUp } from "@/components/ui/icons";
 import ui from "@/styles/ui.module.css";
 
 // Brand icon + ring accent
@@ -151,7 +152,7 @@ export function ConnectedAgentsDropdown() {
         </span>
 
         <span className={ui.agentDropdownChevron} aria-hidden>
-          {open ? "▴" : "▾"}
+          {open ? <IconChevronUp size={12} /> : <IconChevronDown size={12} />}
         </span>
       </button>
 
