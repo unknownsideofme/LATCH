@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { apiUrl } from "@/lib/api";
 import { NoticeBell } from "./NoticeCenter";
 import { ThemeToggle } from "./ThemeToggle";
@@ -21,7 +21,7 @@ function fetchedLabel(ts: number | null, now: number) {
 // The account menu lives up here now — it used to sit at the bottom of the
 // left workspace rail, which is not where anyone looks for their profile.
 function AccountMenu() {
-  const { user, users, login, logout, setTab } = useRelay();
+  const { user, users, login, logout, setTab } = useLatch();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -135,7 +135,7 @@ function AccountMenu() {
 
 export function TopNavbar() {
   const { projects, dashboard, selectedProjectId, sync, syncing, lastFetchedAt, drawerOpen, setDrawerOpen } =
-    useRelay();
+    useLatch();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);

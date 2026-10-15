@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { agentBrand } from "@/components/Sidebar";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import ui from "@/styles/ui.module.css";
 
 // GitHub serves an avatar for any handle at github.com/<login>.png, so a peer
@@ -24,7 +24,7 @@ export function AgentLogo({ agent, size = 16 }: { agent?: string | null; size?: 
 
 /** login (lowercased) -> avatar URL, from everyone this session knows about. */
 export function useAvatars() {
-  const { dashboard, user, users } = useRelay();
+  const { dashboard, user, users } = useLatch();
   return useMemo(() => {
     const map = new Map<string, string>();
     const add = (login?: string | null, url?: string | null) => {

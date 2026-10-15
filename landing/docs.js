@@ -1,4 +1,4 @@
-/* /.relay docs — syntax highlighting, copy buttons, scrollspy, sidebar filter */
+/* ./latch docs — syntax highlighting, copy buttons, scrollspy, sidebar filter */
 (function () {
   "use strict";
 
@@ -17,7 +17,7 @@
 
   /* -------------------------------------------------------- highlighter -- */
 
-  var SHELL_WORDS = /^(relay|npm|npx|node|git|gh|cd|ls|mkdir|export|set|curl|ngrok|pnpm|yarn|bun|sudo|open|start)$/;
+  var SHELL_WORDS = /^(latch|npm|npx|node|git|gh|cd|ls|mkdir|export|set|curl|ngrok|pnpm|yarn|bun|sudo|open|start)$/;
 
   // bash: line-oriented so we can treat prompts and full-line comments simply
   function hlBash(src) {

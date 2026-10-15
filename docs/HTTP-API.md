@@ -1,13 +1,13 @@
 # HTTP API reference
 
-The API server binds `127.0.0.1:<RELAY_PORT>` (default 3001). When the machine is hosting
+The API server binds `127.0.0.1:<LATCH_PORT>` (default 3001). When the machine is hosting
 a room, the same server is also reachable through the ngrok tunnel — which is why the
 authorization rules below matter.
 
 All request and response bodies are JSON. The body limit is **2 MB**, except
 `/api/room/history` at **32 MB**.
 
-**CORS** is allowed for `RELAY_UI_ORIGIN` (default `http://localhost:3002`),
+**CORS** is allowed for `LATCH_UI_ORIGIN` (default `http://localhost:3002`),
 `http://127.0.0.1:3002`, `http://localhost:3000`, `http://127.0.0.1:3000`, and any
 `*.ngrok.app`, `*.ngrok-free.app` or `*.ngrok.io` origin, with credentials.
 
@@ -29,7 +29,7 @@ A request counts as **remote** when it carries `X-Forwarded-For` or
 cannot strip), or when its socket address is not loopback. Local Mission Control and local
 hooks therefore stay unauthenticated, so adding room security never breaks solo use.
 
-The **member token** is read from, in order: the `x-relay-room-token` header, an
+The **member token** is read from, in order: the `x-latch-room-token` header, an
 `Authorization: Room <token>` header, or a `token` query parameter.
 
 `requireRoomMember` also identifies the caller from its token even on a loopback request,
@@ -73,7 +73,7 @@ Redirects to GitHub's authorize URL. **501 `oauth_not_configured`** when
 ### `GET /api/auth/github/callback`
 
 Exchanges `?code`, creates the user if new, saves the session, and redirects to
-`RELAY_UI_ORIGIN`.
+`LATCH_UI_ORIGIN`.
 
 ### `POST /api/auth/logout`
 
@@ -106,7 +106,7 @@ Fetch, or rename via `{ name }`. **404 `not_found`** when unknown.
 ### `DELETE /api/projects/:id?mode=leave|remove`
 
 - `leave` (default) — unregister the project; the checkout stays on disk.
-- `remove` — also delete `~/.relay/data/projects/<id>/`. The checkout is still never
+- `remove` — also delete `~/.latch/data/projects/<id>/`. The checkout is still never
   touched.
 
 Stops the filesystem and transcript watchers, reselects another project if this one was
@@ -260,7 +260,7 @@ Direct `lockTable.heartbeat(body)`.
 ### `GET /api/events`
 
 Server-sent events, optionally scoped by `?projectId`. Registers presence for the caller
-(identified by the `x-relay-user` header or the session login) and deregisters on
+(identified by the `x-latch-user` header or the session login) and deregisters on
 disconnect. Event names include `locks`, `presence`, `activity`, `history`, `agents`,
 `projects`, `graph`, `central` and `rewind`.
 
@@ -298,7 +298,7 @@ out. **404 `no_local_repo`** if the path is not a registered project.
 ### `POST /api/handshake` · `POST /api/connect`
 
 Agent lifecycle for Mission Control. `handshake` marks an agent handshaking and writes a
-token to `.relay/.handshake_<agent>`; `connect` marks it connected and starts the
+token to `.latch/.handshake_<agent>`; `connect` marks it connected and starts the
 workspace watcher.
 
 ### `GET /api/memory`
@@ -411,18 +411,18 @@ Scoped by `?projectId` or `?path`, defaulting to the selected project.
 ### `POST /api/patches` · `requireRoomMember`
 
 `{ patch, remoteUrl, name, pathName, workspaceId }` → accepts a peer's patch, applies it
-if appropriate, and relays it onward.
+if appropriate, and forwards it onward.
 
 ### `POST /api/push` · `POST /api/pull`
 
-Behind `relay push` and `relay pull`. `pull` requires a room (**400 `not_in_a_room`**),
+Behind `latch push` and `latch pull`. `pull` requires a room (**400 `not_in_a_room`**),
 is a no-op on a host, and answers **502 `unreachable`** when the host cannot be reached.
 
 ### `POST /api/ask`
 
-Compiles the `/relay ask` brief: syncs transcripts, pulls room history if a guest, merges
+Compiles the `/latch ask` brief: syncs transcripts, pulls room history if a guest, merges
 peer views, and returns `{ ok, written, markdown, data }`. Unless `write: false` is
-passed, the markdown is also written to `<repo>/.relay/relay_ask.md`.
+passed, the markdown is also written to `<repo>/.latch/latch_ask.md`.
 
 ---
 
@@ -498,7 +498,7 @@ with a `hello` frame carrying the current room state, so a joining board is neve
 until the next lock change. Server pings every 15 s.
 
 **Both sockets:** identity is decided once, at the handshake, from the
-`x-relay-room-token` header or a `token` query parameter, and is never re-read from a
+`x-latch-room-token` header or a `token` query parameter, and is never re-read from a
 frame. A frame that arrives after the member is kicked, or after the room changes, closes
 the socket. Close codes: `4401 not_a_member` / `membership_revoked`, `4403 not_hosting`,
 `4413 frame_too_large`.

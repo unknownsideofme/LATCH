@@ -1,12 +1,12 @@
 {
-  "relay": {
+  "latch": {
     "PreToolUse": [
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|edit_file|create_file",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"C:/Users/Prakrititz Borah/Documents/Github/relayBrain/hooks/relay-antigravity-pre-tool.js\"",
+            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-antigravity-pre-tool.js\"",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"C:/Users/Prakrititz Borah/Documents/Github/relayBrain/hooks/relay-antigravity-pre-read.js\"",
+            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-antigravity-pre-read.js\"",
             "timeout": 10
           }
         ]
@@ -24,11 +24,11 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|edit_file|create_file",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"C:/Users/Prakrititz Borah/Documents/Github/relayBrain/hooks/relay-antigravity-post-tool.js\"",
+            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-antigravity-post-tool.js\"",
             "timeout": 10
           }
         ]
@@ -37,7 +37,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "node \"C:/Users/Prakrititz Borah/Documents/Github/relayBrain/hooks/relay-antigravity-stop.js\"",
+        "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-antigravity-stop.js\"",
         "timeout": 120
       }
     ]

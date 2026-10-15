@@ -1,6 +1,6 @@
 "use client";
 
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import type { TabId } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import ui from "@/styles/ui.module.css";
@@ -29,7 +29,7 @@ const NAV_TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: n
 ];
 
 export function Sidebar() {
-  const { dashboard, projects, selectedProjectId, tab, setTab, notices } = useRelay();
+  const { dashboard, projects, selectedProjectId, tab, setTab, notices } = useLatch();
   const project = projects.find((p) => p.id === selectedProjectId) || dashboard?.project;
   const live = dashboard && dashboard.project.id === selectedProjectId ? dashboard : null;
   if (!live && !project) return <aside className={ui.sidebar} />;

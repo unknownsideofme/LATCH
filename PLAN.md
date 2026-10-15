@@ -1,28 +1,28 @@
-# Relay: Multi-Agent Collaboration & Synchronization Protocol
+# Latch: Multi-Agent Collaboration & Synchronization Protocol
 
 ## Overview
-Relay is a novel synchronization and coordination protocol designed to solve file clashes and manage concurrency when multiple AI agents and human developers operate on the same Git repository. Relay provides real-time locking, dependency-aware conflict resolution, and shared AI context, enabling massive parallelization of software development tasks across both intra-user (local) and inter-user (distributed) environments.
+Latch is a novel synchronization and coordination protocol designed to solve file clashes and manage concurrency when multiple AI agents and human developers operate on the same Git repository. Latch provides real-time locking, dependency-aware conflict resolution, and shared AI context, enabling massive parallelization of software development tasks across both intra-user (local) and inter-user (distributed) environments.
 
 ## Core Features
 
 ### 1. Seamless Onboarding & Repository Management
-- **CLI & Dashboard integration:** Installed via standard package managers (`npm install relay`), users authenticate using GitHub single sign-on (`relay login`) and clone repositories using the custom `relay clone` wrapper.
-- **Centralized Coordinator:** A Backend Coordinator Service tracks active users, repository states, and connected AI agents. This data is visualized via the Relay web dashboard, providing real-time observability of who is working on what.
+- **CLI & Dashboard integration:** Installed via standard package managers (`npm install latch`), users authenticate using GitHub single sign-on (`latch login`) and clone repositories using the custom `latch clone` wrapper.
+- **Centralized Coordinator:** A Backend Coordinator Service tracks active users, repository states, and connected AI agents. This data is visualized via the Latch web dashboard, providing real-time observability of who is working on what.
 
 ### 2. Universal AI Context Sharing
-- **Cross-Tool History Extraction:** Relay natively integrates with popular AI coding assistants (Claude Code, Antigravity, Codex, Cursor, GitHub Copilot, etc.).
-- **Shared Memory:** By extracting and aggregating local IDE chat logs, file edits, and agent contexts, Relay constructs a unified, real-time shared history. Any developer or agent can access the context of what other agents have discussed, explored, or modified, ensuring global alignment and preventing redundant work.
+- **Cross-Tool History Extraction:** Latch natively integrates with popular AI coding assistants (Claude Code, Antigravity, Codex, Cursor, GitHub Copilot, etc.).
+- **Shared Memory:** By extracting and aggregating local IDE chat logs, file edits, and agent contexts, Latch constructs a unified, real-time shared history. Any developer or agent can access the context of what other agents have discussed, explored, or modified, ensuring global alignment and preventing redundant work.
 
 ### 3. Concurrency & Coordination — The Deep Dive
 
-> **The core idea in one sentence:** Relay is a traffic controller for code edits — it makes sure no two hands (human or AI) touch the same wire at the same time, whether those hands are on the same machine or across the planet.
+> **The core idea in one sentence:** Latch is a traffic controller for code edits — it makes sure no two hands (human or AI) touch the same wire at the same time, whether those hands are on the same machine or across the planet.
 
-Relay operates at two distinct levels:
+Latch operates at two distinct levels:
 
 | Level | Scope | Where it runs | Think of it as… |
 |-------|-------|---------------|-----------------|
 | **Intra-Coordination** | One user, many agents | Locally on your machine | A single kitchen, many chefs |
-| **Inter-Coordination** | Many users, many agents | Distributed across machines via the Relay Coordinator | Many kitchens, one restaurant |
+| **Inter-Coordination** | Many users, many agents | Distributed across machines via the Latch Coordinator | Many kitchens, one restaurant |
 
 ---
 
@@ -32,7 +32,7 @@ Relay operates at two distinct levels:
 
 ### How It Works
 
-When you spin up multiple agent instances on the same codebase (e.g., three Cursor tabs + a Claude Code session), each agent's tool calls pass through a **Relay Local Daemon** — a lightweight background process that acts as a single source of truth for file state.
+When you spin up multiple agent instances on the same codebase (e.g., three Cursor tabs + a Claude Code session), each agent's tool calls pass through a **Latch Local Daemon** — a lightweight background process that acts as a single source of truth for file state.
 
 ```
 ┌──────────┐  ┌──────────┐  ┌──────────┐
@@ -43,7 +43,7 @@ When you spin up multiple agent instances on the same codebase (e.g., three Curs
      │  MCP / Pre-Tool Hooks     │
      ▼             ▼             ▼
 ┌────────────────────────────────────────┐
-│        Relay Local Daemon              │
+│        Latch Local Daemon              │
 │  ┌────────────┐  ┌──────────────────┐  │
 │  │ Lock Table │  │ Dependency Graph │  │
 │  └────────────┘  └──────────────────┘  │
@@ -55,14 +55,14 @@ When you spin up multiple agent instances on the same codebase (e.g., three Curs
 **Scenario:** Agent A starts editing `src/auth.ts`. Agent B also wants to edit `src/auth.ts`.
 
 **What happens:**
-1. Agent A's pre-tool hook fires → Relay Daemon grants a **write lock** on `src/auth.ts` → Agent A proceeds.
-2. Agent B's pre-tool hook fires → Relay Daemon sees `src/auth.ts` is locked → **Agent B is blocked.**
+1. Agent A's pre-tool hook fires → Latch Daemon grants a **write lock** on `src/auth.ts` → Agent A proceeds.
+2. Agent B's pre-tool hook fires → Latch Daemon sees `src/auth.ts` is locked → **Agent B is blocked.**
 3. Agent B receives a structured message: *"File `src/auth.ts` is currently being edited by Agent A (Cursor, pid 4821). Waiting for release…"*
 4. Agent A finishes its edit → lock is released → Agent B is unblocked and picks up the latest version of the file.
 
-> **Edge Case — Stale Lock / Agent Crash:** If Agent A crashes mid-edit, the lock would be orphaned forever. Relay handles this with a **heartbeat + TTL system**: each lock has a time-to-live (default: 60s) and the holding agent must send periodic heartbeats. If the heartbeat stops, the daemon force-releases the lock and notifies waiting agents.
+> **Edge Case — Stale Lock / Agent Crash:** If Agent A crashes mid-edit, the lock would be orphaned forever. Latch handles this with a **heartbeat + TTL system**: each lock has a time-to-live (default: 60s) and the holding agent must send periodic heartbeats. If the heartbeat stops, the daemon force-releases the lock and notifies waiting agents.
 
-> **Edge Case — Read vs. Write:** Agents that only *read* a file (e.g., to gather context) do NOT acquire a write lock. Relay uses a **reader-writer lock model**: unlimited concurrent reads, but writes are exclusive. An agent reading `auth.ts` won't block another agent from also reading it — only writes trigger exclusivity.
+> **Edge Case — Read vs. Write:** Agents that only *read* a file (e.g., to gather context) do NOT acquire a write lock. Latch uses a **reader-writer lock model**: unlimited concurrent reads, but writes are exclusive. An agent reading `auth.ts` won't block another agent from also reading it — only writes trigger exclusivity.
 
 ### Case 2 — Dependency Collision (The Sneaky One)
 
@@ -71,7 +71,7 @@ When you spin up multiple agent instances on the same codebase (e.g., three Curs
 **Why this is dangerous:** Agent A might rename a function, change its signature, or delete an export. If Agent B is simultaneously writing code that *calls* that function, Agent B's work will silently break.
 
 **What happens:**
-1. On repo initialization, the Relay Daemon builds a **live dependency graph** by parsing `import`/`require`/`include` statements (supports TS, JS, Python, Go, Rust, Java, and more via tree-sitter).
+1. On repo initialization, the Latch Daemon builds a **live dependency graph** by parsing `import`/`require`/`include` statements (supports TS, JS, Python, Go, Rust, Java, and more via tree-sitter).
 2. When Agent A locks `logger.ts`, the daemon traverses the graph and identifies all **downstream dependents** (files that import from `logger.ts`).
 3. Agent B's attempt to edit `handler.ts` is intercepted. The daemon issues a **soft lock** — Agent B receives: *"⚠️ `handler.ts` depends on `logger.ts`, which is currently being modified by Agent A. Proceeding may cause inconsistencies. Waiting for Agent A to finish…"*
 4. Once Agent A releases its lock, the daemon re-indexes the changed file and Agent B receives the updated dependency information before resuming.
@@ -84,11 +84,11 @@ When you spin up multiple agent instances on the same codebase (e.g., three Curs
       └── tests/logger.test.ts  ← Any agent blocked (SOFT LOCK - dependent)
 ```
 
-> **Edge Case — Circular Dependencies:** If `A.ts` imports `B.ts` and `B.ts` imports `A.ts`, editing either file would soft-lock the other. Relay detects circular dependency clusters and treats them as a **single lockable unit** — only one agent can work on any file in the cycle at a time.
+> **Edge Case — Circular Dependencies:** If `A.ts` imports `B.ts` and `B.ts` imports `A.ts`, editing either file would soft-lock the other. Latch detects circular dependency clusters and treats them as a **single lockable unit** — only one agent can work on any file in the cycle at a time.
 
-> **Edge Case — Deep Transitive Dependencies:** If `A → B → C → D`, does editing `A` lock all the way to `D`? **Configurable.** By default, Relay applies a **depth limit of 1** (only direct dependents). Users can configure `relay.lock.depth` to increase this, trading parallelism for safety.
+> **Edge Case — Deep Transitive Dependencies:** If `A → B → C → D`, does editing `A` lock all the way to `D`? **Configurable.** By default, Latch applies a **depth limit of 1** (only direct dependents). Users can configure `latch.lock.depth` to increase this, trading parallelism for safety.
 
-> **Edge Case — Dynamic Imports / Runtime Dependencies:** Static analysis can't catch `await import(variable)` or Python's `importlib`. Relay flags these as **unresolvable edges** in the graph and logs a warning, but does not lock based on them. Users can manually declare additional dependency edges in a `.relay/deps.json` override file.
+> **Edge Case — Dynamic Imports / Runtime Dependencies:** Static analysis can't catch `await import(variable)` or Python's `importlib`. Latch flags these as **unresolvable edges** in the graph and logs a warning, but does not lock based on them. Users can manually declare additional dependency edges in a `.latch/deps.json` override file.
 
 ### Case 3 — Multi-File Atomic Edits (The Refactoring Bomb)
 
@@ -100,7 +100,7 @@ When you spin up multiple agent instances on the same codebase (e.g., three Curs
 3. Other agents are blocked from editing any of the 12 files until the batch completes.
 4. If the batch fails midway, all partial edits are rolled back and all locks are released.
 
-> **Edge Case — Deadlock:** Agent A holds `file1.ts` and wants `file2.ts`. Agent B holds `file2.ts` and wants `file1.ts`. Classic deadlock. Relay prevents this with **lock ordering** — all batch lock requests are sorted alphabetically by filepath and acquired in order, making circular wait impossible.
+> **Edge Case — Deadlock:** Agent A holds `file1.ts` and wants `file2.ts`. Agent B holds `file2.ts` and wants `file1.ts`. Classic deadlock. Latch prevents this with **lock ordering** — all batch lock requests are sorted alphabetically by filepath and acquired in order, making circular wait impossible.
 
 ---
 
@@ -110,7 +110,7 @@ When you spin up multiple agent instances on the same codebase (e.g., three Curs
 
 ### How It Works
 
-Each user's machine runs a **Relay Local Daemon** (just like in Intra mode), but now each daemon also maintains a persistent **WebSocket connection** to the **Relay Coordinator Service** (cloud-hosted or self-hosted). The Coordinator is the single source of truth for distributed lock state.
+Each user's machine runs a **Latch Local Daemon** (just like in Intra mode), but now each daemon also maintains a persistent **WebSocket connection** to the **Latch Coordinator Service** (cloud-hosted or self-hosted). The Coordinator is the single source of truth for distributed lock state.
 
 ```
   User A's Machine                    User B's Machine
@@ -124,7 +124,7 @@ Each user's machine runs a **Relay Local Daemon** (just like in Intra mode), but
         │ WebSocket                       │ WebSocket
         ▼                                 ▼
 ┌─────────────────────────────────────────────────────┐
-│              Relay Coordinator Service               │
+│              Latch Coordinator Service               │
 │  ┌──────────────────┐  ┌─────────────────────────┐  │
 │  │ Global Lock Table │  │ Patch Stream (pub/sub) │  │
 │  └──────────────────┘  └─────────────────────────┘  │
@@ -154,7 +154,7 @@ Identical logic to Intra Case 2, but the dependency graph is **merged at the Coo
 
 **The problem with git push/pull:** A typical agent edit cycle is: edit file → save → `git add` → `git commit` → `git push`. Meanwhile, User B has to `git pull`, resolve potential merge conflicts, and restart their agent's context. This loop takes **seconds to minutes** per edit cycle. With agents making dozens of edits per minute, this is unacceptable.
 
-**Relay's solution — Streaming Patches:**
+**Latch's solution — Streaming Patches:**
 
 1. When an agent saves a file, the daemon computes a **minimal diff (patch)** against the last known state.
 2. The patch is sent to the Coordinator, which broadcasts it to all other daemons via the WebSocket pub/sub channel.
@@ -183,9 +183,9 @@ locally    locally
 
 > **Edge Case — Conflicting Patches:** User A and User B both edit line 42 of the same file simultaneously (lock failed or race condition). The Coordinator detects the conflict using **Operational Transformation (OT)** — the same algorithm behind Google Docs. Both patches are transformed to be compatible and applied in a deterministic order. If transformation is impossible (e.g., both deleted the same block differently), the Coordinator flags a **manual merge** and pauses both agents.
 
-> **Edge Case — Ordering & Causality:** Patches must be applied in the correct order. Relay uses **Lamport timestamps** on every patch to establish a total causal order. If Daemon B receives Patch #5 before Patch #4 (out of order), it buffers Patch #5 and waits for #4.
+> **Edge Case — Ordering & Causality:** Patches must be applied in the correct order. Latch uses **Lamport timestamps** on every patch to establish a total causal order. If Daemon B receives Patch #5 before Patch #4 (out of order), it buffers Patch #5 and waits for #4.
 
-> **Edge Case — Large Binary Files:** Diffs don't make sense for images, compiled assets, or model weights. Relay detects binary files and falls back to **whole-file replacement** with content-addressed storage (SHA-256 hash). If the hash matches, the file is skipped entirely.
+> **Edge Case — Large Binary Files:** Diffs don't make sense for images, compiled assets, or model weights. Latch detects binary files and falls back to **whole-file replacement** with content-addressed storage (SHA-256 hash). If the hash matches, the file is skipped entirely.
 
 > **Edge Case — Offline Patch Queue:** If a user goes offline, their daemon queues patches locally. On reconnect, the queue is replayed to the Coordinator in order. The Coordinator applies them sequentially, resolving any conflicts that arose during the offline window.
 
@@ -223,7 +223,7 @@ locally    locally
 | Agent crashes mid-lock | Heartbeat + TTL auto-release |
 | Circular dependencies | Treated as single lock unit |
 | Deep transitive deps | Configurable depth limit (default: 1) |
-| Dynamic imports | Flagged as unresolvable; manual override via `.relay/deps.json` |
+| Dynamic imports | Flagged as unresolvable; manual override via `.latch/deps.json` |
 | Deadlock (lock ordering) | Alphabetical lock acquisition |
 | User offline mid-lock | Grace period (120s default), then force-release |
 | Network partition | Degraded local-only mode, reconciliation on reconnect |
@@ -234,14 +234,14 @@ locally    locally
 | Race during lock escalation | Compare-and-swap (CAS) — first registration wins |
 
 ### 4. Advanced Versioning & "Time Travel"
-- **Granular Patch History:** Because every edit is transmitted as a localized micro-patch, Relay maintains a high-resolution, immutable timeline of all repository changes outside of standard Git commits.
+- **Granular Patch History:** Because every edit is transmitted as a localized micro-patch, Latch maintains a high-resolution, immutable timeline of all repository changes outside of standard Git commits.
 - **Patch Replay & Rollback:** Users can rewind to any specific patch, reviewing the exact atomic changes made by any human or AI agent on any file, providing unparalleled observability and surgical rollback capabilities.
 
 ---
 
 ## 5. Pre-Tool Hooks — The Interception Layer
 
-> **This is the single most important mechanism in Relay.** Everything described above — file locking, dependency locking, distributed coordination — is enforced through **pre-tool hooks**. Without hooks, the coordination layer has no teeth. Hooks are the hands that actually grab the steering wheel.
+> **This is the single most important mechanism in Latch.** Everything described above — file locking, dependency locking, distributed coordination — is enforced through **pre-tool hooks**. Without hooks, the coordination layer has no teeth. Hooks are the hands that actually grab the steering wheel.
 
 ### What Are Pre-Tool Hooks?
 
@@ -284,18 +284,18 @@ Despite each agent having a slightly different config format, **every hook follo
 
 ### Hook Lifecycle — Both Events
 
-Relay installs **two** hook events per agent:
+Latch installs **two** hook events per agent:
 
-| Event | When it fires | What Relay does |
+| Event | When it fires | What Latch does |
 |-------|---------------|-----------------|
 | `PreToolUse` | Before any file-write tool executes | **Claim a lock** on the target file. If another agent holds the lock → deny. |
-| `Stop` | When the agent's turn ends (idle / done) | **Release all locks** held by this agent. Run `relay sync` + `relay compile` to update shared memory. |
+| `Stop` | When the agent's turn ends (idle / done) | **Release all locks** held by this agent. Run `latch sync` + `latch compile` to update shared memory. |
 
 ---
 
 ## 5A. Configuration Files — Per Agent
 
-Each agent has its own config file format. `relay init` generates all of these automatically.
+Each agent has its own config file format. `latch init` generates all of these automatically.
 
 ---
 
@@ -313,7 +313,7 @@ Each agent has its own config file format. `relay init` generates all of these a
         "hooks": [
           {
             "type": "command",
-            "command": "node \".relay/hooks/relay-claude-pre-tool.js\""
+            "command": "node \".latch/hooks/latch-claude-pre-tool.js\""
           }
         ]
       }
@@ -324,7 +324,7 @@ Each agent has its own config file format. `relay init` generates all of these a
         "hooks": [
           {
             "type": "command",
-            "command": "node \".relay/hooks/relay-claude-stop.js\""
+            "command": "node \".latch/hooks/latch-claude-stop.js\""
           }
         ]
       }
@@ -383,14 +383,14 @@ Each agent has its own config file format. `relay init` generates all of these a
   "hooks": {
     "preToolUse": [
       {
-        "command": "node \".relay/hooks/relay-cursor-pre-tool.js\"",
+        "command": "node \".latch/hooks/latch-cursor-pre-tool.js\"",
         "matcher": "Write|Edit|str_replace_based_edit_tool|create_file",
         "timeout": 10
       }
     ],
     "stop": [
       {
-        "command": "node \".relay/hooks/relay-cursor-stop.js\"",
+        "command": "node \".latch/hooks/latch-cursor-stop.js\"",
         "loop_limit": 1
       }
     ]
@@ -427,7 +427,7 @@ Each agent has its own config file format. `relay init` generates all of these a
 ```json
 {
   "permission": "deny",
-  "reason": "Relay lock denied: Another agent (Claude Code, session xyz) is editing this file."
+  "reason": "Latch lock denied: Another agent (Claude Code, session xyz) is editing this file."
 }
 ```
 
@@ -453,7 +453,7 @@ codex_hooks = true
         "hooks": [
           {
             "type": "command",
-            "command": "node \".relay/hooks/relay-codex-pre-tool.js\"",
+            "command": "node \".latch/hooks/latch-codex-pre-tool.js\"",
             "timeout": 10
           }
         ]
@@ -464,7 +464,7 @@ codex_hooks = true
         "hooks": [
           {
             "type": "command",
-            "command": "node \".relay/hooks/relay-codex-stop.js\"",
+            "command": "node \".latch/hooks/latch-codex-stop.js\"",
             "timeout": 120
           }
         ]
@@ -503,7 +503,7 @@ codex_hooks = true
 ```json
 {
   "continue": false,
-  "stopReason": "Relay lock denied: Another agent (Antigravity, session def456) is editing this file."
+  "stopReason": "Latch lock denied: Another agent (Antigravity, session def456) is editing this file."
 }
 ```
 
@@ -511,7 +511,7 @@ codex_hooks = true
 
 ### GitHub Copilot CLI
 
-**Config file:** `.github/hooks/relay-os.json`
+**Config file:** `.github/hooks/latch-os.json`
 **Scope:** Repository-level (`.github/hooks/`)
 
 ```json
@@ -521,8 +521,8 @@ codex_hooks = true
     "preToolUse": [
       {
         "type": "command",
-        "bash": "node \".relay/hooks/relay-copilot-pre-tool.js\"",
-        "powershell": "node \".relay/hooks/relay-copilot-pre-tool.js\"",
+        "bash": "node \".latch/hooks/latch-copilot-pre-tool.js\"",
+        "powershell": "node \".latch/hooks/latch-copilot-pre-tool.js\"",
         "matcher": "edit_file|write_file|str_replace_editor",
         "cwd": ".",
         "timeoutSec": 10
@@ -531,8 +531,8 @@ codex_hooks = true
     "agentStop": [
       {
         "type": "command",
-        "bash": "node \".relay/hooks/relay-copilot-stop.js\"",
-        "powershell": "node \".relay/hooks/relay-copilot-stop.js\"",
+        "bash": "node \".latch/hooks/latch-copilot-stop.js\"",
+        "powershell": "node \".latch/hooks/latch-copilot-stop.js\"",
         "cwd": ".",
         "timeoutSec": 120
       }
@@ -571,7 +571,7 @@ codex_hooks = true
 ```json
 {
   "behavior": "deny",
-  "message": "Relay lock denied: Another agent (Cursor, session ghi789) is editing this file."
+  "message": "Latch lock denied: Another agent (Cursor, session ghi789) is editing this file."
 }
 ```
 
@@ -591,7 +591,7 @@ codex_hooks = true
         "hooks": [
           {
             "type": "command",
-            "command": "node \".relay/hooks/relay-antigravity-pre-tool.js\"",
+            "command": "node \".latch/hooks/latch-antigravity-pre-tool.js\"",
             "timeout": 10
           }
         ]
@@ -600,7 +600,7 @@ codex_hooks = true
     "Stop": [
       {
         "type": "command",
-        "command": "node \".relay/hooks/relay-antigravity-stop.js\"",
+        "command": "node \".latch/hooks/latch-antigravity-stop.js\"",
         "timeout": 120
       }
     ]
@@ -644,7 +644,7 @@ codex_hooks = true
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "deny",
-    "permissionDecisionReason": "Relay lock denied: Another agent (Claude Code, session jkl012) is editing this file."
+    "permissionDecisionReason": "Latch lock denied: Another agent (Claude Code, session jkl012) is editing this file."
   }
 }
 ```
@@ -653,12 +653,12 @@ codex_hooks = true
 
 ## 5B. The Hook Script — What Actually Runs
 
-All five agent-specific hook scripts are thin wrappers around the same shared library (`.relay/hooks/relay-hook-lib.js`). The core logic is identical:
+All five agent-specific hook scripts are thin wrappers around the same shared library (`.latch/hooks/latch-hook-lib.js`). The core logic is identical:
 
 ```
                     ┌─────────────────────────────┐
                     │  Agent-Specific Wrapper      │
-                    │  (relay-{agent}-pre-tool.js) │
+                    │  (latch-{agent}-pre-tool.js) │
                     │                              │
                     │  1. Read stdin JSON           │
                     │  2. Parse agent-specific      │
@@ -672,7 +672,7 @@ All five agent-specific hook scripts are thin wrappers around the same shared li
                                    ▼
                     ┌─────────────────────────────┐
                     │  Shared Library              │
-                    │  (relay-hook-lib.js)         │
+                    │  (latch-hook-lib.js)         │
                     │                              │
                     │  • lockAgentIdFor(mode)      │
                     │  • client.claimFile(path)    │
@@ -719,7 +719,7 @@ if (result.allowed === false) {
 
 ### Fail-Open Philosophy
 
-> **Critical design decision:** If anything goes wrong — JSON parse error, coordinator unreachable, timeout, unexpected payload format — **the hook allows the tool to proceed.** This ensures Relay never breaks the developer's workflow. A missed lock is recoverable; a frozen agent is not.
+> **Critical design decision:** If anything goes wrong — JSON parse error, coordinator unreachable, timeout, unexpected payload format — **the hook allows the tool to proceed.** This ensures Latch never breaks the developer's workflow. A missed lock is recoverable; a frozen agent is not.
 
 ```javascript
 // Every hook wraps its main() in a catch-all
@@ -767,13 +767,13 @@ The Coordinator is a lightweight **Express.js HTTP server** that runs locally (b
 │                                                                     │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────────┐ │
 │  │  Lock Table   │  │  SSE Stream  │  │  Disk Persistence        │ │
-│  │  (in-memory   │  │  (real-time  │  │  (.relay/locks/*.lock)   │ │
+│  │  (in-memory   │  │  (real-time  │  │  (.latch/locks/*.lock)   │ │
 │  │   Map<K,V>)   │  │   pub/sub)   │  │  (coordinator-state.json)│ │
 │  └──────────────┘  └──────────────┘  └───────────────────────────┘ │
 │                                                                     │
 │  Binds to: 127.0.0.1:<dynamic-port>                                │
-│  State file: .relay/coordinator-state.json { port, startedAt }     │
-│  Log file: .relay/coordinator.log (auto-rotated at 5MB)            │
+│  State file: .latch/coordinator-state.json { port, startedAt }     │
+│  Log file: .latch/coordinator.log (auto-rotated at 5MB)            │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -781,15 +781,15 @@ The Coordinator is a lightweight **Express.js HTTP server** that runs locally (b
 
 | Mode | How | Best for |
 |------|-----|----------|
-| **Auto-daemon** (default) | `relay init` spawns the coordinator as a detached child process. Port is written to `.relay/coordinator-state.json`. | Solo developer, single machine |
+| **Auto-daemon** (default) | `latch init` spawns the coordinator as a detached child process. Port is written to `.latch/coordinator-state.json`. | Solo developer, single machine |
 | **Manual** | `node backend/coordinator/server.js <workspacePath> --port 9100` | CI/CD pipelines, controlled environments |
-| **Docker** | `docker run -v /repo:/workspace relay-coordinator /workspace` | Team deployment, multi-user setups |
+| **Docker** | `docker run -v /repo:/workspace latch-coordinator /workspace` | Team deployment, multi-user setups |
 | **Cloud-hosted** | Deploy as a standard Node.js service (e.g., Cloud Run, Railway, Fly.io) with workspace path mounted or provided via env var | Distributed teams across machines |
 
 **Port binding strategy:**
 1. Try the preferred port (from `--port` flag or last known port in `coordinator-state.json`)
 2. If `EADDRINUSE`, fall back to port `0` (OS-assigned ephemeral port)
-3. Write actual port to `.relay/coordinator-state.json` — all clients read from here
+3. Write actual port to `.latch/coordinator-state.json` — all clients read from here
 
 ### 6C. API Routes
 
@@ -849,7 +849,7 @@ class LockTable extends EventEmitter {
 - Maximum: `300,000ms` (5 minutes)
 - Cleanup interval: `30,000ms` (every 30 seconds, a sweep deletes expired locks)
 
-**Dual-write persistence:** Every lock is simultaneously written to memory (`Map`) AND to disk (`.relay/locks/<hash>.lock`). This means if the coordinator crashes, locks survive on disk and are reloaded on restart.
+**Dual-write persistence:** Every lock is simultaneously written to memory (`Map`) AND to disk (`.latch/locks/<hash>.lock`). This means if the coordinator crashes, locks survive on disk and are reloaded on restart.
 
 ### 6E. The Client — Fallback Chain
 
@@ -867,7 +867,7 @@ The coordinator client (`backend/coordinator/client.js`) implements a **three-ti
              ▼
   ┌──────────────────────────┐
   │ Tier 2: Filesystem       │  Exclusive lockfile creation (wx flag)
-  │ Timeout: remaining ms    │  .relay/locks/<hash>.lock
+  │ Timeout: remaining ms    │  .latch/locks/<hash>.lock
   │ (total budget: 3000ms)   │  Check owner + TTL if file exists
   └──────────┬───────────────┘
              │ FAIL (FS error, timeout)
@@ -920,9 +920,9 @@ The Mission Control UI (`FileLocksPanel.tsx`) connects to this stream via `Event
 │  │ Project     │  │ Memory &     │  │ Agent        │  │ Static    │ │
 │  │ Registry    │  │ Sync Engine  │  │ Handshake    │  │ Frontend  │ │
 │  │             │  │              │  │ & Connect    │  │ Server    │ │
-│  │ CRUD ops    │  │ relay sync   │  │              │  │           │ │
-│  │ API keys    │  │ relay compile│  │ Per-agent    │  │ Serves    │ │
-│  │ workspace   │  │ relay context│  │ token flow   │  │ MC UI     │ │
+│  │ CRUD ops    │  │ latch sync   │  │              │  │           │ │
+│  │ API keys    │  │ latch compile│  │ Per-agent    │  │ Serves    │ │
+│  │ workspace   │  │ latch context│  │ token flow   │  │ MC UI     │ │
 │  │ resolution  │  │ file watcher │  │              │  │           │ │
 │  └─────────────┘  └──────────────┘  └──────────────┘  └───────────┘ │
 │                                                                       │
@@ -942,7 +942,7 @@ The Mission Control UI (`FileLocksPanel.tsx`) connects to this stream via `Event
 | Method | Route | Purpose |
 |--------|-------|---------|
 | `GET` | `/api/health` | Server liveness + version + auth status |
-| `GET` | `/api/projects` | List all registered Relay projects |
+| `GET` | `/api/projects` | List all registered Latch projects |
 | `POST` | `/api/projects` | Register a new workspace as a project |
 | `GET` | `/api/projects/:id` | Get project details (including API key) |
 | `PATCH` | `/api/projects/:id` | Update project name |
@@ -955,10 +955,10 @@ The Mission Control UI (`FileLocksPanel.tsx`) connects to this stream via `Event
 | `GET` | `/api/memory` | Get raw `memory.json` for a workspace |
 | `GET` | `/api/locks` | Get current lock status (proxies to Coordinator) |
 | `GET` | `/api/locks/stream` | SSE stream of lock changes (proxies to Coordinator `/stream`) |
-| `GET` | `/api/relay-files` | List all `.relay/` IR files |
-| `GET` | `/api/relay-file` | Read a specific `.relay/*.md` file |
-| `PUT` | `/api/relay-file` | Write/update a `.relay/*.md` file |
-| `GET` | `/api/context` | Get the latest `relay_context.md` |
+| `GET` | `/api/latch-files` | List all `.latch/` IR files |
+| `GET` | `/api/latch-file` | Read a specific `.latch/*.md` file |
+| `PUT` | `/api/latch-file` | Write/update a `.latch/*.md` file |
+| `GET` | `/api/context` | Get the latest `latch_context.md` |
 | `GET` | `/api/compile-brief` | Get the latest `compile_brief.md` |
 | `GET` | `/` | Serve the Mission Control frontend |
 
@@ -966,7 +966,7 @@ The Mission Control UI (`FileLocksPanel.tsx`) connects to this stream via `Event
 
 | Mode | Command | Notes |
 |------|---------|-------|
-| **Local dev** | `relay serve` or `node backend/server.js --port 3001` | Starts both the API server and auto-launches the Coordinator daemon |
+| **Local dev** | `latch serve` or `node backend/server.js --port 3001` | Starts both the API server and auto-launches the Coordinator daemon |
 | **Docker** | See below | Bundles API server + Coordinator + frontend in one container |
 | **Cloud** | Deploy to any Node.js hosting (Render, Railway, Fly.io, Cloud Run) | Mount workspace via volume or use the Central API for remote sync |
 
@@ -978,24 +978,24 @@ COPY package*.json ./
 RUN npm ci --production
 COPY . .
 EXPOSE 3001
-ENV RELAY_PORT=3001
+ENV LATCH_PORT=3001
 CMD ["node", "backend/server.js", "--port", "3001"]
 ```
 
 ```bash
-docker build -t relay-server .
+docker build -t latch-server .
 docker run -d \
   -p 3001:3001 \
   -v /path/to/repos:/workspaces \
-  --name relay \
-  relay-server
+  --name latch \
+  latch-server
 ```
 
 ---
 
 ## 8. Mission Control — The Dashboard UI
 
-> **Analogy — NASA Mission Control:** Just like NASA has a room full of screens showing every satellite, every trajectory, and every system status in real time — Relay's Mission Control gives you a single screen showing every agent, every file lock, every code edit, and every conversation happening across your project.
+> **Analogy — NASA Mission Control:** Just like NASA has a room full of screens showing every satellite, every trajectory, and every system status in real time — Latch's Mission Control gives you a single screen showing every agent, every file lock, every code edit, and every conversation happening across your project.
 
 ### 8A. Tech Stack
 
@@ -1004,7 +1004,7 @@ docker run -d \
 | Framework | **Next.js 14+** (App Router) |
 | Language | **TypeScript** |
 | Styling | **CSS Modules** (per-component `.module.css`) |
-| State | **React Context** (`RelayContext`) + hooks |
+| State | **React Context** (`LatchContext`) + hooks |
 | Data fetching | REST API calls to Backend API Server + SSE for real-time locks |
 | Real-time | `EventSource` (SSE) for live lock updates |
 
@@ -1071,7 +1071,7 @@ docker run -d \
 - **How:** Aggregates events from the Central API or shared `memory.json` across users.
 
 #### 6. All IR Files / Memory (`ProjectDashboard.tsx` → Memory tab)
-- **What:** Browse all Relay Intermediate Representation (IR) markdown files.
+- **What:** Browse all Latch Intermediate Representation (IR) markdown files.
 - **Sub-tabs:** `Project` | `Tasks` | `Decisions` | `Failures` | `Architecture` | `Compile Brief`
 - **Layout:** Split view — Handoff context on the left, selected IR file on the right.
 - **Purpose:** Gives you a bird's-eye view of the shared AI memory — what the agents collectively know about your project.
@@ -1082,7 +1082,7 @@ docker run -d \
 
 ### 8D. Sidebar — Agent Integrations Panel (`Sidebar.tsx`)
 
-The sidebar is the **control panel for connecting agents** to Relay:
+The sidebar is the **control panel for connecting agents** to Latch:
 
 ```
   ┌─────────────────────────────┐
@@ -1103,7 +1103,7 @@ The sidebar is the **control panel for connecting agents** to Relay:
 ```
 
 **Connection flow:**
-1. Click an agent's "Connect" button → `POST /api/handshake` → writes a `.relay/.handshake_<agent>` token file.
+1. Click an agent's "Connect" button → `POST /api/handshake` → writes a `.latch/.handshake_<agent>` token file.
 2. The agent's next tool call reads the handshake → confirms connection → status turns green.
 3. `POST /api/connect` → starts file watcher → events begin flowing into the timeline.
 4. Status states: `idle` → `handshaking` → `connected` (or `error` with retry).
@@ -1120,7 +1120,7 @@ Pre-tool hook fires → Coordinator claims lock
 Edit happens → File saved to disk
        │
        ▼
-relay watch (file watcher) detects change → Writes to memory.json timeline
+latch watch (file watcher) detects change → Writes to memory.json timeline
        │
        ▼
 Backend API Server reads memory.json → Builds dashboard payload
@@ -1137,7 +1137,7 @@ SSE /api/locks/stream → FileLocksPanel updates in real-time
 | Concern | Coordinator | Backend API Server |
 |---------|-------------|--------------------|
 | **Purpose** | File locking only | Everything else |
-| **Lifecycle** | Auto-started as daemon, can crash/restart independently | Started explicitly by `relay serve` |
+| **Lifecycle** | Auto-started as daemon, can crash/restart independently | Started explicitly by `latch serve` |
 | **Port** | Dynamic (ephemeral) | Fixed (default `3001`) |
 | **Consumers** | Hook scripts only (via `client.js`) | Mission Control UI, CLI commands |
 | **State** | Lock table (transient, TTL-based) | Memory.json, IR files, project registry (persistent) |
@@ -1151,9 +1151,9 @@ SSE /api/locks/stream → FileLocksPanel updates in real-time
 
 ---
 
-## 9. Event-Driven Architecture — Why Relay Never Busy-Waits
+## 9. Event-Driven Architecture — Why Latch Never Busy-Waits
 
-> **The cardinal sin of coordination tools is polling.** If your lock-check is a `while(!available) { sleep(100); }` loop, you've already lost. Every 100ms of sleep is 100ms of wasted CPU, 100ms of latency, and 100ms of frustration. Relay is designed from the ground up to be **fully event-driven** — nothing polls, nothing spins, nothing busy-waits.
+> **The cardinal sin of coordination tools is polling.** If your lock-check is a `while(!available) { sleep(100); }` loop, you've already lost. Every 100ms of sleep is 100ms of wasted CPU, 100ms of latency, and 100ms of frustration. Latch is designed from the ground up to be **fully event-driven** — nothing polls, nothing spins, nothing busy-waits.
 
 ### 9A. The Problem with Polling
 
@@ -1173,9 +1173,9 @@ This is catastrophic at scale:
 - Latency floor of 250ms (average half-interval) on every lock acquisition
 - Thundering herd: all agents wake up simultaneously on each interval
 
-### 9B. Relay's Event-Driven Design
+### 9B. Latch's Event-Driven Design
 
-Relay eliminates polling at every layer with three interlocking mechanisms:
+Latch eliminates polling at every layer with three interlocking mechanisms:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -1313,9 +1313,9 @@ This sweep runs every 30 seconds to delete expired locks. It is:
 
 ---
 
-## 10. Relay MCP Server — Structured Tool Access
+## 10. Latch MCP Server — Structured Tool Access
 
-> **Hooks are interceptors. The MCP server is a collaborator.** Hooks run invisibly before every tool call. The MCP server gives agents *explicit tools* they can call when they want to interact with Relay — check locks, read shared memory, report changes, coordinate with teammates.
+> **Hooks are interceptors. The MCP server is a collaborator.** Hooks run invisibly before every tool call. The MCP server gives agents *explicit tools* they can call when they want to interact with Latch — check locks, read shared memory, report changes, coordinate with teammates.
 
 ### 10A. What Is MCP?
 
@@ -1331,7 +1331,7 @@ Agent Process                MCP Server Process
 
                   stdin
   tools/call    ──────────────►   callTool(name, args)
-  { name: "relay_claim_file",       │
+  { name: "latch_claim_file",       │
     args: { file: "src/app.ts" }}    ▼
                                   coordinator.claimFile()
                   stdout              │
@@ -1340,7 +1340,7 @@ Agent Process                MCP Server Process
 
 ### 10B. Transport — stdio, Not HTTP
 
-The Relay MCP server uses **stdio transport** (JSON-RPC over newline-delimited stdin/stdout), NOT an HTTP server:
+The Latch MCP server uses **stdio transport** (JSON-RPC over newline-delimited stdin/stdout), NOT an HTTP server:
 
 ```javascript
 const rl = readline.createInterface({ input: process.stdin, terminal: false });
@@ -1371,23 +1371,23 @@ The MCP server operates in two modes, selected by environment variables:
 │                                                                 │
 │  LOCAL MODE (default)                                           │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │  RELAY_WORKSPACE_PATH=/path/to/repo                      │  │
+│  │  LATCH_WORKSPACE_PATH=/path/to/repo                      │  │
 │  │                                                          │  │
-│  │  relay_read_file ──► fs.readFile(.relay/project.md)      │  │
-│  │  relay_claim_file ──► coordinator client (HTTP/fallback) │  │
-│  │  relay_sync ──► syncWorkspace() (direct function call)   │  │
+│  │  latch_read_file ──► fs.readFile(.latch/project.md)      │  │
+│  │  latch_claim_file ──► coordinator client (HTTP/fallback) │  │
+│  │  latch_sync ──► syncWorkspace() (direct function call)   │  │
 │  │                                                          │  │
 │  │  Everything runs locally. No network. Fast.              │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  REMOTE MODE                                                    │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │  RELAY_API_URL=https://relay.example.com                 │  │
-│  │  RELAY_API_KEY=sk-relay-...                              │  │
+│  │  LATCH_API_URL=https://latch.example.com                 │  │
+│  │  LATCH_API_KEY=sk-latch-...                              │  │
 │  │                                                          │  │
-│  │  relay_read_file ──► GET /api/relay/file?path=...        │  │
-│  │  relay_claim_file ──► POST /api/locks/claim (remote)     │  │
-│  │  relay_sync ──► POST /api/sync (remote)                  │  │
+│  │  latch_read_file ──► GET /api/latch/file?path=...        │  │
+│  │  latch_claim_file ──► POST /api/locks/claim (remote)     │  │
+│  │  latch_sync ──► POST /api/sync (remote)                  │  │
 │  │                                                          │  │
 │  │  For cloud agents, CI, or distributed teams.             │  │
 │  └──────────────────────────────────────────────────────────┘  │
@@ -1400,31 +1400,31 @@ The MCP server operates in two modes, selected by environment variables:
 
 | Tool | Purpose | Key Arguments |
 |------|---------|---------------|
-| `relay_list_files` | List files/folders inside `.relay/` | `path` (relative, `""` for root) |
-| `relay_read_file` | Read any `.relay/` file (markdown, JSON) | `path` (e.g. `"relay_context.md"`) |
-| `relay_write_file` | Write/update a `.relay/` IR file | `path`, `content` |
-| `relay_get_context` | Regenerate and return `relay_context.md` handoff | — |
-| `relay_sync` | Sync agent transcripts → `memory.json` → compile brief | — |
+| `latch_list_files` | List files/folders inside `.latch/` | `path` (relative, `""` for root) |
+| `latch_read_file` | Read any `.latch/` file (markdown, JSON) | `path` (e.g. `"latch_context.md"`) |
+| `latch_write_file` | Write/update a `.latch/` IR file | `path`, `content` |
+| `latch_get_context` | Regenerate and return `latch_context.md` handoff | — |
+| `latch_sync` | Sync agent transcripts → `memory.json` → compile brief | — |
 
 #### Coordination Tools (file locking)
 
 | Tool | Purpose | Key Arguments |
 |------|---------|---------------|
-| `relay_claim_file` | Acquire exclusive write lock before editing | `file` (repo-relative), `ttl_ms` (optional) |
-| `relay_release_file` | Release a lock after editing | `file` |
-| `relay_status` | View full lock table (all held locks + expiry) | — |
+| `latch_claim_file` | Acquire exclusive write lock before editing | `file` (repo-relative), `ttl_ms` (optional) |
+| `latch_release_file` | Release a lock after editing | `file` |
+| `latch_status` | View full lock table (all held locks + expiry) | — |
 
-#### Central Relay Tools (multi-user collaboration)
+#### Central Latch Tools (multi-user collaboration)
 
 | Tool | Purpose | Key Arguments |
 |------|---------|---------------|
-| `relay_report_change` | Report a code change to Central for team visibility | `file`, `content` (summary) |
-| `relay_get_project_context` | Pull compiled team context from Central | — |
-| `relay_get_recent_changes` | Pull latest `changes.md` from Central | — |
-| `relay_get_decisions` | Pull team `decisions.md` from Central | — |
-| `relay_get_active_tasks` | Pull team `tasks.md` from Central | — |
-| `relay_report_decision` | Report an open/resolved decision | `decision_id`, `decision`, `status` |
-| `relay_update_task` | Create or update a task status | `task_id`, `description`, `status` |
+| `latch_report_change` | Report a code change to Central for team visibility | `file`, `content` (summary) |
+| `latch_get_project_context` | Pull compiled team context from Central | — |
+| `latch_get_recent_changes` | Pull latest `changes.md` from Central | — |
+| `latch_get_decisions` | Pull team `decisions.md` from Central | — |
+| `latch_get_active_tasks` | Pull team `tasks.md` from Central | — |
+| `latch_report_decision` | Report an open/resolved decision | `decision_id`, `decision`, `status` |
+| `latch_update_task` | Create or update a task status | `task_id`, `description`, `status` |
 
 ### 10E. MCP vs Hooks — When to Use Which
 
@@ -1436,7 +1436,7 @@ The MCP server operates in two modes, selected by environment variables:
 | **Blocking** | Can deny tool execution | Cannot block anything |
 | **Install** | Config files per agent | Single `mcpServers` config entry |
 | **Transport** | Process spawn (child_process) | stdio (JSON-RPC over pipe) |
-| **When needed** | Always — non-negotiable for coordination | Optional — for agents that want richer Relay interaction |
+| **When needed** | Always — non-negotiable for coordination | Optional — for agents that want richer Latch interaction |
 
 > **Use both together.** Hooks enforce coordination silently. MCP tools give agents the ability to *think* about coordination — check what's locked, read what other agents did, report their own work to the team.
 
@@ -1446,11 +1446,11 @@ The MCP server operates in two modes, selected by environment variables:
 ```json
 {
   "mcpServers": {
-    "relay": {
+    "latch": {
       "command": "node",
-      "args": ["<path-to-relay>/backend/mcp/server.js"],
+      "args": ["<path-to-latch>/backend/mcp/server.js"],
       "env": {
-        "RELAY_WORKSPACE_PATH": "/path/to/repo"
+        "LATCH_WORKSPACE_PATH": "/path/to/repo"
       }
     }
   }
@@ -1461,11 +1461,11 @@ The MCP server operates in two modes, selected by environment variables:
 ```json
 {
   "mcpServers": {
-    "relay": {
+    "latch": {
       "command": "node",
-      "args": ["<path-to-relay>/backend/mcp/server.js"],
+      "args": ["<path-to-latch>/backend/mcp/server.js"],
       "env": {
-        "RELAY_WORKSPACE_PATH": "/path/to/repo"
+        "LATCH_WORKSPACE_PATH": "/path/to/repo"
       }
     }
   }
@@ -1476,11 +1476,11 @@ The MCP server operates in two modes, selected by environment variables:
 ```json
 {
   "mcpServers": {
-    "relay": {
+    "latch": {
       "command": "node",
-      "args": ["<path-to-relay>/backend/mcp/server.js"],
+      "args": ["<path-to-latch>/backend/mcp/server.js"],
       "env": {
-        "RELAY_WORKSPACE_PATH": "/path/to/repo"
+        "LATCH_WORKSPACE_PATH": "/path/to/repo"
       }
     }
   }
@@ -1505,7 +1505,7 @@ The MCP server operates in two modes, selected by environment variables:
   └──────────────────────┬───────────────────┘
                          │
   ┌──────────────────────▼───────────────────┐
-  │  2. File Watcher (relay watch)           │
+  │  2. File Watcher (latch watch)           │
   │     → Detects FS change event            │
   │     → Extracts diff (git diff HEAD)      │
   │     → Appends to memory.json timeline    │
@@ -1520,7 +1520,7 @@ The MCP server operates in two modes, selected by environment variables:
   └──────────────────────┬───────────────────┘
                          │
   ┌──────────────────────▼───────────────────┐
-  │  4. Central Relay API                    │
+  │  4. Central Latch API                    │
   │     → Stores event in central store      │
   │     → Compiles central context           │
   │     → Available to all team members      │
@@ -1536,7 +1536,7 @@ The MCP server operates in two modes, selected by environment variables:
 
 ### 11B. Conflict Detection Engine
 
-The conflict detection module (`relayConflicts.js`) scans for **overlapping edits** — different agents editing the same file within a configurable time window:
+The conflict detection module (`latchConflicts.js`) scans for **overlapping edits** — different agents editing the same file within a configurable time window:
 
 ```javascript
 function detectConflicts(memory, windowMs = 5 * 60 * 1000) {
@@ -1589,7 +1589,7 @@ The Central Sync Bridge (`centralSync.js`) ensures events flow between machines 
   GET /api/central/projects/:id/events?after=lastPulledId
        │
        ▼
-  Append new events to .relay/central_events.jsonl
+  Append new events to .latch/central_events.jsonl
        │
        ▼
   Advance cursor: lastPulledCentralEventId = latest event ID
@@ -1598,7 +1598,7 @@ The Central Sync Bridge (`centralSync.js`) ensures events flow between machines 
   Compile central context → central_context.md
        │
        ▼
-  Available to all local agents via MCP tools or relay_context.md
+  Available to all local agents via MCP tools or latch_context.md
 ```
 
 **Idempotency guarantee:** The `client_event_id` is a SHA-256 of `(timestamp, filepath, index)`. If the same event is pushed twice (network retry, duplicate sync), the Central API deduplicates by this ID. No double-counting.
@@ -1607,7 +1607,7 @@ The Central Sync Bridge (`centralSync.js`) ensures events flow between machines 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                       UNIFIED RELAY BACKEND                             │
+│                       UNIFIED LATCH BACKEND                             │
 │                                                                         │
 │  ┌────────────────────────────────────────────────────────────────────┐ │
 │  │  Express API Server (backend/server.js)          Port: 3001       │ │
@@ -1649,7 +1649,7 @@ The Central Sync Bridge (`centralSync.js`) ensures events flow between machines 
 │  │  └──┬───┘ └──┬───┘ └──┬───┘ └──┬───┘ └──────┬───────┘          │ │
 │  │     └────────┴────────┴────────┴─────────────┘                   │ │
 │  │                       │                                           │ │
-│  │              relay-hook-lib.js (shared)                           │ │
+│  │              latch-hook-lib.js (shared)                           │ │
 │  │              coordinator/client.js (3-tier fallback)              │ │
 │  └───────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -1673,9 +1673,9 @@ The Central Sync Bridge (`centralSync.js`) ensures events flow between machines 
 
 ---
 
-## 12. The Central Relay — Inter-Machine Coordination
+## 12. The Central Latch — Inter-Machine Coordination
 
-> **You spotted the gap.** The local Coordinator (Section 6) only handles **Intra** coordination — multiple agents on the **same machine** fighting over the same files. But what about Alice in New York running Claude Code and Bob in London running Cursor on the **same repo**? That's **Inter** coordination, and it requires a completely different architecture. The local Express server can't do this. You need a **shared, networked truth** — and that's the Central Relay.
+> **You spotted the gap.** The local Coordinator (Section 6) only handles **Intra** coordination — multiple agents on the **same machine** fighting over the same files. But what about Alice in New York running Claude Code and Bob in London running Cursor on the **same repo**? That's **Inter** coordination, and it requires a completely different architecture. The local Express server can't do this. You need a **shared, networked truth** — and that's the Central Latch.
 
 ### 12A. Two Layers, Two Problems, Two Solutions
 
@@ -1686,7 +1686,7 @@ The Central Sync Bridge (`centralSync.js`) ensures events flow between machines 
 │  ─────────────────────               ───────────────────────             │
 │                                                                          │
 │  ┌──────────────────┐               ┌────────────────────────┐          │
-│  │ Local Coordinator│               │   Central Relay API    │          │
+│  │ Local Coordinator│               │   Central Latch API    │          │
 │  │ (127.0.0.1:*)    │               │   (cloud-hosted or     │          │
 │  │                  │               │    self-hosted server)  │          │
 │  │ • File locks     │               │                        │          │
@@ -1714,13 +1714,13 @@ The Central Sync Bridge (`centralSync.js`) ensures events flow between machines 
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 12B. Central Relay Architecture
+### 12B. Central Latch Architecture
 
-The Central Relay is a **second set of API routes** inside the same Express server (`backend/server.js`), but with a completely different auth model, data store, and purpose:
+The Central Latch is a **second set of API routes** inside the same Express server (`backend/server.js`), but with a completely different auth model, data store, and purpose:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      CENTRAL RELAY                                      │
+│                      CENTRAL LATCH                                      │
 │                                                                         │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │  Auth Layer (centralAuth.js)                                    │   │
@@ -1733,7 +1733,7 @@ The Central Relay is a **second set of API routes** inside the same Express serv
 │  ┌────────────────────────────────▼────────────────────────────────┐   │
 │  │  Project Registry (centralProjects.js)                          │   │
 │  │                                                                 │   │
-│  │  ~/.relay-os/central/central-projects.json                      │   │
+│  │  ~/.latch-os/central/central-projects.json                      │   │
 │  │  [{ id, name, apiKeyHash, keyPrefix, createdAt }]               │   │
 │  │                                                                 │   │
 │  │  API key is returned ONCE on creation, then only the SHA-256    │   │
@@ -1743,7 +1743,7 @@ The Central Relay is a **second set of API routes** inside the same Express serv
 │  ┌────────────────────────────────▼────────────────────────────────┐   │
 │  │  Event Store (centralStore.js)                                  │   │
 │  │                                                                 │   │
-│  │  ~/.relay-os/central/events/<projectId>.jsonl                   │   │
+│  │  ~/.latch-os/central/events/<projectId>.jsonl                   │   │
 │  │                                                                 │   │
 │  │  Append-only JSONL file. Each line is a JSON event.             │   │
 │  │  Monotonic auto-increment event_id per project.                 │   │
@@ -1758,7 +1758,7 @@ The Central Relay is a **second set of API routes** inside the same Express serv
 │  │  Reads ALL events → produces 5 markdown files:                  │   │
 │  │    project.md, changes.md, decisions.md, tasks.md, agents.md    │   │
 │  │                                                                 │   │
-│  │  These are what agents read via relay_get_project_context.      │   │
+│  │  These are what agents read via latch_get_project_context.      │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1781,7 +1781,7 @@ All Central routes live under `/api/central/` and require `Bearer <api-key>` aut
 
 ### 12D. The Event Store — Internals
 
-The Event Store (`centralStore.js`) is the most performance-critical part of the Central Relay. Here's how it avoids busy-waiting and race conditions:
+The Event Store (`centralStore.js`) is the most performance-critical part of the Central Latch. Here's how it avoids busy-waiting and race conditions:
 
 #### Promise Queue Serialization (No Busy-Wait)
 
@@ -1860,7 +1860,7 @@ return initPromises.get(projectId);  // All callers share the same init promise
 ### 12E. Auth Model — SHA-256 Hashed Keys
 
 ```
-  relay central create "my-project"
+  latch central create "my-project"
          │
          ▼
   ┌──────────────────────────────────────┐
@@ -1873,21 +1873,21 @@ return initPromises.get(projectId);  // All callers share the same init promise
   └──────────────────────────────────────┘
          │
          ▼
-  User stores key in .relay/central-config.json:
+  User stores key in .latch/central-config.json:
   {
-    "serverUrl": "https://relay.example.com",
+    "serverUrl": "https://latch.example.com",
     "projectId": "p_abc123def456",
     "apiKey": "central_<48 hex chars>"
   }
 ```
 
 **Two auth levels:**
-1. **Admin key** (`RELAY_CENTRAL_ADMIN_KEY` env var) — can create projects, list all projects
+1. **Admin key** (`LATCH_CENTRAL_ADMIN_KEY` env var) — can create projects, list all projects
 2. **Project key** — scoped to a single project ID. The `requireProjectMatch` middleware ensures `req.params.id === req.centralProject.id`
 
 ### 12F. Auto-Compile Pipeline
 
-After **every event append**, the Central Relay automatically recompiles the project context:
+After **every event append**, the Central Latch automatically recompiles the project context:
 
 ```
   POST /api/central/projects/:id/events
@@ -1911,7 +1911,7 @@ After **every event append**, the Central Relay automatically recompiles the pro
          ▼
   GET /api/central/projects/:id/context
   → Returns all 5 files joined
-  → Agent reads via relay_get_project_context MCP tool
+  → Agent reads via latch_get_project_context MCP tool
 ```
 
 **What the compiler does:**
@@ -1925,7 +1925,7 @@ After **every event append**, the Central Relay automatically recompiles the pro
 Each local machine runs a **Sync Bridge** (`centralSync.js`) that handles the push/pull lifecycle:
 
 ```
-  LOCAL MACHINE                           CENTRAL RELAY SERVER
+  LOCAL MACHINE                           CENTRAL LATCH SERVER
   ─────────────                           ──────────────────────
 
   ┌─────────────────────┐
@@ -1954,7 +1954,7 @@ Each local machine runs a **Sync Bridge** (`centralSync.js`) that handles the pu
              │
              ▼
   ┌─────────────────────┐
-  │  relay_context.md    │  ← Now includes team changes
+  │  latch_context.md    │  ← Now includes team changes
   │  (handoff bundle)    │  ← Agents see what others did
   └─────────────────────┘
 ```
@@ -1962,7 +1962,7 @@ Each local machine runs a **Sync Bridge** (`centralSync.js`) that handles the pu
 **Cursor tracking per machine:**
 - `lastPushedEventTs` — what's the latest event I've already pushed?
 - `lastPulledCentralEventId` — what's the latest event_id I've already pulled?
-- Both stored in `.relay/central-config.json`, updated atomically after each successful operation
+- Both stored in `.latch/central-config.json`, updated atomically after each successful operation
 
 ### 12H. Event Types — The Three Kinds
 
@@ -1980,7 +1980,7 @@ Each event also carries:
 
 ### 12I. Intra vs Inter — The Complete Comparison
 
-| Dimension | Intra (Local Coordinator) | Inter (Central Relay) |
+| Dimension | Intra (Local Coordinator) | Inter (Central Latch) |
 |-----------|--------------------------|----------------------|
 | **Scope** | One machine | All machines, all users |
 | **Purpose** | File lock enforcement | Team awareness + change visibility |
@@ -1991,13 +1991,13 @@ Each event also carries:
 | **Port** | Ephemeral (dynamic) | Fixed (3001 or configured) |
 | **Latency** | ~60ms (in-memory) | 200–500ms (network) |
 | **Failure mode** | Filesystem fallback → fail-open | Fail-open (local agents keep working) |
-| **State persistence** | `.relay/locks/*.lock` (TTL, transient) | `~/.relay-os/central/events/*.jsonl` (permanent) |
+| **State persistence** | `.latch/locks/*.lock` (TTL, transient) | `~/.latch-os/central/events/*.jsonl` (permanent) |
 | **Who talks to it** | Pre-tool hooks (automatic) | MCP tools + Sync Bridge (explicit) |
 | **Real-time updates** | SSE push (EventEmitter) | Pull-based (cursor pagination) |
 | **Binding** | `127.0.0.1` only | `0.0.0.0` (network-accessible when deployed) |
 | **Deployment** | Auto-started daemon (No hosting needed) | Self-hosted or cloud-deployed |
 
-> **Both layers work together.** Intra prevents Claude and Cursor on your laptop from stomping each other's files. Inter prevents your laptop's agents from stomping your teammate's agents' files. Neither blocks the other — if the Central Relay is down, local agents still coordinate locally. If the local Coordinator is down, hooks fall back to filesystem → fail-open. The system degrades gracefully at every boundary.
+> **Both layers work together.** Intra prevents Claude and Cursor on your laptop from stomping each other's files. Inter prevents your laptop's agents from stomping your teammate's agents' files. Neither blocks the other — if the Central Latch is down, local agents still coordinate locally. If the local Coordinator is down, hooks fall back to filesystem → fail-open. The system degrades gracefully at every boundary.
 
 ---
 
@@ -2007,29 +2007,29 @@ Each event also carries:
 
 ## 13. The Great Markdown Purge (Token Optimization)
 
-> **The old way was too heavy.** Forcing every agent to constantly read and write a rigid set of Markdown files (`relay_context.md`, `compile_brief.md`, `project.md`, `changes.md`, `decisions.md`, `tasks.md`) consumed massive context windows and clashed with teams' existing documentation standards. 
+> **The old way was too heavy.** Forcing every agent to constantly read and write a rigid set of Markdown files (`latch_context.md`, `compile_brief.md`, `project.md`, `changes.md`, `decisions.md`, `tasks.md`) consumed massive context windows and clashed with teams' existing documentation standards. 
 
-We are **completely scrapping** the Markdown generation engine from the core Relay loop. 
+We are **completely scrapping** the Markdown generation engine from the core Latch loop. 
 
 **What we are removing:**
-1. **Instruction file patching:** Relay will no longer forcefully inject pseudo-commands into `CLAUDE.md`, `AGENTS.md`, or `.cursorrules`.
-2. **Context Compilation:** No more `relay context .` generating huge handoff files.
-3. **Central Markdown Compilation:** The Central Relay will no longer synthesize `project.md` or `decisions.md`.
+1. **Instruction file patching:** Latch will no longer forcefully inject pseudo-commands into `CLAUDE.md`, `AGENTS.md`, or `.cursorrules`.
+2. **Context Compilation:** No more `latch context .` generating huge handoff files.
+3. **Central Markdown Compilation:** The Central Latch will no longer synthesize `project.md` or `decisions.md`.
 
 **What we are keeping:**
-Relay will focus exclusively on its two most powerful, invisible primitives:
+Latch will focus exclusively on its two most powerful, invisible primitives:
 1. **File Locking (Intra):** Preventing parallel file corruption.
 2. **Chat History Syncing (Inter):** Harvesting agent transcripts into a unified `memory.json` (and syncing to Central) so agents can query the raw timeline of what others did.
 
-By relying on MCP tools (e.g., a new `relay_get_chat_history` tool) rather than force-feeding `.md` files, we drastically reduce token usage and let agents pull exactly the history they need, when they need it.
+By relying on MCP tools (e.g., a new `latch_get_chat_history` tool) rather than force-feeding `.md` files, we drastically reduce token usage and let agents pull exactly the history they need, when they need it.
 
 ---
 
 ## 14. The Agent Hook Ecosystem (How to Connect)
 
-To make Relay work invisibly without `.md` instructions, we rely entirely on **Pre-Tool Hooks** (for locking) and **Stop Hooks** (for chat history sync).
+To make Latch work invisibly without `.md` instructions, we rely entirely on **Pre-Tool Hooks** (for locking) and **Stop Hooks** (for chat history sync).
 
-Here is the exact mapping of how Relay hooks into the 5 supported AI coding agents.
+Here is the exact mapping of how Latch hooks into the 5 supported AI coding agents.
 
 ### 14A. Cursor
 Cursor supports robust hook definitions in `.cursor/hooks.json`.
@@ -2043,14 +2043,14 @@ Cursor supports robust hook definitions in `.cursor/hooks.json`.
   "hooks": {
     "preToolUse": [
       {
-        "command": "node \".relay/hooks/relay-cursor-pre-tool.js\"",
+        "command": "node \".latch/hooks/latch-cursor-pre-tool.js\"",
         "matcher": "Write|Edit|str_replace_based_edit_tool|create_file",
         "timeout": 10
       }
     ],
     "stop": [
       {
-        "command": "node \".relay/hooks/relay-cursor-stop.js\"",
+        "command": "node \".latch/hooks/latch-cursor-stop.js\"",
         "loop_limit": 1
       }
     ]
@@ -2070,13 +2070,13 @@ Claude Code supports similar hooks in its `.claude/settings.json` file.
     "PreToolUse": [
       {
         "matcher": "Edit|Write|Replace",
-        "hooks": [{ "type": "command", "command": "node \".relay/hooks/relay-claude-pre-tool.js\"" }]
+        "hooks": [{ "type": "command", "command": "node \".latch/hooks/latch-claude-pre-tool.js\"" }]
       }
     ],
     "Stop": [
       {
         "matcher": "*",
-        "hooks": [{ "type": "command", "command": "node \".relay/hooks/relay-claude-stop.js\"" }]
+        "hooks": [{ "type": "command", "command": "node \".latch/hooks/latch-claude-stop.js\"" }]
       }
     ]
   }
@@ -2098,7 +2098,7 @@ Antigravity executes highly specific tools for modifying files. We intercept the
         "hooks": [
           {
             "type": "command",
-            "command": "node \".relay/hooks/relay-antigravity-pre-tool.js\"",
+            "command": "node \".latch/hooks/latch-antigravity-pre-tool.js\"",
             "timeout": 10
           }
         ]
@@ -2107,7 +2107,7 @@ Antigravity executes highly specific tools for modifying files. We intercept the
     "Stop": [
       {
         "type": "command",
-        "command": "node \".relay/hooks/relay-antigravity-stop.js\"",
+        "command": "node \".latch/hooks/latch-antigravity-stop.js\"",
         "timeout": 120
       }
     ]
@@ -2116,7 +2116,7 @@ Antigravity executes highly specific tools for modifying files. We intercept the
 ```
 
 ### 14D. GitHub Copilot CLI
-Copilot CLI allows cross-platform hooks defined in `.github/hooks/relay-os.json`.
+Copilot CLI allows cross-platform hooks defined in `.github/hooks/latch-os.json`.
 
 - **preToolUse:** Matches `edit_file|write_file|str_replace_editor`. Defines both bash and powershell executors.
 - **agentStop:** Syncs the Copilot session state.
@@ -2128,8 +2128,8 @@ Copilot CLI allows cross-platform hooks defined in `.github/hooks/relay-os.json`
     "preToolUse": [
       {
         "type": "command",
-        "bash": "node \".relay/hooks/relay-copilot-pre-tool.js\"",
-        "powershell": "node \".relay/hooks/relay-copilot-pre-tool.js\"",
+        "bash": "node \".latch/hooks/latch-copilot-pre-tool.js\"",
+        "powershell": "node \".latch/hooks/latch-copilot-pre-tool.js\"",
         "matcher": "edit_file|write_file|str_replace_editor",
         "cwd": ".",
         "timeoutSec": 10
@@ -2138,8 +2138,8 @@ Copilot CLI allows cross-platform hooks defined in `.github/hooks/relay-os.json`
     "agentStop": [
       {
         "type": "command",
-        "bash": "node \".relay/hooks/relay-copilot-stop.js\"",
-        "powershell": "node \".relay/hooks/relay-copilot-stop.js\"",
+        "bash": "node \".latch/hooks/latch-copilot-stop.js\"",
+        "powershell": "node \".latch/hooks/latch-copilot-stop.js\"",
         "cwd": ".",
         "timeoutSec": 120
       }
@@ -2160,7 +2160,7 @@ Codex shares a virtually identical schema to Claude Code, defined in `.codex/hoo
         "hooks": [
           {
             "type": "command",
-            "command": "node \".relay/hooks/relay-codex-pre-tool.js\"",
+            "command": "node \".latch/hooks/latch-codex-pre-tool.js\"",
             "timeout": 10
           }
         ]
@@ -2171,7 +2171,7 @@ Codex shares a virtually identical schema to Claude Code, defined in `.codex/hoo
         "hooks": [
           {
             "type": "command",
-            "command": "node \".relay/hooks/relay-codex-stop.js\"",
+            "command": "node \".latch/hooks/latch-codex-stop.js\"",
             "timeout": 120
           }
         ]
@@ -2183,59 +2183,59 @@ Codex shares a virtually identical schema to Claude Code, defined in `.codex/hoo
 
 ### Conclusion: The Future is Invisible
 
-By leveraging these hooks and the local `127.0.0.1` Coordinator, Relay achieves cross-agent orchestration without forcing a single line of Markdown into the LLM's context window. 
+By leveraging these hooks and the local `127.0.0.1` Coordinator, Latch achieves cross-agent orchestration without forcing a single line of Markdown into the LLM's context window. 
 
 1. **Pre-Tool Hooks** hit the O(1) Coordinator HTTP endpoint, locking the file in <60ms.
 2. **Stop Hooks** harvest the agent's chat transcripts, extracting the code edits into `memory.json`.
-3. The **MCP Server** exposes `relay_get_chat_history` so an agent can *choose* to read what happened while it was asleep.
+3. The **MCP Server** exposes `latch_get_chat_history` so an agent can *choose* to read what happened while it was asleep.
 
-This makes Relay faster, cheaper (tokens), and completely agnostic to the user's personal workflow.
+This makes Latch faster, cheaper (tokens), and completely agnostic to the user's personal workflow.
 
 ---
 
 ## 15. Zero-Init: Global Auto-Run Architecture
 
-> **No more manual setup.** Developers hate typing `relay init` in every single repository. 
+> **No more manual setup.** Developers hate typing `latch init` in every single repository. 
 
-Relay is designed to be **always on, everywhere, automatically.** It achieves this by shifting from a per-project script to a **Global Daemon & Native IDE Integration** model.
+Latch is designed to be **always on, everywhere, automatically.** It achieves this by shifting from a per-project script to a **Global Daemon & Native IDE Integration** model.
 
 ### 15A. The Global Daemon
-Instead of running a local Express server from a `node_modules` folder inside the project, Relay runs as a lightweight **global background service** (e.g., a system tray app on macOS/Windows or a systemd service on Linux).
+Instead of running a local Express server from a `node_modules` folder inside the project, Latch runs as a lightweight **global background service** (e.g., a system tray app on macOS/Windows or a systemd service on Linux).
 
 1. The global daemon binds to `127.0.0.1:3001` upon system startup.
 2. It dynamically tracks which workspaces are active based on incoming hook traffic.
-3. No `npm install relay-os` or `relay init` is required in individual repositories. 
+3. No `npm install latch-os` or `latch init` is required in individual repositories. 
 
 ### 15B. Global Hook Injection
-Instead of injecting `.relay/hooks/*` into every individual project folder, the Relay daemon patches the **global agent configurations** once upon installation.
+Instead of injecting `.latch/hooks/*` into every individual project folder, the Latch daemon patches the **global agent configurations** once upon installation.
 
-- **Claude Code:** Patches `~/.claude/settings.json` globally, pointing to a global hook binary (e.g., `~/.relay-os/bin/relay-claude-hook`).
-- **Cursor/Copilot:** Handled via a native VSCode Extension (`Relay for VSCode`). The extension activates automatically in any workspace and intercepts the IDE's file write events natively, bypassing the need for a `.cursor/hooks.json` file entirely.
-- **Antigravity:** Installed as a global custom Plugin (`~/.gemini/config/plugins/relay`), ensuring the PreToolUse and Stop hooks are active across all workspaces automatically.
+- **Claude Code:** Patches `~/.claude/settings.json` globally, pointing to a global hook binary (e.g., `~/.latch-os/bin/latch-claude-hook`).
+- **Cursor/Copilot:** Handled via a native VSCode Extension (`Latch for VSCode`). The extension activates automatically in any workspace and intercepts the IDE's file write events natively, bypassing the need for a `.cursor/hooks.json` file entirely.
+- **Antigravity:** Installed as a global custom Plugin (`~/.gemini/config/plugins/latch`), ensuring the PreToolUse and Stop hooks are active across all workspaces automatically.
 
 ### 15C. Result: Invisible Magic
-When a developer clones a new repo and fires up Claude or Cursor, Relay is already watching. 
+When a developer clones a new repo and fires up Claude or Cursor, Latch is already watching. 
 - The first time a file edit is attempted, the global hook pings the global daemon.
 - The daemon auto-registers the workspace in its internal registry and creates the lock.
 - **Zero commands. Zero config files. Zero friction.**
 
 ### 15D. The Death of the CLI
 
-Because Relay is now fully integrated into the global hook system and background daemon, **we have completely eliminated all manual user/agent commands.**
+Because Latch is now fully integrated into the global hook system and background daemon, **we have completely eliminated all manual user/agent commands.**
 
 *RIP to the legacy commands:*
-- ❌ `relay init` (Handled globally upon system installation)
-- ❌ `relay watch .` (The global daemon intrinsically watches all registered workspaces via hooks)
-- ❌ `relay sync .` (Syncing is automatically triggered by the agent's Stop hook at the end of every turn)
-- ❌ `relay compile .` and `relay context .` (The entire Markdown generation engine was deleted)
+- ❌ `latch init` (Handled globally upon system installation)
+- ❌ `latch watch .` (The global daemon intrinsically watches all registered workspaces via hooks)
+- ❌ `latch sync .` (Syncing is automatically triggered by the agent's Stop hook at the end of every turn)
+- ❌ `latch compile .` and `latch context .` (The entire Markdown generation engine was deleted)
 
-There are no "pseudo-commands" for agents to type, and no background terminals the user has to keep open. The user experience is perfectly transparent: you just open your IDE and start coding. Relay handles the chaos invisibly.
+There are no "pseudo-commands" for agents to type, and no background terminals the user has to keep open. The user experience is perfectly transparent: you just open your IDE and start coding. Latch handles the chaos invisibly.
 
 ---
 
 ## 16. The Desktop App (Tauri Delivery)
 
-To make the "Global Daemon" actually user-friendly, Relay isn't installed via a terminal command. It is packaged and distributed as a native **Desktop Application**.
+To make the "Global Daemon" actually user-friendly, Latch isn't installed via a terminal command. It is packaged and distributed as a native **Desktop Application**.
 
 ### 16A. Why Tauri?
 We target **Tauri** (Rust + React/Next.js frontend) instead of Electron.
@@ -2243,12 +2243,12 @@ We target **Tauri** (Rust + React/Next.js frontend) instead of Electron.
 - **Battery-Friendly:** Since this daemon needs to run 24/7 in the background listening for hooks on `127.0.0.1:3001`, an Electron app would drain laptop batteries. Tauri's Rust backend is incredibly efficient.
 
 ### 16B. The "Always On" UX
-The user experience boils down to this single rule: **"As long as the Relay Desktop App is running, everything is good."**
+The user experience boils down to this single rule: **"As long as the Latch Desktop App is running, everything is good."**
 
 1. **System Tray:** The app lives quietly in the system tray (macOS menu bar or Windows taskbar).
 2. **Auto-Start:** It boots silently when the OS starts up.
 3. **The Global Daemon:** The Tauri Rust backend automatically spawns and manages the Node.js Coordinator process (`127.0.0.1:3001`). If the Node process crashes, Tauri instantly resurrects it.
-4. **Mission Control UI:** Clicking the tray icon opens the beautiful Mission Control frontend, allowing the user to visually see real-time file locks, agent activity streams, and Central Relay sync statuses.
+4. **Mission Control UI:** Clicking the tray icon opens the beautiful Mission Control frontend, allowing the user to visually see real-time file locks, agent activity streams, and Central Latch sync statuses.
 
 With Tauri, we replace complex terminal daemons and `npm global` installs with a standard, consumer-grade desktop app experience.
 
@@ -2256,40 +2256,40 @@ With Tauri, we replace complex terminal daemons and `npm global` installs with a
 
 # Part V — The Multi-User Experience
 
-## 17. The Power of Relay: Inter-Coordination
-Relay is designed to solve the chaotic problem of multiple AI agents and human developers working on the same repository simultaneously. While "Intra-Coordination" solves this for a single user, **Inter-Coordination** scales this to distributed teams across the world.
+## 17. The Power of Latch: Inter-Coordination
+Latch is designed to solve the chaotic problem of multiple AI agents and human developers working on the same repository simultaneously. While "Intra-Coordination" solves this for a single user, **Inter-Coordination** scales this to distributed teams across the world.
 
-Imagine a restaurant chain where five kitchens in different cities cook the same recipe. If one kitchen changes the recipe, the others need to know instantly. That is the multi-user experience in Relay.
+Imagine a restaurant chain where five kitchens in different cities cook the same recipe. If one kitchen changes the recipe, the others need to know instantly. That is the multi-user experience in Latch.
 
 ## 18. How it Feels
-Using Relay in a multi-user environment feels like magic. There is no git-push/pull ceremony required to see what your teammates (and their agents) are doing. 
+Using Latch in a multi-user environment feels like magic. There is no git-push/pull ceremony required to see what your teammates (and their agents) are doing. 
 You get unparalleled real-time observability of who is working on what, ensuring no two hands touch the same wire at the same time.
 
 ### 1. Cross-User File Collisions (Prevented)
 If User A's agent (e.g., Cursor) starts editing `src/auth.ts` and User B's agent (e.g., Claude Code) tries to edit the same file:
-- User A's daemon acquires a distributed write lock from the Relay Coordinator Service.
+- User A's daemon acquires a distributed write lock from the Latch Coordinator Service.
 - User B's agent is instantly blocked with a structured message: *"File `src/auth.ts` is locked by User A (@alice, Cursor instance). Waiting..."*
 - Once User A finishes, the lock is released, and User B's agent unblocks.
 
 ### 2. Dependency Awareness
 It's not just about the same file. What if User A edits `src/utils/logger.ts`, and User B is editing `src/api/handler.ts` which imports `logger.ts`?
-Relay merges the dependency graph across all users at the Coordinator level. User B will receive a soft-lock warning: *"⚠️ `handler.ts` depends on `logger.ts`, which is currently being modified by User A. Proceeding may cause inconsistencies."*
+Latch merges the dependency graph across all users at the Coordinator level. User B will receive a soft-lock warning: *"⚠️ `handler.ts` depends on `logger.ts`, which is currently being modified by User A. Proceeding may cause inconsistencies."*
 
 ### 3. Real-Time Patch Delivery (The Speed Layer)
-The typical agent loop (`edit -> save -> git add -> git commit -> git push -> git pull -> resolve conflicts`) takes minutes. Relay reduces this to milliseconds.
-- When an agent saves a file, Relay computes a minimal patch.
+The typical agent loop (`edit -> save -> git add -> git commit -> git push -> git pull -> resolve conflicts`) takes minutes. Latch reduces this to milliseconds.
+- When an agent saves a file, Latch computes a minimal patch.
 - The patch is broadcasted to all connected daemons via WebSockets.
 - The receiving daemons apply the patch instantly. No `git` ceremony.
 - Operational Transformation (OT) seamlessly resolves any conflicting patches, similar to Google Docs.
 
 ### 4. Zero Polling, Instant UI
-Relay's Mission Control dashboard doesn't rely on busy-waiting or polling. It uses an **Event-Driven Architecture** with Server-Sent Events (SSE). 
+Latch's Mission Control dashboard doesn't rely on busy-waiting or polling. It uses an **Event-Driven Architecture** with Server-Sent Events (SSE). 
 - **Activity Timeline**: A real-time feed of every agent event, prompt, edit, and tool call.
 - **Agent Session Chat**: See the exact conversation between your teammates and their agents.
 - **Team Activity**: Real-time visibility into the multi-user ecosystem.
 - **File Locks**: Watch locks get acquired and released in real-time, with zero latency.
 
 ### 5. Advanced Versioning ("Time Travel")
-Because every edit is tracked as a localized micro-patch, Relay maintains a high-resolution timeline of all changes. You can rewind to any specific patch, reviewing the exact atomic changes made by any human or AI agent, providing surgical rollback capabilities.
+Because every edit is tracked as a localized micro-patch, Latch maintains a high-resolution timeline of all changes. You can rewind to any specific patch, reviewing the exact atomic changes made by any human or AI agent, providing surgical rollback capabilities.
 
-Relay transforms multi-agent and multi-user development from a collision-prone nightmare into a synchronized, high-throughput symphony.
+Latch transforms multi-agent and multi-user development from a collision-prone nightmare into a synchronized, high-throughput symphony.

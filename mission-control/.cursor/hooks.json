@@ -3,21 +3,33 @@
   "hooks": {
     "preToolUse": [
       {
-        "command": "node \"C:/Users/Prakrititz Borah/Downloads/Relay/relay.it/hooks/relay-cursor-pre-tool.js\"",
-        "matcher": "Write|Edit|str_replace_based_edit_tool|create_file",
+        "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-cursor-pre-tool.js\"",
+        "matcher": "Write|Edit|Delete|StrReplace|ApplyPatch|EditNotebook|search_replace",
+        "timeout": 10
+      },
+      {
+        "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-cursor-pre-read.js\"",
+        "matcher": "Read|Grep",
         "timeout": 10
       }
     ],
     "postToolUse": [
       {
-        "command": "node \"C:/Users/Prakrititz Borah/Downloads/Relay/relay.it/hooks/relay-cursor-post-tool.js\"",
-        "matcher": "Write|Edit|str_replace_based_edit_tool|create_file",
+        "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-cursor-post-tool.js\"",
+        "matcher": "Write|Edit|Delete|StrReplace|ApplyPatch|EditNotebook|search_replace",
+        "timeout": 10
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-cursor-pre-read.js\"",
+        "matcher": "Read",
         "timeout": 10
       }
     ],
     "stop": [
       {
-        "command": "node \"C:/Users/Prakrititz Borah/Downloads/Relay/relay.it/hooks/relay-cursor-stop.js\"",
+        "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-cursor-stop.js\"",
         "loop_limit": 1
       }
     ]

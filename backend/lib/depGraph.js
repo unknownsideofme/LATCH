@@ -11,6 +11,7 @@ const SKIP = new Set([
   "out",
   "dist",
   "coverage",
+  ".latch",
   ".relay",
 ]);
 const SOURCE = new Set([
@@ -57,7 +58,10 @@ function walk(root, rel = "", out = []) {
 
 function loadOverride(workspacePath) {
   try {
-    return JSON.parse(fs.readFileSync(path.join(workspacePath, ".relay", "deps.json"), "utf8"));
+    const latchPath = path.join(workspacePath, ".latch", "deps.json");
+    const relayPath = path.join(workspacePath, ".relay", "deps.json");
+    const file = fs.existsSync(latchPath) ? latchPath : (fs.existsSync(relayPath) ? relayPath : latchPath);
+    return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
     return { lockDepth: 1, edges: [] };
   }
@@ -196,7 +200,7 @@ class DepGraph {
 
   build() {
     const override = loadOverride(this.workspacePath);
-    this.lockDepth = Number(override.lockDepth || process.env.RELAY_LOCK_DEPTH || 1);
+    this.lockDepth = Number(override.lockDepth || process.env.LATCH_LOCK_DEPTH || process.env.RELAY_LOCK_DEPTH || 1);
     this.imports = new Map();
     this.importedBy = new Map();
     this.unresolvable = [];

@@ -15,7 +15,7 @@ async function exchangeCode(code, redirectUri) {
   const token = await tokenRes.json();
   if (!token.access_token) return { error: "token_failed", detail: token };
   const userRes = await fetch("https://api.github.com/user", {
-    headers: { Authorization: `Bearer ${token.access_token}`, "User-Agent": "relay-it" },
+    headers: { Authorization: `Bearer ${token.access_token}`, "User-Agent": "latch-it" },
   });
   const gh = await userRes.json();
   return {

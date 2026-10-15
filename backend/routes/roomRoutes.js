@@ -41,12 +41,22 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
   function inviteLink(room, code, project) {
     const base = String(room.url || "").replace(/\/$/, "");
     const u = new URL(`${base}/`);
+    u.searchParams.set("latch_invite", code);
     u.searchParams.set("relay_invite", code);
     const host = room.hostLogin || ContextService.currentUser().login;
     const repo = room.repoKey || repoKeyFromRemote(project?.remoteUrl);
-    if (host) u.searchParams.set("relay_host", host);
-    if (repo) u.searchParams.set("relay_repo", repo);
-    if (room.roomId) u.searchParams.set("relay_room", room.roomId);
+    if (host) {
+      u.searchParams.set("latch_host", host);
+      u.searchParams.set("relay_host", host);
+    }
+    if (repo) {
+      u.searchParams.set("latch_repo", repo);
+      u.searchParams.set("relay_repo", repo);
+    }
+    if (room.roomId) {
+      u.searchParams.set("latch_room", room.roomId);
+      u.searchParams.set("relay_room", room.roomId);
+    }
     return u.toString();
   }
 
@@ -230,7 +240,7 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
     upsertMember(room, { ...ContextService.currentUser(), ...active }, "host");
     saveRoom(room, project?.path);
     if (sse) sse.emit("presence", { workspaceId: project?.id, userId: user.login });
-    console.log(`[relay-room] @${user.login} joined the room`);
+    console.log(`[latch-room] @${user.login} joined the room`);
     if (roomService.noticeService) {
       roomService.noticeService.emitNotice(
         {

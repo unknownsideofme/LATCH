@@ -189,14 +189,14 @@ class PatchService {
           headers: {
             "Content-Type": "application/json",
             "ngrok-skip-browser-warning": "relay",
-            ...(room.memberToken ? { "x-relay-room-token": room.memberToken } : {}),
+            ...(room.memberToken ? { "x-latch-room-token": room.memberToken, "x-relay-room-token": room.memberToken } : {}),
           },
           body: JSON.stringify(body),
         })
           .then((r) => {
-            if (!r.ok) console.warn(`[relay-room] host rejected patch for ${rel}: ${r.status}`);
+            if (!r.ok) console.warn(`[latch-room] host rejected patch for ${rel}: ${r.status}`);
           })
-          .catch((err) => console.warn(`[relay-room] could not send patch for ${rel}: ${err.message || err}`));
+          .catch((err) => console.warn(`[latch-room] could not send patch for ${rel}: ${err.message || err}`));
       }
     }
     const memory = loadMemory(project.id);
@@ -261,7 +261,7 @@ class PatchService {
         try {
           this.fanOutLocalFile(entry.project, entry.rel, entry.agentId);
         } catch (err) {
-          console.warn(`[relay] deferred publish ${entry.rel}: ${err.message || err}`);
+          console.warn(`[latch] deferred publish ${entry.rel}: ${err.message || err}`);
         }
       }
     }, 750);

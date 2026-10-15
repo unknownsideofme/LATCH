@@ -14,7 +14,8 @@ export const RIGHT_MAX = 520;
 export const RIGHT_DEFAULT = 268;
 export const CENTER_MIN = 400;
 
-const KEY = "relay.panes.v1";
+const KEY = "latch.panes.v1";
+const LEGACY_KEY = "relay.panes.v1";
 
 export type PaneState = {
   left: number;
@@ -87,7 +88,7 @@ export function PanesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(KEY);
+      const raw = window.localStorage.getItem(KEY) || window.localStorage.getItem(LEGACY_KEY);
       if (raw) {
         const saved = JSON.parse(raw) as Partial<PaneState>;
         setState((s) => ({

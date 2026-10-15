@@ -12,7 +12,7 @@ function createPatchesServer({ server, roomService, patchService }) {
 
   wss.on("error", (err) => {
     if (err.code === "EADDRINUSE") return;
-    console.warn(`[relay-ws] ${err.message || err}`);
+    console.warn(`[latch-ws] ${err.message || err}`);
   });
 
   wss.on("connection", (socket, req) => {

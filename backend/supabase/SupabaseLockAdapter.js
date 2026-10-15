@@ -76,9 +76,15 @@ class SupabaseLockAdapter extends EventEmitter {
   async releaseAll(agentId, workspaceId) {
     if (!this.client) return null;
     try {
-      let query = this.client.from("relay_locks").delete().eq("agent_id", agentId);
+      let query = this.client.from("latch_locks").delete().eq("agent_id", agentId);
       if (workspaceId) query = query.eq("workspace_id", workspaceId);
-      const { error } = await query;
+      let { error } = await query;
+      if (error && error.message?.includes("does not exist")) {
+        query = this.client.from("relay_locks").delete().eq("agent_id", agentId);
+        if (workspaceId) query = query.eq("workspace_id", workspaceId);
+        const res = await query;
+        error = res.error;
+      }
       return { ok: !error };
     } catch {
       return { ok: false };
@@ -90,13 +96,23 @@ class SupabaseLockAdapter extends EventEmitter {
     try {
       const now = new Date().toISOString();
       let query = this.client
-        .from("relay_locks")
+        .from("latch_locks")
         .select("*")
         .gt("expires_at", now);
 
       if (workspaceId) query = query.eq("workspace_id", workspaceId);
 
-      const { data, error } = await query;
+      let { data, error } = await query;
+      if (error && error.message?.includes("does not exist")) {
+        query = this.client
+          .from("relay_locks")
+          .select("*")
+          .gt("expires_at", now);
+        if (workspaceId) query = query.eq("workspace_id", workspaceId);
+        const res = await query;
+        data = res.data;
+        error = res.error;
+      }
       if (error || !Array.isArray(data)) return [];
 
       return data.map((row) => ({

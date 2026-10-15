@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { EDIT, READ } = require("./editMatchers");
-const { installProjectRelay, installGlobalRelay } = require("./installAgentRelay");
+const { installProjectLatch, installGlobalLatch } = require("./installAgentLatch");
 
 function repoRoot() {
   return path.join(__dirname, "..", "..");
@@ -20,21 +20,21 @@ function writeJson(file, value) {
 
 function installProjectHooks(workspacePath) {
   if (!workspacePath) return;
-  const claude = nodeCmd("hooks/relay-claude-pre-tool.js");
-  const claudePost = nodeCmd("hooks/relay-claude-post-tool.js");
-  const claudeStop = nodeCmd("hooks/relay-claude-stop.js");
-  const cursor = nodeCmd("hooks/relay-cursor-pre-tool.js");
-  const cursorPost = nodeCmd("hooks/relay-cursor-post-tool.js");
-  const cursorStop = nodeCmd("hooks/relay-cursor-stop.js");
-  const codex = nodeCmd("hooks/relay-codex-pre-tool.js");
-  const codexPost = nodeCmd("hooks/relay-codex-post-tool.js");
-  const codexStop = nodeCmd("hooks/relay-codex-stop.js");
-  const copilot = nodeCmd("hooks/relay-copilot-pre-tool.js");
-  const copilotPost = nodeCmd("hooks/relay-copilot-post-tool.js");
-  const copilotStop = nodeCmd("hooks/relay-copilot-stop.js");
-  const anti = nodeCmd("hooks/relay-antigravity-pre-tool.js");
-  const antiPost = nodeCmd("hooks/relay-antigravity-post-tool.js");
-  const antiStop = nodeCmd("hooks/relay-antigravity-stop.js");
+  const claude = nodeCmd("hooks/latch-claude-pre-tool.js");
+  const claudePost = nodeCmd("hooks/latch-claude-post-tool.js");
+  const claudeStop = nodeCmd("hooks/latch-claude-stop.js");
+  const cursor = nodeCmd("hooks/latch-cursor-pre-tool.js");
+  const cursorPost = nodeCmd("hooks/latch-cursor-post-tool.js");
+  const cursorStop = nodeCmd("hooks/latch-cursor-stop.js");
+  const codex = nodeCmd("hooks/latch-codex-pre-tool.js");
+  const codexPost = nodeCmd("hooks/latch-codex-post-tool.js");
+  const codexStop = nodeCmd("hooks/latch-codex-stop.js");
+  const copilot = nodeCmd("hooks/latch-copilot-pre-tool.js");
+  const copilotPost = nodeCmd("hooks/latch-copilot-post-tool.js");
+  const copilotStop = nodeCmd("hooks/latch-copilot-stop.js");
+  const anti = nodeCmd("hooks/latch-antigravity-pre-tool.js");
+  const antiPost = nodeCmd("hooks/latch-antigravity-post-tool.js");
+  const antiStop = nodeCmd("hooks/latch-antigravity-stop.js");
 
   writeJson(path.join(workspacePath, ".claude", "settings.json"), {
     hooks: {
@@ -45,7 +45,7 @@ function installProjectHooks(workspacePath) {
         },
         {
           matcher: READ.claude,
-          hooks: [{ type: "command", command: nodeCmd("hooks/relay-claude-pre-read.js") }],
+          hooks: [{ type: "command", command: nodeCmd("hooks/latch-claude-pre-read.js") }],
         },
       ],
       PostToolUse: [
@@ -68,7 +68,7 @@ function installProjectHooks(workspacePath) {
           timeout: 10,
         },
         {
-          command: nodeCmd("hooks/relay-cursor-pre-read.js"),
+          command: nodeCmd("hooks/latch-cursor-pre-read.js"),
           matcher: READ.cursor,
           timeout: 10,
         },
@@ -85,7 +85,7 @@ function installProjectHooks(workspacePath) {
       // a read must never be able to stop the agent from reading.
       beforeReadFile: [
         {
-          command: nodeCmd("hooks/relay-cursor-pre-read.js"),
+          command: nodeCmd("hooks/latch-cursor-pre-read.js"),
           matcher: "Read",
           timeout: 10,
         },
@@ -116,7 +116,7 @@ function installProjectHooks(workspacePath) {
     },
   });
 
-  writeJson(path.join(workspacePath, ".github", "hooks", "relay-os.json"), {
+  writeJson(path.join(workspacePath, ".github", "hooks", "latch-os.json"), {
     version: 1,
     hooks: {
       preToolUse: [
@@ -130,8 +130,8 @@ function installProjectHooks(workspacePath) {
         },
         {
           type: "command",
-          bash: nodeCmd("hooks/relay-copilot-pre-read.js"),
-          powershell: nodeCmd("hooks/relay-copilot-pre-read.js"),
+          bash: nodeCmd("hooks/latch-copilot-pre-read.js"),
+          powershell: nodeCmd("hooks/latch-copilot-pre-read.js"),
           matcher: READ.copilot,
           cwd: ".",
           timeoutSec: 10,
@@ -161,7 +161,7 @@ function installProjectHooks(workspacePath) {
 
   writeJson(path.join(workspacePath, ".agents", "hooks.json"), antigravityHooks(anti, antiPost, antiStop));
   try {
-    installProjectRelay(workspacePath);
+    installProjectLatch(workspacePath);
   } catch {
     /* instructions + MCP are best-effort */
   }
@@ -179,7 +179,7 @@ function installProjectHooks(workspacePath) {
  */
 function antigravityHooks(pre, post, stop) {
   return {
-    relay: {
+    latch: {
       PreToolUse: [
         {
           matcher: EDIT.antigravity,
@@ -187,7 +187,7 @@ function antigravityHooks(pre, post, stop) {
         },
         {
           matcher: READ.antigravity,
-          hooks: [{ type: "command", command: nodeCmd("hooks/relay-antigravity-pre-read.js"), timeout: 10 }],
+          hooks: [{ type: "command", command: nodeCmd("hooks/latch-antigravity-pre-read.js"), timeout: 10 }],
         },
       ],
       PostToolUse: [
@@ -216,7 +216,7 @@ function mergeClaudeSettings(file, preCmd, postCmd, stopCmd) {
     },
     {
       matcher: READ.claude,
-      hooks: [{ type: "command", command: nodeCmd("hooks/relay-claude-pre-read.js") }],
+      hooks: [{ type: "command", command: nodeCmd("hooks/latch-claude-pre-read.js") }],
     },
   ];
   existing.hooks.PostToolUse = [
@@ -233,40 +233,40 @@ function installGlobalHooks() {
   const home = os.homedir();
   mergeClaudeSettings(
     path.join(home, ".claude", "settings.json"),
-    nodeCmd("hooks/relay-claude-pre-tool.js"),
-    nodeCmd("hooks/relay-claude-post-tool.js"),
-    nodeCmd("hooks/relay-claude-stop.js")
+    nodeCmd("hooks/latch-claude-pre-tool.js"),
+    nodeCmd("hooks/latch-claude-post-tool.js"),
+    nodeCmd("hooks/latch-claude-stop.js")
   );
   writeJson(path.join(home, ".cursor", "hooks.json"), {
     version: 1,
     hooks: {
       preToolUse: [
         {
-          command: nodeCmd("hooks/relay-cursor-pre-tool.js"),
+          command: nodeCmd("hooks/latch-cursor-pre-tool.js"),
           matcher: EDIT.cursor,
           timeout: 10,
         },
         {
-          command: nodeCmd("hooks/relay-cursor-pre-read.js"),
+          command: nodeCmd("hooks/latch-cursor-pre-read.js"),
           matcher: READ.cursor,
           timeout: 10,
         },
       ],
       postToolUse: [
         {
-          command: nodeCmd("hooks/relay-cursor-post-tool.js"),
+          command: nodeCmd("hooks/latch-cursor-post-tool.js"),
           matcher: EDIT.cursor,
           timeout: 10,
         },
       ],
       beforeReadFile: [
         {
-          command: nodeCmd("hooks/relay-cursor-pre-read.js"),
+          command: nodeCmd("hooks/latch-cursor-pre-read.js"),
           matcher: "Read",
           timeout: 10,
         },
       ],
-      stop: [{ command: nodeCmd("hooks/relay-cursor-stop.js"), loop_limit: 1 }],
+      stop: [{ command: nodeCmd("hooks/latch-cursor-stop.js"), loop_limit: 1 }],
     },
   });
   writeJson(path.join(home, ".codex", "hooks.json"), {
@@ -274,33 +274,34 @@ function installGlobalHooks() {
       PreToolUse: [
         {
           matcher: EDIT.codex,
-          hooks: [{ type: "command", command: nodeCmd("hooks/relay-codex-pre-tool.js"), timeout: 10 }],
+          hooks: [{ type: "command", command: nodeCmd("hooks/latch-codex-pre-tool.js"), timeout: 10 }],
         },
       ],
       PostToolUse: [
         {
           matcher: EDIT.codex,
-          hooks: [{ type: "command", command: nodeCmd("hooks/relay-codex-post-tool.js"), timeout: 10 }],
+          hooks: [{ type: "command", command: nodeCmd("hooks/latch-codex-post-tool.js"), timeout: 10 }],
         },
       ],
       Stop: [
         {
-          hooks: [{ type: "command", command: nodeCmd("hooks/relay-codex-stop.js"), timeout: 120 }],
+          hooks: [{ type: "command", command: nodeCmd("hooks/latch-codex-stop.js"), timeout: 120 }],
         },
       ],
     },
   });
   const antigravity = antigravityHooks(
-    nodeCmd("hooks/relay-antigravity-pre-tool.js"),
-    nodeCmd("hooks/relay-antigravity-post-tool.js"),
-    nodeCmd("hooks/relay-antigravity-stop.js")
+    nodeCmd("hooks/latch-antigravity-pre-tool.js"),
+    nodeCmd("hooks/latch-antigravity-post-tool.js"),
+    nodeCmd("hooks/latch-antigravity-stop.js")
   );
   // Antigravity reads global hooks from ~/.gemini/config, either directly or
   // from a plugin bundle under it.
+  writeJson(path.join(home, ".gemini", "config", "plugins", "latch", "hooks.json"), antigravity);
   writeJson(path.join(home, ".gemini", "config", "plugins", "relay", "hooks.json"), antigravity);
   writeJson(path.join(home, ".gemini", "config", "hooks.json"), antigravity);
   try {
-    installGlobalRelay();
+    installGlobalLatch();
   } catch {
     /* global MCP is best-effort */
   }

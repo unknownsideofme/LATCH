@@ -1,7 +1,7 @@
 # Rooms and teams
 
 A **room** puts several machines on one lock table. One member hosts; everyone else is a
-guest. There is no Relay server anywhere — the host's own laptop is the server, reached
+guest. There is no Latch server anywhere — the host's own laptop is the server, reached
 over an ngrok tunnel.
 
 ---
@@ -13,7 +13,7 @@ over an ngrok tunnel.
 | Owns the lock table | Yes — it *is* the shared mutex | No; mirrors the host's |
 | Reached at | Their ngrok tunnel | Their own `127.0.0.1:3001` |
 | Manages invites and kicks | Yes | No (`403 host_only`) |
-| `relay pull` | No-op — already has the tree | Fetches the host's dirty files |
+| `latch pull` | No-op — already has the tree | Fetches the host's dirty files |
 | Own hooks route through the tunnel | **No** — the host is the coordinator | Yes, via the control socket |
 
 A host never routes its own hooks out through its tunnel and back. That would add a full
@@ -24,13 +24,13 @@ internet round trip to every claim and stall the agent whenever the tunnel hiccu
 ## Hosting
 
 ```bash
-relay login
-relay serve
+latch login
+latch serve
 ```
 
 Then Mission Control → **Team** → **Share**.
 
-Relay looks for an existing ngrok tunnel on the local inspector (`127.0.0.1:4040`) and
+Latch looks for an existing ngrok tunnel on the local inspector (`127.0.0.1:4040`) and
 reuses it; only if there is none does it spawn `ngrok http <port>`. It never stacks
 processes, and a failed probe of the public URL is not on its own a reason to spawn — the
 inspector flapping after a laptop sleep is normal, and killing the only tunnel over it was
@@ -40,7 +40,7 @@ If ngrok is installed but has no authtoken you will get a hint pointing at
 [dashboard.ngrok.com](https://dashboard.ngrok.com/get-started/your-authtoken). You can
 also run `ngrok http 3001` yourself and adopt the URL via `POST /api/room/adopt`.
 
-Hosting is remembered. On the next `relay serve`, a host resumes its room automatically and
+Hosting is remembered. On the next `latch serve`, a host resumes its room automatically and
 re-establishes the tunnel.
 
 ## Inviting
@@ -65,13 +65,13 @@ what actually decides admission.
 ## Joining
 
 ```bash
-relay login
-relay serve
+latch login
+latch serve
 # paste the host's invite link on the Team tab
-relay pull
+latch pull
 ```
 
-`relay pull` takes the host's current working state. If you have no clone at all, the join
+`latch pull` takes the host's current working state. If you have no clone at all, the join
 flow fetches `GET /api/snapshot?full=1` — the whole tree, not just the dirty files.
 
 Once joined, your agents claim against the host's table automatically. There is nothing
@@ -110,7 +110,7 @@ Failures are specific: `invite_required`, `invite_invalid`, `invite_revoked`,
 
 ### Presenting the token
 
-The `x-relay-room-token` header, an `Authorization: Room <token>` header, or a `token`
+The `x-latch-room-token` header, an `Authorization: Room <token>` header, or a `token`
 query parameter. Hooks, the coordinator client, the lock mirror and the control socket all
 send it automatically.
 
@@ -170,8 +170,8 @@ Members go **offline** on the board after 45 seconds without a heartbeat.
 
 | | |
 |---|---|
-| `relay push` | Fan out every dirty working-tree file as patches |
-| `relay pull` | Apply the host's current dirty files onto this clone |
+| `latch push` | Fan out every dirty working-tree file as patches |
+| `latch pull` | Apply the host's current dirty files onto this clone |
 | Automatic | Post-tool and stop hooks flush finished files; a filesystem watcher covers hand edits |
 
 Patches carry a Lamport clock, are buffered until their predecessors arrive, transformed
@@ -185,7 +185,7 @@ their disk.
 
 ## When the host disappears
 
-Laptops close, tunnels expire, VPNs change. Relay degrades in defined steps:
+Laptops close, tunnels expire, VPNs change. Latch degrades in defined steps:
 
 1. **The coordinator client marks the room down** for 30 seconds after a failed call, so
    hooks stop paying a full timeout on every claim, heartbeat and release.
@@ -199,17 +199,17 @@ Laptops close, tunnels expire, VPNs change. Relay degrades in defined steps:
 5. **Reconnection is automatic.** A guest re-looks-up the host's current tunnel and
    reconnects both sockets when it comes back.
 
-`relay doctor` walks exactly this chain. See [Troubleshooting](./TROUBLESHOOTING.md).
+`latch doctor` walks exactly this chain. See [Troubleshooting](./TROUBLESHOOTING.md).
 
 ---
 
 ## Sharing read-only context
 
 Anyone can read the room's context — chat history, recent edits, locks, conflicts — from
-any MCP client, on a machine with no Relay installed:
+any MCP client, on a machine with no Latch installed:
 
 ```bash
-relay mcp-url    # prints a ready-to-paste mcpServers block
+latch mcp-url    # prints a ready-to-paste mcpServers block
 ```
 
 The endpoint is read-only for everyone off the host machine. See the

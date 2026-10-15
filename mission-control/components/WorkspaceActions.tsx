@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { Button } from "@/components/ui/button";
 import ui from "@/styles/ui.module.css";
 
 export function WorkspaceActions({ projectId }: { projectId?: string | null }) {
-  const { leaveWorkspace, removeWorkspace } = useRelay();
+  const { leaveWorkspace, removeWorkspace } = useLatch();
   const [hint, setHint] = useState("");
   const id = projectId;
   if (!id) return null;

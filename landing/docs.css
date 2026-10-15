@@ -1,5 +1,5 @@
 /* ==========================================================================
-   /.relay documentation
+   ./latch documentation
    Layout: sticky sidebar · article · "on this page" rail
    ========================================================================== */
 
@@ -8,17 +8,17 @@
   --doc-rail: 220px;
   --doc-header: 72px;
 
-  /* syntax palette — tuned for the black surface */
-  --syn-comment: rgba(255, 255, 255, 0.32);
-  --syn-cmd: #6ee7a8;
-  --syn-flag: #f5b661;
-  --syn-string: #8ab4ff;
-  --syn-placeholder: #c99bf5;
-  --syn-number: #f2909b;
-  --syn-key: #7dd3fc;
-  --syn-punct: rgba(255, 255, 255, 0.45);
-  --syn-add: #6ee7a8;
-  --syn-del: #f2909b;
+  /* syntax palette — tuned for LATCH architectural warm dark theme */
+  --syn-comment: #857870;
+  --syn-cmd: #8FC3A0;
+  --syn-flag: #D8A17D;
+  --syn-string: #7EA8D6;
+  --syn-placeholder: #B8ACA4;
+  --syn-number: #E7BB79;
+  --syn-key: #D8A17D;
+  --syn-punct: #B8ACA4;
+  --syn-add: #8FC3A0;
+  --syn-del: #F08D86;
 }
 
 /* --------------------------------------------------------------- shell -- */

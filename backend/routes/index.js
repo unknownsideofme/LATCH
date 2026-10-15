@@ -90,7 +90,7 @@ function registerRoutes(app, services) {
     app.get("/", (_req, res) => {
       const coordPort = typeof getCoordPort === "function" ? getCoordPort() : 0;
       res.type("html").send(`<!doctype html><html><body style="background:#0b0c0f;color:#e7e7ea;font-family:sans-serif;padding:48px">
-        <h1>Relay API</h1>
+        <h1>Latch API</h1>
         <p>Coordinator on 127.0.0.1:${coordPort}. Open Mission Control at <a href="${UI_ORIGIN}" style="color:#f59e0b">${UI_ORIGIN}</a>.</p>
       </body></html>`);
     });

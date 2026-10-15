@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { apiUrl } from "@/lib/api";
 import type { Dashboard } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -112,7 +112,7 @@ function GraphView({ graph }: { graph: NonNullable<Dashboard["graph"]> }) {
 }
 
 export function FileLocksPanel() {
-  const { dashboard, selectedProjectId } = useRelay();
+  const { dashboard, selectedProjectId } = useLatch();
   const [view, setView] = useState<"board" | "list">("board");
   const [graph, setGraph] = useState(dashboard?.graph || null);
   const [now, setNow] = useState(Date.now());

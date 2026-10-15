@@ -84,7 +84,7 @@ function seedIfEmpty() {
   }
   const cwd = process.cwd();
   const project = {
-    id: "proj_relay",
+    id: "proj_latch",
     name: path.basename(cwd),
     initials: initials(cwd),
     color: "#f59e0b",
@@ -95,6 +95,7 @@ function seedIfEmpty() {
     lastSyncAt: Date.now(),
   };
   try {
+    fs.mkdirSync(path.join(cwd, ".latch"), { recursive: true });
     fs.mkdirSync(path.join(cwd, ".relay"), { recursive: true });
   } catch {
     /* ignore */

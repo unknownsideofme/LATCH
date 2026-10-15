@@ -5,7 +5,7 @@ function hardenHttpServer(server) {
   server.requestTimeout = 0;
   server.timeout = 0;
   server.on("error", (err) => {
-    console.error("[relay-api]", err.message);
+    console.error("[latch-api]", err.message);
     process.exitCode = 1;
   });
   server.on("clientError", (err, socket) => {
@@ -20,7 +20,7 @@ function hardenHttpServer(server) {
 }
 
 function apiErrorHandler(err, _req, res, _next) {
-  console.error("[relay-api]", err);
+  console.error("[latch-api]", err);
   if (!res.headersSent) res.status(500).json({ error: String(err.message || err) });
 }
 

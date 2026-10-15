@@ -3,24 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="/.relay documentation — installation, quickstart, core concepts, the full CLI reference, agent hooks, MCP, Mission Control, configuration, and troubleshooting.">
-  <title>Docs · /.relay</title>
+  <meta name="description" content="./latch documentation — installation, quickstart, core concepts, the full CLI reference, agent hooks, MCP, Mission Control, configuration, and troubleshooting.">
+  <title>Docs · ./latch</title>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="docs.css">
+  <link rel="stylesheet" href="styles.css?v=20261015b">
+  <link rel="stylesheet" href="docs.css?v=20261015b">
 </head>
 <body>
   <header class="site-header">
     <nav class="nav shell" aria-label="Primary navigation">
-      <a class="wordmark" href="index.html" aria-label="/.relay home"><img src="logo.png" alt="" class="inline-logo" /> /.relay</a>
+      <a class="wordmark" href="index.html" aria-label="./latch home"><img src="logo.png" alt="" class="inline-logo" /> ./latch</a>
       <div class="nav-links">
         <a href="index.html#demo">Watch the demo</a>
         <a href="how-it-works.html">How it works</a>
         <a href="docs.html">Docs</a>
-        <a href="https://github.com/prakrititz/relayBrain" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
+        <a href="https://github.com/unknownsideofme/LATCH" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
       </div>
     </nav>
   </header>
@@ -78,10 +78,10 @@
       <!-- ---------------------------------------------- introduction -- -->
       <section id="introduction">
         <p class="docs-kicker">Documentation · v0.1.0</p>
-        <h1>/.relay docs</h1>
-        <p class="lead">/.relay is the coordination layer for AI coding agents. Claude Code, Cursor, Copilot, Codex and Antigravity all write to the same files and none of them know the others exist. /.relay gives them one shared lock table, a dependency-aware view of the blast radius, and live patch sync across every machine on the team.</p>
+        <h1>./latch docs</h1>
+        <p class="lead">./latch is the coordination layer for AI coding agents. Claude Code, Cursor, Copilot, Codex and Antigravity all write to the same files and none of them know the others exist. ./latch gives them one shared lock table, a dependency-aware view of the blast radius, and live patch sync across every machine on the team.</p>
 
-        <p>Everything on this page runs on your own hardware. There is no hosted backend, no database, and no account server — one person on the team runs <code>relay serve</code> and that machine <em>is</em> the server.</p>
+        <p>Everything on this page runs on your own hardware. There is no hosted backend, no database, and no account server — one person on the team runs <code>latch serve</code> and that machine <em>is</em> the server.</p>
 
         <div class="code-block" data-lang="diff">
           <div class="code-block-head"><span class="dot"></span><span class="label">the shift</span><span class="lang">diff</span></div>
@@ -114,7 +114,7 @@
       <section id="installation">
         <p class="docs-kicker">Get started</p>
         <h2>Installation</h2>
-        <p>/.relay is a Node CLI plus a local API and a Next.js board. Everything ships in one repository, so installing means cloning it and linking the CLI onto your <code>PATH</code>.</p>
+        <p>./latch is a Node CLI plus a local API and a Next.js board. Everything ships in one repository, so installing means cloning it and linking the CLI onto your <code>PATH</code>.</p>
 
         <h3 id="installation-requirements">Requirements</h3>
         <div class="docs-table-wrap">
@@ -122,8 +122,8 @@
             <thead><tr><th>Status</th><th>What</th><th>Why</th></tr></thead>
             <tbody>
               <tr><td>Required</td><td>Node.js 18+ (20+ recommended), npm</td><td>Runs the CLI, the API, and Mission Control</td></tr>
-              <tr><td>Required</td><td>git</td><td><code>relay clone</code> shells out to it</td></tr>
-              <tr><td>Optional</td><td><code>gh</code> CLI</td><td>Fastest path for <code>relay login</code></td></tr>
+              <tr><td>Required</td><td>git</td><td><code>latch clone</code> shells out to it</td></tr>
+              <tr><td>Optional</td><td><code>gh</code> CLI</td><td>Fastest path for <code>latch login</code></td></tr>
               <tr><td>Optional</td><td>ngrok</td><td>Only needed for cross-machine rooms</td></tr>
               <tr><td>Not needed</td><td>MongoDB, Redis, Docker, a hosted backend, an account</td><td>State lives in files on your disk</td></tr>
             </tbody>
@@ -133,35 +133,35 @@
         <h3 id="installation-install">Install the CLI</h3>
         <div class="code-block" data-lang="bash">
           <div class="code-block-head"><span class="dot"></span><span class="label">terminal</span><span class="lang">bash</span></div>
-<pre><code>$ git clone https://github.com/prakrititz/relayBrain
-$ cd relayBrain
+<pre><code>$ git clone https://github.com/unknownsideofme/LATCH
+$ cd latch
 $ npm install                # deps for the CLI, API and Mission Control
-$ npm link                   # puts `relay` on your PATH</code></pre>
+$ npm link                   # puts `latch` on your PATH</code></pre>
         </div>
 
         <p>Confirm the binary resolves:</p>
 
         <div class="code-block" data-lang="bash">
           <div class="code-block-head"><span class="dot"></span><span class="label">terminal</span><span class="lang">bash</span></div>
-<pre><code>$ relay help</code></pre>
+<pre><code>$ latch help</code></pre>
         </div>
 
         <div class="code-block" data-lang="output">
           <div class="code-block-head"><span class="dot"></span><span class="label">output</span><span class="lang">console</span></div>
-<pre><code>Relay — GitHub Desktop for AI agents
+<pre><code>Latch — GitHub Desktop for AI agents
 
-  relay login              Sign in with GitHub (uses gh CLI, or device flow if GITHUB_CLIENT_ID is set)
-  relay logout             Clear the local session
-  relay whoami             Show the signed-in GitHub user
-  relay clone &lt;url&gt; [dir]  git clone + register workspace + install agent hooks
-  relay add &lt;path&gt;         Attach an existing local repo
-  relay serve              Start API on 127.0.0.1:3001 and Mission Control on :3002
-  relay serve --no-ui      Start API + coordinator only
-  relay push               Send your dirty working-tree files to the shared room
-  relay pull               Apply the host's current dirty files onto this clone
-  relay status             Health check
-  relay mcp-url            Print the MCP config for this room's shared context endpoint
-  relay doctor             Why the Coordinator board is empty</code></pre>
+  latch login              Sign in with GitHub (uses gh CLI, or device flow if GITHUB_CLIENT_ID is set)
+  latch logout             Clear the local session
+  latch whoami             Show the signed-in GitHub user
+  latch clone &lt;url&gt; [dir]  git clone + register workspace + install agent hooks
+  latch add &lt;path&gt;         Attach an existing local repo
+  latch serve              Start API on 127.0.0.1:3001 and Mission Control on :3002
+  latch serve --no-ui      Start API + coordinator only
+  latch push               Send your dirty working-tree files to the shared room
+  latch pull               Apply the host's current dirty files onto this clone
+  latch status             Health check
+  latch mcp-url            Print the MCP config for this room's shared context endpoint
+  latch doctor             Why the Coordinator board is empty</code></pre>
         </div>
 
         <div class="callout callout-warn">
@@ -181,35 +181,35 @@ $ npm link                   # puts `relay` on your PATH</code></pre>
             <h3>Sign in with GitHub</h3>
             <p>Locks are attributed to a GitHub identity, so the board can say <em>@pony holds this file</em> rather than <em>agent-4f2 holds this file</em>.</p>
             <div class="code-block" data-lang="bash">
-<pre><code>$ relay login</code></pre>
+<pre><code>$ latch login</code></pre>
             </div>
-            <p>This reuses the <code>gh</code> CLI session. If <code>gh</code> is not installed, set <code>GITHUB_CLIENT_ID</code> and /.relay falls back to the GitHub device flow.</p>
+            <p>This reuses the <code>gh</code> CLI session. If <code>gh</code> is not installed, set <code>GITHUB_CLIENT_ID</code> and ./latch falls back to the GitHub device flow.</p>
           </div>
 
           <div class="step-item">
-            <h3>Bring a repository under /.relay</h3>
-            <p>Cloning <em>through</em> relay clones the repo, registers the workspace, and installs the claim/release hooks for every supported agent in one shot.</p>
+            <h3>Bring a repository under ./latch</h3>
+            <p>Cloning <em>through</em> latch clones the repo, registers the workspace, and installs the claim/release hooks for every supported agent in one shot.</p>
             <div class="code-block" data-lang="bash">
-<pre><code>$ relay clone &lt;repo-url&gt; [dir]</code></pre>
+<pre><code>$ latch clone &lt;repo-url&gt; [dir]</code></pre>
             </div>
             <p>Already have the repo on disk? Attach it in place instead — same hook install, no re-clone:</p>
             <div class="code-block" data-lang="bash">
-<pre><code>$ relay add /path/to/repo</code></pre>
+<pre><code>$ latch add /path/to/repo</code></pre>
             </div>
           </div>
 
           <div class="step-item">
-            <h3>Start the relay</h3>
+            <h3>Start the latch</h3>
             <div class="code-block" data-lang="bash">
-<pre><code>$ relay serve                # API → 127.0.0.1:3001 · Mission Control → :3002
-$ relay serve --no-ui        # API + coordinator only, no board</code></pre>
+<pre><code>$ latch serve                # API → 127.0.0.1:3001 · Mission Control → :3002
+$ latch serve --no-ui        # API + coordinator only, no board</code></pre>
             </div>
             <p>Mission Control is a Next.js dev server; the CLI waits for <code>/api/health</code> to answer before booting it, and shuts both down together on <kbd>Ctrl-C</kbd>.</p>
           </div>
 
           <div class="step-item">
             <h3>Mint the invite link</h3>
-            <p>Open <a href="http://localhost:3002" target="_blank" rel="noopener">localhost:3002</a> → <strong>Team → Share</strong>. /.relay opens an ngrok tunnel to your machine and hands you a link. That link, plus the member token baked into it, is the whole room.</p>
+            <p>Open <a href="http://localhost:3002" target="_blank" rel="noopener">localhost:3002</a> → <strong>Team → Share</strong>. ./latch opens an ngrok tunnel to your machine and hands you a link. That link, plus the member token baked into it, is the whole room.</p>
           </div>
         </div>
 
@@ -223,15 +223,15 @@ $ relay serve --no-ui        # API + coordinator only, no board</code></pre>
       <section id="quickstart-teammate">
         <p class="docs-kicker">Get started</p>
         <h2>Quickstart · Teammate</h2>
-        <p>Guests run their own relay against their own filesystem. They do not share a working tree with the host — they share a lock table and a patch stream.</p>
+        <p>Guests run their own latch against their own filesystem. They do not share a working tree with the host — they share a lock table and a patch stream.</p>
 
         <div class="code-block" data-lang="bash">
           <div class="code-block-head"><span class="dot"></span><span class="label">teammate</span><span class="lang">bash</span></div>
-<pre><code>$ relay login                     # their own GitHub identity
-$ relay clone &lt;same-repo-url&gt;     # their own clone
-$ relay serve                     # their own local relay
+<pre><code>$ latch login                     # their own GitHub identity
+$ latch clone &lt;same-repo-url&gt;     # their own clone
+$ latch serve                     # their own local latch
 # then: Mission Control → Team → Join, paste the host's invite link
-$ relay pull                      # take the host's current working state</code></pre>
+$ latch pull                      # take the host's current working state</code></pre>
         </div>
 
         <p>From that point on, the two machines see one lock table. A claim on the guest's machine is arbitrated against the host over the tunnel, and the board mirrors the host's locks back down.</p>
@@ -248,7 +248,7 @@ $ relay pull                      # take the host's current working state</code>
 
         <div class="callout callout-warn">
           <span class="callout-mark">Warning</span>
-          <p>If the host's tunnel dies, locks still arbitrate correctly on the machines that can reach it — the board is what degrades first. <a href="#troubleshooting"><code>relay doctor</code></a> walks that chain and names the broken link.</p>
+          <p>If the host's tunnel dies, locks still arbitrate correctly on the machines that can reach it — the board is what degrades first. <a href="#troubleshooting"><code>latch doctor</code></a> walks that chain and names the broken link.</p>
         </div>
       </section>
 
@@ -259,7 +259,7 @@ $ relay pull                      # take the host's current working state</code>
         <p>Open your agent as you normally would and ask it to edit a file. Nothing about your workflow changes — the hooks fire underneath.</p>
 
         <div class="code-block" data-lang="output">
-          <div class="code-block-head"><span class="dot"></span><span class="label">relay status</span><span class="lang">console</span></div>
+          <div class="code-block-head"><span class="dot"></span><span class="label">latch status</span><span class="lang">console</span></div>
 <pre><code>lock table — 4 held
 ├── src/auth/session.ts   # @pony   · claude  · write
 ├── src/api/routes.ts     # @unnath · cursor  · write
@@ -273,7 +273,7 @@ $ relay pull                      # take the host's current working state</code>
         <p>Confirm the whole chain is healthy at any time:</p>
 
         <div class="code-block" data-lang="bash">
-<pre><code>$ relay doctor</code></pre>
+<pre><code>$ latch doctor</code></pre>
         </div>
       </section>
 
@@ -305,7 +305,7 @@ $ relay pull                      # take the host's current working state</code>
       <section id="concept-depgraph">
         <p class="docs-kicker">Core concepts</p>
         <h2>Dependency-graph locking</h2>
-        <p>Files do not exist independently. Editing one module can break a dozen importers, so path-exact locking is not enough. /.relay parses imports with tree-sitter and asks the real question: <em>does this change affect a file another agent is working on?</em> — not merely <em>is this exact path locked?</em></p>
+        <p>Files do not exist independently. Editing one module can break a dozen importers, so path-exact locking is not enough. ./latch parses imports with tree-sitter and asks the real question: <em>does this change affect a file another agent is working on?</em> — not merely <em>is this exact path locked?</em></p>
 
         <p>Agents stay parallel wherever the graph says they are independent. The blast radius is what gets serialized.</p>
 
@@ -332,17 +332,17 @@ $ relay pull                      # take the host's current working state</code>
       <section id="concept-room">
         <p class="docs-kicker">Core concepts</p>
         <h2>Rooms &amp; the host model</h2>
-        <p>A <strong>room</strong> is one host machine plus the guests connected to it. There is no cloud component: <code>relay serve</code> binds the API to <code>127.0.0.1:3001</code>, and sharing means opening an ngrok tunnel straight to that laptop.</p>
+        <p>A <strong>room</strong> is one host machine plus the guests connected to it. There is no cloud component: <code>latch serve</code> binds the API to <code>127.0.0.1:3001</code>, and sharing means opening an ngrok tunnel straight to that laptop.</p>
 
         <div class="code-block" data-lang="text">
           <div class="code-block-head"><span class="dot"></span><span class="label">topology</span><span class="lang">text</span></div>
 <pre><code>  Cursor ──┐  pre-tool hook: claim
   Claude ──┤  post-tool hook: release      ┌──────────────┐
-  Copilot ─┼──► lock table ◄── dep graph ──│ relay serve  │──► Mission Control
+  Copilot ─┼──► lock table ◄── dep graph ──│ latch serve  │──► Mission Control
   Codex ───┤        ▲                      │  (your host) │          ▲
   Antigravity ┘     │                      └──────┬───────┘          │
                     │       ngrok tunnel          │                  │
-              teammate's relay ◄──── patches ─────┴──────────────────┘</code></pre>
+              teammate's latch ◄──── patches ─────┴──────────────────┘</code></pre>
         </div>
 
         <div class="docs-table-wrap">
@@ -351,8 +351,8 @@ $ relay pull                      # take the host's current working state</code>
             <tbody>
               <tr><td>Claim / release</td><td>pre- and post-tool hooks</td><td>Exclusive write access to a file</td></tr>
               <tr><td>Dependency graph</td><td>tree-sitter import scan</td><td>Files <em>affected by</em> the edit</td></tr>
-              <tr><td>Room</td><td><code>relay serve</code> + ngrok tunnel</td><td>One shared lock table across machines</td></tr>
-              <tr><td>Patches</td><td><code>relay push</code> / <code>relay pull</code></td><td>Working-tree state without full copies</td></tr>
+              <tr><td>Room</td><td><code>latch serve</code> + ngrok tunnel</td><td>One shared lock table across machines</td></tr>
+              <tr><td>Patches</td><td><code>latch push</code> / <code>latch pull</code></td><td>Working-tree state without full copies</td></tr>
               <tr><td>Board</td><td>Mission Control (<code>:3002</code>)</td><td>Who holds what, right now</td></tr>
             </tbody>
           </table>
@@ -365,12 +365,12 @@ $ relay pull                      # take the host's current working state</code>
       <section id="concept-sync">
         <p class="docs-kicker">Core concepts</p>
         <h2>Patch sync</h2>
-        <p>Your teammate has their own filesystem, their own environment, and their own agents. /.relay does not copy projects around — it propagates <strong>patches of the dirty working tree</strong>, so both clones converge on the same uncommitted state without anyone committing.</p>
+        <p>Your teammate has their own filesystem, their own environment, and their own agents. ./latch does not copy projects around — it propagates <strong>patches of the dirty working tree</strong>, so both clones converge on the same uncommitted state without anyone committing.</p>
 
         <div class="code-block" data-lang="bash">
           <div class="code-block-head"><span class="dot"></span><span class="label">terminal</span><span class="lang">bash</span></div>
-<pre><code>$ relay push     # send your dirty working-tree files to the room
-$ relay pull     # apply the host's current dirty files onto this clone</code></pre>
+<pre><code>$ latch push     # send your dirty working-tree files to the room
+$ latch pull     # apply the host's current dirty files onto this clone</code></pre>
         </div>
 
         <div class="code-block" data-lang="output">
@@ -381,41 +381,41 @@ $ relay pull     # apply the host's current dirty files onto this clone</code></
   lib/db/client.ts</code></pre>
         </div>
 
-        <p>Both commands are thin clients over the local API — if the relay is not running you get <code>offline — run relay serve</code> and a non-zero exit code, which makes them safe to use in scripts.</p>
+        <p>Both commands are thin clients over the local API — if the latch is not running you get <code>offline — run latch serve</code> and a non-zero exit code, which makes them safe to use in scripts.</p>
       </section>
 
       <!-- ------------------------------------------------------- CLI -- -->
       <section id="cli">
         <p class="docs-kicker">Reference</p>
         <h2>CLI reference</h2>
-        <p>Every command /.relay ships. Expand one for usage, output, and the failure modes worth knowing.</p>
+        <p>Every command ./latch ships. Expand one for usage, output, and the failure modes worth knowing.</p>
 
         <h3 id="cli-identity">Identity</h3>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay login</code><span class="cmd-desc">Sign in with GitHub</span></summary>
+          <summary><code class="cmd-name">latch login</code><span class="cmd-desc">Sign in with GitHub</span></summary>
           <div class="cmd-body">
-            <p>Reads the existing <code>gh</code> CLI session and stores a local /.relay session. Locks and board entries are attributed to this identity.</p>
-            <div class="code-block" data-lang="bash"><pre><code>$ relay login</code></pre></div>
+            <p>Reads the existing <code>gh</code> CLI session and stores a local ./latch session. Locks and board entries are attributed to this identity.</p>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch login</code></pre></div>
             <div class="code-block" data-lang="output"><pre><code>signed in as Krishna V (@pony) via GitHub CLI</code></pre></div>
             <p><strong>No <code>gh</code> installed?</strong> Set <code>GITHUB_CLIENT_ID</code> (and <code>GITHUB_CLIENT_SECRET</code>) and the command falls back to the GitHub device flow, printing a verification URL and a one-time code. You can also sign in from Mission Control with <strong>Continue with GitHub</strong>.</p>
           </div>
         </details>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay whoami</code><span class="cmd-desc">Show the signed-in user</span></summary>
+          <summary><code class="cmd-name">latch whoami</code><span class="cmd-desc">Show the signed-in user</span></summary>
           <div class="cmd-body">
-            <div class="code-block" data-lang="bash"><pre><code>$ relay whoami</code></pre></div>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch whoami</code></pre></div>
             <div class="code-block" data-lang="output"><pre><code>Krishna V (@pony)
 project prj_8f31a2</code></pre></div>
-            <p>Exits non-zero with <code>not signed in — run relay login</code> when there is no session.</p>
+            <p>Exits non-zero with <code>not signed in — run latch login</code> when there is no session.</p>
           </div>
         </details>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay logout</code><span class="cmd-desc">Clear the local session</span></summary>
+          <summary><code class="cmd-name">latch logout</code><span class="cmd-desc">Clear the local session</span></summary>
           <div class="cmd-body">
-            <div class="code-block" data-lang="bash"><pre><code>$ relay logout</code></pre></div>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch logout</code></pre></div>
             <p>Removes the stored session only. Your <code>gh</code> credentials are untouched.</p>
           </div>
         </details>
@@ -423,11 +423,11 @@ project prj_8f31a2</code></pre></div>
         <h3 id="cli-workspaces">Workspaces</h3>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay clone &lt;url&gt; [dir]</code><span class="cmd-desc">Clone + register + install hooks</span></summary>
+          <summary><code class="cmd-name">latch clone &lt;url&gt; [dir]</code><span class="cmd-desc">Clone + register + install hooks</span></summary>
           <div class="cmd-body">
-            <p>Three steps in one: <code>git clone</code>, register the workspace as a /.relay project, and install pre-tool, post-tool, pre-read and stop hooks for every supported agent.</p>
-            <div class="code-block" data-lang="bash"><pre><code>$ relay clone https://github.com/acme/api-server
-$ relay clone https://github.com/acme/api-server ./api</code></pre></div>
+            <p>Three steps in one: <code>git clone</code>, register the workspace as a ./latch project, and install pre-tool, post-tool, pre-read and stop hooks for every supported agent.</p>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch clone https://github.com/acme/api-server
+$ latch clone https://github.com/acme/api-server ./api</code></pre></div>
             <div class="code-block" data-lang="output"><pre><code>cloned https://github.com/acme/api-server
 workspace /Users/pony/code/api-server
 registered api-server (prj_8f31a2)</code></pre></div>
@@ -435,10 +435,10 @@ registered api-server (prj_8f31a2)</code></pre></div>
         </details>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay add &lt;path&gt;</code><span class="cmd-desc">Attach an existing local repo</span></summary>
+          <summary><code class="cmd-name">latch add &lt;path&gt;</code><span class="cmd-desc">Attach an existing local repo</span></summary>
           <div class="cmd-body">
             <p>Same registration and hook install as <code>clone</code>, without touching git. Use this for a repo you already have on disk.</p>
-            <div class="code-block" data-lang="bash"><pre><code>$ relay add ~/code/api-server</code></pre></div>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch add ~/code/api-server</code></pre></div>
             <div class="code-block" data-lang="output"><pre><code>added /Users/pony/code/api-server as api-server</code></pre></div>
           </div>
         </details>
@@ -446,32 +446,32 @@ registered api-server (prj_8f31a2)</code></pre></div>
         <h3 id="cli-runtime">Runtime</h3>
 
         <details class="cmd-entry" open>
-          <summary><code class="cmd-name">relay serve</code><span class="cmd-desc">Start the API and Mission Control</span></summary>
+          <summary><code class="cmd-name">latch serve</code><span class="cmd-desc">Start the API and Mission Control</span></summary>
           <div class="cmd-body">
             <p>Boots the coordination API on <code>127.0.0.1:3001</code>, waits for <code>/api/health</code>, then starts Mission Control on <code>:3002</code>. Both processes shut down together on <kbd>Ctrl-C</kbd>, including their child process trees on Windows.</p>
             <div class="code-block" data-lang="bash">
-<pre><code>$ relay serve                    # API + Mission Control
-$ relay serve --no-ui            # API + coordinator only
-$ relay serve --port 4001        # move the API off 3001</code></pre>
+<pre><code>$ latch serve                    # API + Mission Control
+$ latch serve --no-ui            # API + coordinator only
+$ latch serve --port 4001        # move the API off 3001</code></pre>
             </div>
             <div class="docs-table-wrap">
               <table class="docs-table">
                 <thead><tr><th>Flag</th><th>Effect</th></tr></thead>
                 <tbody>
                   <tr><td><code>--no-ui</code></td><td>Skip Mission Control; run the API and coordinator only</td></tr>
-                  <tr><td><code>--port &lt;n&gt;</code></td><td>API port (overrides <code>RELAY_PORT</code>, default <code>3001</code>)</td></tr>
+                  <tr><td><code>--port &lt;n&gt;</code></td><td>API port (overrides <code>LATCH_PORT</code>, default <code>3001</code>)</td></tr>
                 </tbody>
               </table>
             </div>
-            <p>The board port comes from <code>RELAY_UI_PORT</code> (default <code>3002</code>). If <code>next</code> is missing you will get <code>Mission Control is not installed — run npm install</code>.</p>
+            <p>The board port comes from <code>LATCH_UI_PORT</code> (default <code>3002</code>). If <code>next</code> is missing you will get <code>Mission Control is not installed — run npm install</code>.</p>
           </div>
         </details>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay status</code><span class="cmd-desc">Health check as JSON</span></summary>
+          <summary><code class="cmd-name">latch status</code><span class="cmd-desc">Health check as JSON</span></summary>
           <div class="cmd-body">
             <p>Prints the raw <code>/api/health</code> payload — room, role, host, and ports.</p>
-            <div class="code-block" data-lang="bash"><pre><code>$ relay status</code></pre></div>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch status</code></pre></div>
             <div class="code-block" data-lang="json">
 <pre><code>{
   "ok": true,
@@ -485,16 +485,16 @@ $ relay serve --port 4001        # move the API off 3001</code></pre>
   }
 }</code></pre>
             </div>
-            <p>Exits non-zero with <code>offline — run relay serve</code> when no local API answers.</p>
+            <p>Exits non-zero with <code>offline — run latch serve</code> when no local API answers.</p>
           </div>
         </details>
 
         <h3 id="cli-sync">Sync</h3>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay push</code><span class="cmd-desc">Send dirty files to the room</span></summary>
+          <summary><code class="cmd-name">latch push</code><span class="cmd-desc">Send dirty files to the room</span></summary>
           <div class="cmd-body">
-            <div class="code-block" data-lang="bash"><pre><code>$ relay push</code></pre></div>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch push</code></pre></div>
             <div class="code-block" data-lang="output"><pre><code>push 2 file(s)
   src/api/routes.ts
   lib/db/client.ts</code></pre></div>
@@ -503,9 +503,9 @@ $ relay serve --port 4001        # move the API off 3001</code></pre>
         </details>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay pull</code><span class="cmd-desc">Apply the host's working state</span></summary>
+          <summary><code class="cmd-name">latch pull</code><span class="cmd-desc">Apply the host's working state</span></summary>
           <div class="cmd-body">
-            <div class="code-block" data-lang="bash"><pre><code>$ relay pull</code></pre></div>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch pull</code></pre></div>
             <div class="code-block" data-lang="output"><pre><code>pull 3 file(s)
   src/auth/session.ts
   src/api/routes.ts
@@ -517,14 +517,14 @@ $ relay serve --port 4001        # move the API off 3001</code></pre>
         <h3 id="cli-diagnostics">Diagnostics &amp; integration</h3>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay doctor</code><span class="cmd-desc">Explain an empty Coordinator board</span></summary>
+          <summary><code class="cmd-name">latch doctor</code><span class="cmd-desc">Explain an empty Coordinator board</span></summary>
           <div class="cmd-body">
             <p>Locks and the board are separate subsystems — hooks arbitrate straight against the host over HTTP, while the board is fed by a lock mirror and SSE. That makes <em>"locking works but I see nothing"</em> a normal and otherwise invisible failure. <code>doctor</code> walks that exact chain and names the broken link.</p>
-            <div class="code-block" data-lang="bash"><pre><code>$ relay doctor
-$ relay doctor --port 4001</code></pre></div>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch doctor
+$ latch doctor --port 4001</code></pre></div>
             <div class="code-block" data-lang="output">
               <div class="code-block-head"><span class="dot"></span><span class="label">healthy guest</span><span class="lang">console</span></div>
-<pre><code>relay doctor — room + Coordinator board
+<pre><code>latch doctor — room + Coordinator board
 
   ok    local API on http://127.0.0.1:3001
   ok    room joined as guest -> https://a1b2c3.ngrok-free.app
@@ -541,20 +541,20 @@ $ relay doctor --port 4001</code></pre></div>
         </details>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay mcp-url</code><span class="cmd-desc">Print the room's MCP config</span></summary>
+          <summary><code class="cmd-name">latch mcp-url</code><span class="cmd-desc">Print the room's MCP config</span></summary>
           <div class="cmd-body">
             <p>Emits a ready-to-paste <code>mcpServers</code> block pointing at this room's shared-context endpoint. See <a href="#mcp">MCP server</a>.</p>
-            <div class="code-block" data-lang="bash"><pre><code>$ relay mcp-url</code></pre></div>
-            <p>Exits non-zero with a hint when you are not in a room — locally your agents already reach relay over stdio, so there is nothing to configure.</p>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch mcp-url</code></pre></div>
+            <p>Exits non-zero with a hint when you are not in a room — locally your agents already reach latch over stdio, so there is nothing to configure.</p>
           </div>
         </details>
 
         <details class="cmd-entry">
-          <summary><code class="cmd-name">relay help</code><span class="cmd-desc">Full command list</span></summary>
+          <summary><code class="cmd-name">latch help</code><span class="cmd-desc">Full command list</span></summary>
           <div class="cmd-body">
-            <div class="code-block" data-lang="bash"><pre><code>$ relay help
-$ relay -h
-$ relay --help</code></pre></div>
+            <div class="code-block" data-lang="bash"><pre><code>$ latch help
+$ latch -h
+$ latch --help</code></pre></div>
           </div>
         </details>
 
@@ -563,18 +563,18 @@ $ relay --help</code></pre></div>
           <table class="docs-table">
             <thead><tr><th>Command</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>relay login</code></td><td>GitHub identity via <code>gh</code>, or device flow with <code>GITHUB_CLIENT_ID</code></td></tr>
-              <tr><td><code>relay logout</code></td><td>Clear the local session</td></tr>
-              <tr><td><code>relay whoami</code></td><td>Show the signed-in GitHub user and active project</td></tr>
-              <tr><td><code>relay clone &lt;url&gt; [dir]</code></td><td>git clone + register workspace + install agent hooks</td></tr>
-              <tr><td><code>relay add &lt;path&gt;</code></td><td>Attach an existing local repo</td></tr>
-              <tr><td><code>relay serve</code></td><td>API on <code>127.0.0.1:3001</code> + Mission Control on <code>:3002</code></td></tr>
-              <tr><td><code>relay serve --no-ui</code></td><td>API + coordinator only</td></tr>
-              <tr><td><code>relay push</code></td><td>Send your dirty working-tree files to the room</td></tr>
-              <tr><td><code>relay pull</code></td><td>Apply the host's current dirty files onto this clone</td></tr>
-              <tr><td><code>relay status</code></td><td>Health check (room, role, host, ports)</td></tr>
-              <tr><td><code>relay mcp-url</code></td><td>Print the MCP config for this room's shared-context endpoint</td></tr>
-              <tr><td><code>relay doctor</code></td><td>Diagnose an empty Coordinator board</td></tr>
+              <tr><td><code>latch login</code></td><td>GitHub identity via <code>gh</code>, or device flow with <code>GITHUB_CLIENT_ID</code></td></tr>
+              <tr><td><code>latch logout</code></td><td>Clear the local session</td></tr>
+              <tr><td><code>latch whoami</code></td><td>Show the signed-in GitHub user and active project</td></tr>
+              <tr><td><code>latch clone &lt;url&gt; [dir]</code></td><td>git clone + register workspace + install agent hooks</td></tr>
+              <tr><td><code>latch add &lt;path&gt;</code></td><td>Attach an existing local repo</td></tr>
+              <tr><td><code>latch serve</code></td><td>API on <code>127.0.0.1:3001</code> + Mission Control on <code>:3002</code></td></tr>
+              <tr><td><code>latch serve --no-ui</code></td><td>API + coordinator only</td></tr>
+              <tr><td><code>latch push</code></td><td>Send your dirty working-tree files to the room</td></tr>
+              <tr><td><code>latch pull</code></td><td>Apply the host's current dirty files onto this clone</td></tr>
+              <tr><td><code>latch status</code></td><td>Health check (room, role, host, ports)</td></tr>
+              <tr><td><code>latch mcp-url</code></td><td>Print the MCP config for this room's shared-context endpoint</td></tr>
+              <tr><td><code>latch doctor</code></td><td>Diagnose an empty Coordinator board</td></tr>
             </tbody>
           </table>
         </div>
@@ -584,7 +584,7 @@ $ relay --help</code></pre></div>
       <section id="hooks">
         <p class="docs-kicker">Reference</p>
         <h2>Agent hooks</h2>
-        <p><code>relay clone</code> and <code>relay add</code> install four hooks into your project: <strong>pre-tool</strong> (claim), <strong>post-tool</strong> (release), <strong>pre-read</strong>, and <strong>stop</strong>. They are written into each agent's own config format, so every tool participates without a plugin.</p>
+        <p><code>latch clone</code> and <code>latch add</code> install four hooks into your project: <strong>pre-tool</strong> (claim), <strong>post-tool</strong> (release), <strong>pre-read</strong>, and <strong>stop</strong>. They are written into each agent's own config format, so every tool participates without a plugin.</p>
 
         <div class="docs-table-wrap">
           <table class="docs-table">
@@ -593,7 +593,7 @@ $ relay --help</code></pre></div>
               <tr><td>Claude Code</td><td><code>.claude/settings.json</code></td><td><code>Edit</code>, <code>Write</code>, <code>NotebookEdit</code></td></tr>
               <tr><td>Cursor</td><td><code>.cursor/hooks.json</code></td><td><code>Write</code>, <code>Edit</code>, <code>Delete</code></td></tr>
               <tr><td>Codex</td><td><code>.codex/hooks.json</code></td><td><code>apply_patch</code>, <code>Edit</code>, <code>Write</code></td></tr>
-              <tr><td>Copilot CLI</td><td><code>.github/hooks/relay-os.json</code></td><td><code>edit</code>, <code>create</code></td></tr>
+              <tr><td>Copilot CLI</td><td><code>.github/hooks/latch-os.json</code></td><td><code>edit</code>, <code>create</code></td></tr>
               <tr><td>Antigravity</td><td><code>.agents/hooks.json</code></td><td><code>write_to_file</code>, <code>replace_file_content</code>, <code>multi_replace_file_content</code></td></tr>
             </tbody>
           </table>
@@ -606,7 +606,7 @@ $ relay --help</code></pre></div>
 
         <div class="callout callout-note">
           <span class="callout-mark">Note</span>
-          <p>The hook files are committed alongside the repo, so a teammate who clones it normally still gets the claim/release wiring — they only need their own <code>relay serve</code> running for it to have something to talk to.</p>
+          <p>The hook files are committed alongside the repo, so a teammate who clones it normally still gets the claim/release wiring — they only need their own <code>latch serve</code> running for it to have something to talk to.</p>
         </div>
       </section>
 
@@ -614,22 +614,22 @@ $ relay --help</code></pre></div>
       <section id="mcp">
         <p class="docs-kicker">Reference</p>
         <h2>MCP server</h2>
-        <p>Any MCP client can read the room's shared context — <strong>even on a machine with no relay installed</strong>. Print the config and paste it into your agent:</p>
+        <p>Any MCP client can read the room's shared context — <strong>even on a machine with no latch installed</strong>. Print the config and paste it into your agent:</p>
 
         <div class="code-block" data-lang="bash">
-<pre><code>$ relay mcp-url</code></pre>
+<pre><code>$ latch mcp-url</code></pre>
         </div>
 
         <div class="code-block" data-lang="json">
           <div class="code-block-head"><span class="dot"></span><span class="label">mcp config</span><span class="lang">json</span></div>
 <pre><code>{
   "mcpServers": {
-    "relay-room": {
+    "latch-room": {
       "type": "http",
       "url": "https://a1b2c3.ngrok-free.app/mcp",
       "headers": {
-        "ngrok-skip-browser-warning": "relay",
-        "x-relay-room-token": "rmt_9f81…"
+        "ngrok-skip-browser-warning": "latch",
+        "x-latch-room-token": "rmt_9f81…"
       }
     }
   }
@@ -638,7 +638,7 @@ $ relay --help</code></pre></div>
 
         <div class="callout callout-warn">
           <span class="callout-mark">Scope</span>
-          <p>The room endpoint is <strong>read-only</strong> for anyone off the host machine. Coordination tools that mutate state — <code>relay_claim_file</code>, <code>relay_release_file</code>, <code>relay_status</code> — run against each member's own local relay.</p>
+          <p>The room endpoint is <strong>read-only</strong> for anyone off the host machine. Coordination tools that mutate state — <code>latch_claim_file</code>, <code>latch_release_file</code>, <code>latch_status</code> — run against each member's own local latch.</p>
         </div>
 
         <h3 id="mcp-tools">Tools exposed</h3>
@@ -646,17 +646,17 @@ $ relay --help</code></pre></div>
           <table class="docs-table">
             <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
             <tbody>
-              <tr><td><code>relay_claim_file</code></td><td>Acquire an exclusive write lock before editing</td></tr>
-              <tr><td><code>relay_release_file</code></td><td>Release the lock after editing</td></tr>
-              <tr><td><code>relay_status</code></td><td>View the full lock table</td></tr>
-              <tr><td><code>relay_get_conflicts</code></td><td>Overlapping edits in the last 5 minutes</td></tr>
-              <tr><td><code>relay_get_recent_changes</code></td><td>Recent <code>code_edit</code> events</td></tr>
-              <tr><td><code>relay_get_chat_history</code></td><td>Unified agent chat across every room member</td></tr>
-              <tr><td><code>relay_report_change</code></td><td>Push a code-change event</td></tr>
-              <tr><td><code>relay_report_decision</code> / <code>relay_get_decisions</code></td><td>Append / read decisions</td></tr>
-              <tr><td><code>relay_update_task</code> / <code>relay_get_active_tasks</code></td><td>Append / read tasks</td></tr>
-              <tr><td><code>relay_get_project_context</code></td><td>Full JSON project context</td></tr>
-              <tr><td><code>relay_sync</code></td><td>Re-read agent transcripts into unified history</td></tr>
+              <tr><td><code>latch_claim_file</code></td><td>Acquire an exclusive write lock before editing</td></tr>
+              <tr><td><code>latch_release_file</code></td><td>Release the lock after editing</td></tr>
+              <tr><td><code>latch_status</code></td><td>View the full lock table</td></tr>
+              <tr><td><code>latch_get_conflicts</code></td><td>Overlapping edits in the last 5 minutes</td></tr>
+              <tr><td><code>latch_get_recent_changes</code></td><td>Recent <code>code_edit</code> events</td></tr>
+              <tr><td><code>latch_get_chat_history</code></td><td>Unified agent chat across every room member</td></tr>
+              <tr><td><code>latch_report_change</code></td><td>Push a code-change event</td></tr>
+              <tr><td><code>latch_report_decision</code> / <code>latch_get_decisions</code></td><td>Append / read decisions</td></tr>
+              <tr><td><code>latch_update_task</code> / <code>latch_get_active_tasks</code></td><td>Append / read tasks</td></tr>
+              <tr><td><code>latch_get_project_context</code></td><td>Full JSON project context</td></tr>
+              <tr><td><code>latch_sync</code></td><td>Re-read agent transcripts into unified history</td></tr>
             </tbody>
           </table>
         </div>
@@ -668,7 +668,7 @@ $ relay --help</code></pre></div>
       <section id="mission-control">
         <p class="docs-kicker">Reference</p>
         <h2>Mission Control</h2>
-        <p>One board for every agent on every machine. Started by <code>relay serve</code>, running on your own hardware, with no hosted account behind it.</p>
+        <p>One board for every agent on every machine. Started by <code>latch serve</code>, running on your own hardware, with no hosted account behind it.</p>
 
         <div class="docs-table-wrap">
           <table class="docs-table">
@@ -724,7 +724,7 @@ $ curl -s http://127.0.0.1:3001/api/locks
 $ curl -s -X POST http://127.0.0.1:3001/api/push -d '{}'</code></pre>
         </div>
 
-        <p>Requests that cross the tunnel to a host carry two headers: <code>ngrok-skip-browser-warning: relay</code> and, in invite-only rooms, <code>x-relay-room-token</code>.</p>
+        <p>Requests that cross the tunnel to a host carry two headers: <code>ngrok-skip-browser-warning: latch</code> and, in invite-only rooms, <code>x-latch-room-token</code>.</p>
       </section>
 
       <!-- --------------------------------------------- configuration -- -->
@@ -737,9 +737,9 @@ $ curl -s -X POST http://127.0.0.1:3001/api/push -d '{}'</code></pre>
           <table class="docs-table">
             <thead><tr><th>Variable</th><th>Default</th><th>What it controls</th></tr></thead>
             <tbody>
-              <tr><td><code>RELAY_PORT</code></td><td><code>3001</code></td><td>Coordination API port</td></tr>
-              <tr><td><code>RELAY_UI_PORT</code></td><td><code>3002</code></td><td>Mission Control port</td></tr>
-              <tr><td><code>RELAY_UI_ORIGIN</code></td><td><code>http://localhost:3002</code></td><td>Origin the API accepts board requests from (CORS)</td></tr>
+              <tr><td><code>LATCH_PORT</code></td><td><code>3001</code></td><td>Coordination API port</td></tr>
+              <tr><td><code>LATCH_UI_PORT</code></td><td><code>3002</code></td><td>Mission Control port</td></tr>
+              <tr><td><code>LATCH_UI_ORIGIN</code></td><td><code>http://localhost:3002</code></td><td>Origin the API accepts board requests from (CORS)</td></tr>
               <tr><td><code>GITHUB_CLIENT_ID</code></td><td>—</td><td>Enables the device-flow login fallback</td></tr>
               <tr><td><code>GITHUB_CLIENT_SECRET</code></td><td>—</td><td>Pairs with the client id for Mission Control sign-in</td></tr>
             </tbody>
@@ -748,10 +748,10 @@ $ curl -s -X POST http://127.0.0.1:3001/api/push -d '{}'</code></pre>
 
         <div class="code-block" data-lang="bash">
           <div class="code-block-head"><span class="dot"></span><span class="label">moving off the default ports</span><span class="lang">bash</span></div>
-<pre><code>$ export RELAY_PORT=4001
-$ export RELAY_UI_PORT=4002
-$ export RELAY_UI_ORIGIN=http://localhost:4002
-$ relay serve</code></pre>
+<pre><code>$ export LATCH_PORT=4001
+$ export LATCH_UI_PORT=4002
+$ export LATCH_UI_ORIGIN=http://localhost:4002
+$ latch serve</code></pre>
         </div>
 
         <h3 id="configuration-state">Where state lives</h3>
@@ -761,8 +761,8 @@ $ relay serve</code></pre>
             <thead><tr><th>File</th><th>Holds</th></tr></thead>
             <tbody>
               <tr><td><code>room.json</code></td><td>Role, tunnel URL, host project id and name, member token</td></tr>
-              <tr><td>Session store</td><td>The GitHub identity from <code>relay login</code></td></tr>
-              <tr><td>Project registry</td><td>Workspaces registered by <code>relay clone</code> / <code>relay add</code></td></tr>
+              <tr><td>Session store</td><td>The GitHub identity from <code>latch login</code></td></tr>
+              <tr><td>Project registry</td><td>Workspaces registered by <code>latch clone</code> / <code>latch add</code></td></tr>
               <tr><td>Hook configs</td><td>Per-agent files listed under <a href="#hooks">Agent hooks</a></td></tr>
             </tbody>
           </table>
@@ -787,7 +787,7 @@ $ relay serve</code></pre>
         <h2>Troubleshooting</h2>
         <p>Start here, always:</p>
         <div class="code-block" data-lang="bash">
-<pre><code>$ relay doctor    # run it on the machine that sees nothing</code></pre>
+<pre><code>$ latch doctor    # run it on the machine that sees nothing</code></pre>
         </div>
 
         <h3 id="troubleshooting-board">The board is empty but locking works</h3>
@@ -795,7 +795,7 @@ $ relay serve</code></pre>
         <div class="code-block" data-lang="output">
 <pre><code>  BROKE the host holds locks but this machine mirrors none of them.
         Locks still arbitrate correctly (hooks call the host directly); it is only
-        the board that is fed by the mirror. Restart `relay serve` here.</code></pre>
+        the board that is fed by the mirror. Restart `latch serve` here.</code></pre>
         </div>
 
         <h3 id="troubleshooting-common">Common failures</h3>
@@ -804,14 +804,14 @@ $ relay serve</code></pre>
             <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
             <tbody>
               <tr>
-                <td><code>offline — run relay serve</code></td>
+                <td><code>offline — run latch serve</code></td>
                 <td>No local API on the expected port</td>
-                <td>Start <code>relay serve</code>, or match <code>RELAY_PORT</code></td>
+                <td>Start <code>latch serve</code>, or match <code>LATCH_PORT</code></td>
               </tr>
               <tr>
                 <td><code>no local API on http://127.0.0.1:3001</code></td>
                 <td>Same, seen from <code>doctor</code></td>
-                <td>Run <code>relay serve</code> on <em>this</em> machine</td>
+                <td>Run <code>latch serve</code> on <em>this</em> machine</td>
               </tr>
               <tr>
                 <td><code>room.json has no hostProjectId</code></td>
@@ -821,7 +821,7 @@ $ relay serve</code></pre>
               <tr>
                 <td><code>cannot reach the host</code></td>
                 <td>Tunnel down or rotated</td>
-                <td>Host re-shares; /.relay looks up the current tunnel and reconnects</td>
+                <td>Host re-shares; ./latch looks up the current tunnel and reconnects</td>
               </tr>
               <tr>
                 <td><code>host refused /api/locks</code></td>
@@ -841,7 +841,7 @@ $ relay serve</code></pre>
               <tr>
                 <td>No agent ever claims a lock</td>
                 <td>Hooks not installed in that workspace</td>
-                <td>Run <code>relay add &lt;path&gt;</code> on the repo</td>
+                <td>Run <code>latch add &lt;path&gt;</code> on the repo</td>
               </tr>
             </tbody>
           </table>
@@ -849,13 +849,13 @@ $ relay serve</code></pre>
 
         <h3 id="troubleshooting-ports">Port already in use</h3>
         <div class="code-block" data-lang="bash">
-<pre><code>$ relay serve --port 4001                    # API only
-$ RELAY_UI_PORT=4002 relay serve --port 4001  # both, plus set RELAY_UI_ORIGIN</code></pre>
+<pre><code>$ latch serve --port 4001                    # API only
+$ LATCH_UI_PORT=4002 latch serve --port 4001  # both, plus set LATCH_UI_ORIGIN</code></pre>
         </div>
 
         <div class="callout callout-tip">
           <span class="callout-mark">Tip</span>
-          <p>An empty board with nothing locked anywhere is <em>correct</em>. Have someone start an agent edit and run <code>relay doctor</code> again before assuming something is broken.</p>
+          <p>An empty board with nothing locked anywhere is <em>correct</em>. Have someone start an agent edit and run <code>latch doctor</code> again before assuming something is broken.</p>
         </div>
       </section>
 
@@ -865,16 +865,16 @@ $ RELAY_UI_PORT=4002 relay serve --port 4001  # both, plus set RELAY_UI_ORIGIN</
         <h2>FAQ</h2>
 
         <h3 id="faq-account">Do I need an account?</h3>
-        <p>No. <code>relay login</code> reads a GitHub identity so locks can be attributed to a person, but there is no /.relay account server, no sign-up, and no hosted state.</p>
+        <p>No. <code>latch login</code> reads a GitHub identity so locks can be attributed to a person, but there is no ./latch account server, no sign-up, and no hosted state.</p>
 
         <h3 id="faq-branch">Does this replace Git?</h3>
-        <p>No — it sits under it. Git coordinates humans committing minutes apart. /.relay coordinates agents editing the same files right now. You still branch, commit and merge exactly as before.</p>
+        <p>No — it sits under it. Git coordinates humans committing minutes apart. ./latch coordinates agents editing the same files right now. You still branch, commit and merge exactly as before.</p>
 
         <h3 id="faq-offline">What happens if the host goes offline?</h3>
-        <p>Guests keep their own local relay and their own clone. Claims that need the host will fail loudly rather than silently succeed, and the board falls back to local locks until the tunnel is back.</p>
+        <p>Guests keep their own local latch and their own clone. Claims that need the host will fail loudly rather than silently succeed, and the board falls back to local locks until the tunnel is back.</p>
 
         <h3 id="faq-language">My language is not in the dependency-graph list.</h3>
-        <p>File locking still works exactly the same — every write is claimed and released. Only the blast-radius edges are missing, so /.relay will not know that editing your file affects someone else's.</p>
+        <p>File locking still works exactly the same — every write is claimed and released. Only the blast-radius edges are missing, so ./latch will not know that editing your file affects someone else's.</p>
 
         <h3 id="faq-roadmap">What is next?</h3>
         <ul>
@@ -886,8 +886,8 @@ $ RELAY_UI_PORT=4002 relay serve --port 4001  # both, plus set RELAY_UI_ORIGIN</
           <a href="how-it-works.html">
             <span>Deeper</span><strong>How it works — the full architecture ↗</strong>
           </a>
-          <a href="https://github.com/prakrititz/relayBrain" target="_blank" rel="noopener">
-            <span>Source</span><strong>github.com/prakrititz/relayBrain ↗</strong>
+          <a href="https://github.com/unknownsideofme/LATCH" target="_blank" rel="noopener">
+            <span>Source</span><strong>github.com/prakrititz/latch ↗</strong>
           </a>
         </div>
       </section>
@@ -903,9 +903,9 @@ $ RELAY_UI_PORT=4002 relay serve --port 4001  # both, plus set RELAY_UI_ORIGIN</
   </div>
 
   <footer class="footer shell">
-    <a class="wordmark" href="index.html"><img src="logo.png" alt="" class="inline-logo" /> /.relay</a>
+    <a class="wordmark" href="index.html"><img src="logo.png" alt="" class="inline-logo" /> ./latch</a>
     <p>The coordination layer for AI agents.</p>
-    <p>© 2026 /.relay</p>
+    <p>© 2026 ./latch</p>
   </footer>
 
   <script src="docs.js"></script>

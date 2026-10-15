@@ -3,10 +3,10 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 const { isBinary, sha256 } = require("./patches");
 
-// Mirrors dirtyFiles' SKIP list. `.relay` is deliberately excluded: it holds the
+// Mirrors dirtyFiles' SKIP list. `.latch` and `.relay` are deliberately excluded: it holds the
 // host's room.json and lock files, and shipping those to a guest would point the
 // guest's coordinator at the guest's own tunnel.
-const SKIP_DIR = /^(\.git|\.relay|node_modules|\.next|dist|out|build|\.turbo|\.venv|__pycache__|target)$/i;
+const SKIP_DIR = /^(\.git|\.latch|\.relay|node_modules|\.next|dist|out|build|\.turbo|\.venv|__pycache__|target)$/i;
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const MAX_FILES = 4000;

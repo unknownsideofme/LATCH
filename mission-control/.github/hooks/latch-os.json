@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-copilot-pre-tool.js\"",
+        "powershell": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-copilot-pre-tool.js\"",
+        "matcher": "edit|create|apply_patch",
+        "cwd": ".",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "bash": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-copilot-pre-read.js\"",
+        "powershell": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-copilot-pre-read.js\"",
+        "matcher": "view|grep|glob",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-copilot-post-tool.js\"",
+        "powershell": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-copilot-post-tool.js\"",
+        "matcher": "edit|create|apply_patch",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-copilot-stop.js\"",
+        "powershell": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-copilot-stop.js\"",
+        "cwd": ".",
+        "timeoutSec": 120
+      }
+    ]
+  }
+}

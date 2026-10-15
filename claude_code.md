@@ -18,7 +18,7 @@ Unlike Codex which embeds workspace mapping inside the file content, Claude Code
 ## 3. Planning & Markdown Memory
 Claude Code has an explicit planning system that outputs native Markdown.
 - **Location:** `~/.claude/plans/*.md`
-- **Purpose:** Claude generates and stores files here (e.g. `okay-right-now-v2-diff-cheeky-naur.md`) to keep track of multi-step plans. These files are highly valuable targets for Relay's Universal IR.
+- **Purpose:** Claude generates and stores files here (e.g. `okay-right-now-v2-diff-cheeky-naur.md`) to keep track of multi-step plans. These files are highly valuable targets for Latch's Universal IR.
 
 ## 4. Undo Systems & File History
 Claude Code implements a safety mechanism to rollback changes it makes to files.
@@ -36,7 +36,7 @@ Claude tracks active connections to prevent conflicts:
 - **Extension:** `~/.claude/ide/` contains `.lock` files to track the VS Code extension's connection to the Claude backend.
 
 ## Conclusion
-To fully reconstruct Claude Code's state for Relay:
+To fully reconstruct Claude Code's state for Latch:
 1. **Transcripts:** Extract from `~/.claude/projects/[slug]/` (Already implemented).
 2. **Plans:** Sync the markdown files in `~/.claude/plans/` as they represent the agent's high-level objectives.
 3. **Rollbacks:** Monitor `~/.claude/file-history/` for diffs of what the AI changed.

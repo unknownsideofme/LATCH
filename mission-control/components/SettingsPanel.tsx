@@ -1,11 +1,11 @@
 "use client";
 
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { WorkspaceActions } from "./WorkspaceActions";
 import ui from "@/styles/ui.module.css";
 
 export function SettingsPanel() {
-  const { dashboard } = useRelay();
+  const { dashboard } = useLatch();
   if (!dashboard) return null;
   const p = dashboard.project;
   return (

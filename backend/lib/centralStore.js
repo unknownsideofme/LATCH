@@ -6,7 +6,7 @@ const projectStates = new Map();
 const initPromises = new Map();
 
 function eventsPath(projectId) {
-  const dir = path.join(os.homedir(), ".relay-os", "central", "events");
+  const dir = path.join(os.homedir(), ".latch-os", "central", "events");
   fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, `${projectId}.jsonl`);
 }

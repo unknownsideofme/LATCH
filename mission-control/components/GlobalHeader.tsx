@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import ui from "@/styles/ui.module.css";
 
 function fetchedLabel(ts: number | null, now: number) {
@@ -15,7 +15,7 @@ function fetchedLabel(ts: number | null, now: number) {
 }
 
 export function GlobalHeader() {
-  const { dashboard, projects, selectedProjectId, sync, syncing, lastFetchedAt } = useRelay();
+  const { dashboard, projects, selectedProjectId, sync, syncing, lastFetchedAt } = useLatch();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);

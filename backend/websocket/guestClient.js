@@ -55,11 +55,11 @@ class GuestClient {
       this.hostSocket = new WebSocket(wsUrl, {
         headers: {
           "ngrok-skip-browser-warning": "relay",
-          ...(room.memberToken ? { "x-relay-room-token": room.memberToken } : {}),
+          ...(room.memberToken ? { "x-latch-room-token": room.memberToken, "x-relay-room-token": room.memberToken } : {}),
         },
       });
     } catch (err) {
-      console.warn(`[relay-room] could not open ${wsUrl}: ${err.message || err}`);
+      console.warn(`[latch-room] could not open ${wsUrl}: ${err.message || err}`);
       this.schedulePatchesRetry();
       return;
     }
@@ -91,11 +91,11 @@ class GuestClient {
       } catch {
         /* ignore */
       }
-      console.log(`[relay-room] streaming room from ${room.url}`);
+      console.log(`[latch-room] streaming room from ${room.url}`);
     });
 
     this.hostSocket.on("error", (err) => {
-      console.warn(`[relay-room] host connection failed (${wsUrl}): ${err.message || err}`);
+      console.warn(`[latch-room] host connection failed (${wsUrl}): ${err.message || err}`);
       schedule();
     });
 
@@ -206,11 +206,11 @@ class GuestClient {
       this.controlSocket = new WebSocket(wsUrl, {
         headers: {
           "ngrok-skip-browser-warning": "relay",
-          ...(room.memberToken ? { "x-relay-room-token": room.memberToken } : {}),
+          ...(room.memberToken ? { "x-latch-room-token": room.memberToken, "x-relay-room-token": room.memberToken } : {}),
         },
       });
     } catch (err) {
-      console.warn(`[relay-room] control socket failed: ${err.message || err}`);
+      console.warn(`[latch-room] control socket failed: ${err.message || err}`);
       this.scheduleControlRetry();
       return;
     }
@@ -239,26 +239,26 @@ class GuestClient {
     this.controlSocket.on("open", () => {
       this.controlBackoffMs = 200;
       this.roomService.roomControl.send({ type: "join" });
-      console.log(`[relay-room] control stream ${room.url}`);
+      console.log(`[latch-room] control stream ${room.url}`);
       if (this.roomService.roomControl.queued) {
         const pending = this.roomService.roomControl.queued;
         this.roomService.roomControl
           .flush()
           .then(({ replayed, rejected, requeued }) => {
             console.log(
-              `[relay-room] replayed ${replayed.length}/${pending} queued lock ${
+              `[latch-room] replayed ${replayed.length}/${pending} queued lock ${
                 pending === 1 ? "mutation" : "mutations"
               }${rejected.length ? `, ${rejected.length} rejected` : ""}${
                 requeued.length ? `, ${requeued.length} held for the next reconnect` : ""
               }`
             );
           })
-          .catch((err) => console.warn(`[relay-room] replay failed: ${err.message || err}`));
+          .catch((err) => console.warn(`[latch-room] replay failed: ${err.message || err}`));
       }
     });
 
     this.controlSocket.on("error", (err) => {
-      console.warn(`[relay-room] control failed: ${err.message || err}`);
+      console.warn(`[latch-room] control failed: ${err.message || err}`);
       schedule();
     });
 

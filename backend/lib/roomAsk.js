@@ -1,6 +1,6 @@
 /**
- * Room brief for the `/relay ask` pseudo-command — what teammates' agents did recently.
- * Agents fetch this via MCP `relay_room_brief`; humans do not run a CLI for it.
+ * Room brief for the `/latch ask` pseudo-command — what teammates' agents did recently.
+ * Agents fetch this via MCP `latch_room_brief`; humans do not run a CLI for it.
  */
 
 function sameLogin(a, b) {
@@ -79,10 +79,10 @@ function compileRoomAsk({ view, room, login, locks = [], limit = 30 }) {
     : "Not in a shared room — showing local activity only.";
 
   const sections = [];
-  sections.push("# Relay ask — teammate activity\n");
+  sections.push("# Latch ask — teammate activity\n");
   sections.push(`Generated: ${new Date().toISOString()}`);
   sections.push(`${roomLine}\n`);
-  sections.push("> Agents load this via MCP `relay_room_brief` when the user says `/relay ask`.\n");
+  sections.push("> Agents load this via MCP `latch_room_brief` when the user says `/latch ask`.\n");
 
   sections.push("## Connected agents (other machines)\n");
   if (!agents.length) sections.push("_No other connected agents right now._\n");
@@ -95,7 +95,7 @@ function compileRoomAsk({ view, room, login, locks = [], limit = 30 }) {
   }
 
   sections.push("## Recent teammate chat\n");
-  if (!chatLines.length) sections.push("_No peer chat synced yet — teammate needs `relay serve` + room join._\n");
+  if (!chatLines.length) sections.push("_No peer chat synced yet — teammate needs `latch serve` + room join._\n");
   else {
     for (const row of chatLines) sections.push(row.line);
     sections.push("");
@@ -128,7 +128,7 @@ function compileRoomAsk({ view, room, login, locks = [], limit = 30 }) {
 
   sections.push("## File sync note\n");
   sections.push(
-    "Chat/activity above sync via the room transcript pipeline. **File contents** land on your disk only when post-tool hooks flush patches (`relay serve` + hooks on each machine). If a file is missing locally, ask the editor to re-save it or run `/api/flush-file` — not `relay push` after a git commit.\n"
+    "Chat/activity above sync via the room transcript pipeline. **File contents** land on your disk only when post-tool hooks flush patches (`latch serve` + hooks on each machine). If a file is missing locally, ask the editor to re-save it or run `/api/flush-file` — not `latch push` after a git commit.\n"
   );
 
   const markdown = sections.join("\n");

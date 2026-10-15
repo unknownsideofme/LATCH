@@ -140,7 +140,7 @@ class RoomService {
       headers: {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "relay",
-        ...(token ? { "x-relay-room-token": token } : {}),
+        ...(token ? { "x-latch-room-token": token, "x-relay-room-token": token } : {}),
         ...(init.headers || {}),
       },
     });
@@ -319,7 +319,7 @@ class RoomService {
         },
         room.projectPath || project?.path
       );
-      console.log(`[relay-room] host moved to ${signal.url}`);
+      console.log(`[latch-room] host moved to ${signal.url}`);
       if (this.sse) this.sse.emit("presence", { workspaceId: room.projectId || project?.id, reconnect: true });
       if (this.noticeService) {
         this.noticeService.emitNotice(
@@ -472,8 +472,8 @@ class RoomService {
     room.live = true;
     saveRoom(room, project?.path);
     const warning = await this.publishAndWatch(room, project);
-    if (previous !== url) console.log(`[relay-room] tunnel is ${url}`);
-    if (warning) console.warn(`[relay-room] ${warning}`);
+    if (previous !== url) console.log(`[latch-room] tunnel is ${url}`);
+    if (warning) console.warn(`[latch-room] ${warning}`);
     if (previous !== url) {
       if (this.sse) this.sse.emit("presence", { workspaceId: project?.id, tunnel: url });
       broadcast(this.wss, { type: "tunnel", url });
@@ -481,7 +481,7 @@ class RoomService {
   }
 
   static defaultJoinDir(name) {
-    return path.join(os.homedir(), "Documents", "Relay", String(name || "workspace").replace(/[<>:"|?*]/g, "-"));
+    return path.join(os.homedir(), "Documents", "Latch", String(name || "workspace").replace(/[<>:"|?*]/g, "-"));
   }
 
   resolveJoinProject(hostMeta, explicitPath) {
@@ -545,12 +545,12 @@ class RoomService {
       const m = text.match(new RegExp(`[?&#]${name}=([^&#\\s]+)`));
       return m ? RoomService.decodeParam(m[1]) : null;
     };
-    const code = grab("relay_invite");
-    const host = grab("relay_host");
-    const repo = grab("relay_repo");
-    const roomId = grab("relay_room");
+    const code = grab("latch_invite") || grab("relay_invite");
+    const host = grab("latch_host") || grab("relay_host");
+    const repo = grab("latch_repo") || grab("relay_repo");
+    const roomId = grab("latch_room") || grab("relay_room");
     let url = text;
-    const first = text.search(/[?&#]relay_(invite|host|repo|room)=/);
+    const first = text.search(/[?&#](latch|relay)_(invite|host|repo|room)=/);
     if (first >= 0) url = text.slice(0, first).replace(/[?#]$/, "").replace(/\/$/, "");
     if (!/^https?:\/\//i.test(url)) url = "";
     return { url, code, host, repo, roomId };

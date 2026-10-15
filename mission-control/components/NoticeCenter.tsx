@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import type { Notice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { IconBell } from "@/components/ui/icons";
@@ -26,7 +26,7 @@ function joinPayload(n: Notice) {
 }
 
 export function NoticeBell() {
-  const { notices, unreadNotices, markNoticeRead, markAllNoticesRead, dismissNotice, joinRoom } = useRelay();
+  const { notices, unreadNotices, markNoticeRead, markAllNoticesRead, dismissNotice, joinRoom } = useLatch();
   const [open, setOpen] = useState(false);
   const [joining, setJoining] = useState("");
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -144,7 +144,7 @@ export function NoticeBell() {
 }
 
 export function NoticeToasts() {
-  const { toasts, dismissToast, dismissNotice, joinRoom } = useRelay();
+  const { toasts, dismissToast, dismissNotice, joinRoom } = useLatch();
   const [joining, setJoining] = useState("");
 
   useEffect(() => {

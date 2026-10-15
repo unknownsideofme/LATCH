@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconX, IconCheck, IconCopy } from "@/components/ui/icons";
@@ -54,7 +54,7 @@ function Diff({ text }: { text?: string }) {
 }
 
 export function CodeEdits() {
-  const { dashboard, rewind } = useRelay();
+  const { dashboard, rewind } = useLatch();
   const patches = dashboard?.patches?.length ? dashboard.patches : dashboard?.edits || [];
   const maxLamport = Math.max(0, ...patches.map((p) => p.lamport || 0));
   const [cursor, setCursor] = useState(dashboard?.lastAppliedLamport || maxLamport);

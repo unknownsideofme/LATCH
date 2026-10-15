@@ -1,12 +1,12 @@
 "use client";
 
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { MarkdownView, plainPreview } from "@/lib/markdown";
 import { Badge } from "@/components/ui/badge";
 import ui from "@/styles/ui.module.css";
 
 export function MemoryPanel() {
-  const { dashboard } = useRelay();
+  const { dashboard } = useLatch();
   if (!dashboard) return null;
   return (
     <>

@@ -2,13 +2,13 @@
 
 // Builds the User -> Agent -> File model for the Coordinator board.
 //
-// Everything here is derived from data RelayContext already merges into
-// `dashboard`. No new fetch, no new SSE subscription (RelayContext already has
+// Everything here is derived from data LatchContext already merges into
+// `dashboard`. No new fetch, no new SSE subscription (LatchContext already has
 // four writers into `dashboard.locks`; adding a fifth would double-fire), and
 // no backend change.
 //
 // The one non-obvious join: lock.filePath is stored REPO-RELATIVE
-// (hooks/relay-hook-lib.js does path.relative(workspace, file)), while the
+// (hooks/latch-hook-lib.js does path.relative(workspace, file)), while the
 // machine-specific part lives only in lock.workspaceId. So keying file nodes on
 // filePath alone makes two users' locks on the same file converge on ONE node —
 // which is how cross-user contention becomes visible even though the backend

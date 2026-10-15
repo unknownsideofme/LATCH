@@ -17,7 +17,7 @@ function createHookLogger() {
     const started = Date.now();
     res.on("finish", () => {
       console.log(
-        `[relay-hook] ${req.method} ${req.path} -> ${res.statusCode} (${Date.now() - started}ms) ` +
+        `[latch-hook] ${req.method} ${req.path} -> ${res.statusCode} (${Date.now() - started}ms) ` +
           `workspace=${ws}${detail ? ` ${detail}` : ""}`
       );
     });

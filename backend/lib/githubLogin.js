@@ -69,7 +69,7 @@ async function pollDevice(device) {
     const body = await res.json();
     if (body.access_token) {
       const userRes = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${body.access_token}`, "User-Agent": "relay-it" },
+        headers: { Authorization: `Bearer ${body.access_token}`, "User-Agent": "latch-it" },
       });
       const gh = await userRes.json();
       return upsertUser({

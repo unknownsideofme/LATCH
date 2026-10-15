@@ -1,62 +1,17 @@
 
 
+[mcp_servers.latch]
+command = "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node"
+args = ["/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"]
+
+[mcp_servers.latch.env]
+LATCH_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
+RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
+
 [mcp_servers.relay]
-command = "C:/Program Files/nodejs/node.exe"
-args = ["C:/latch/LATCH/backend/mcp/server.js"]
+command = "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node"
+args = ["/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"]
 
 [mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "C:/latch/LATCH"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "C:/latch/LATCH"
-
-[mcp_servers.relay.env]
+LATCH_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
 RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "C:/Users/unnat/Documents/GitHub/relayBrainv3"
-
-[mcp_servers.relay.env]
-RELAY_WORKSPACE_PATH = "C:/Users/unnat/Documents/GitHub/relayBrainv3"

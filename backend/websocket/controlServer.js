@@ -12,7 +12,7 @@ function createControlServer({ server, lockService, ensureWorkspaceFn }) {
 
   wssControl.on("error", (err) => {
     if (err.code === "EADDRINUSE") return;
-    console.warn(`[relay-ws-control] ${err.message || err}`);
+    console.warn(`[latch-ws-control] ${err.message || err}`);
   });
 
   wssControl.on("connection", (socket, req) => {

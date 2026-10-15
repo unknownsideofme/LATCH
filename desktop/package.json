@@ -1,5 +1,5 @@
 {
-  "name": "relay-desktop",
+  "name": "latch-desktop",
   "private": true,
   "scripts": {
     "tauri": "tauri"

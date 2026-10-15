@@ -7,7 +7,7 @@ import {
   type Node, type Edge, type NodeProps, type EdgeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { IconAlertTriangle, IconCheck } from "@/components/ui/icons";
 import { useLockGraph, type EdgeKind, type GFile, type GUser } from "./useLockGraph";
 import g from "./lockgraph.module.css";
@@ -128,7 +128,7 @@ const edgeTypes = { state: StateEdge };
 /* ------------------------------- board ------------------------------- */
 
 function Board() {
-  const { dashboard, user } = useRelay();
+  const { dashboard, user } = useLatch();
   const [now, setNow] = useState(() => Date.now());
   const [animate, setAnimate] = useState(true);
   const [showWaiting, setShowWaiting] = useState(true);
@@ -231,7 +231,7 @@ function Board() {
           <>
             <p><b>No files are being edited or read right now.</b></p>
             <p className={g.emptyHint}>
-              The board fills in the moment an agent reads or edits a file — run <code>relay serve</code> and start a
+              The board fills in the moment an agent reads or edits a file — run <code>latch serve</code> and start a
               task in Claude Code, Cursor, Codex, Copilot or Antigravity.
               {room ? " Everyone in the room sees the same board." : ""}
             </p>

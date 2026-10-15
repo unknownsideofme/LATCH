@@ -45,6 +45,7 @@ class WorkspaceService {
         lastSyncAt: Date.now(),
       };
       try {
+        fs.mkdirSync(path.join(resolved, ".latch"), { recursive: true });
         fs.mkdirSync(path.join(resolved, ".relay"), { recursive: true });
         installProjectHooks(resolved);
       } catch {

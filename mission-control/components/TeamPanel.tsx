@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { apiUrl } from "@/lib/api";
 import type { OpenRoom, Room } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ function sameLogin(a?: string | null, b?: string | null) {
 }
 
 export function TeamPanel() {
-  const { dashboard, sync, user } = useRelay();
+  const { dashboard, sync, user } = useLatch();
   const [room, setRoom] = useState<Room | null>(dashboard?.room || null);
   const [openRooms, setOpenRooms] = useState<OpenRoom[]>(dashboard?.openRooms || []);
   const [busy, setBusy] = useState(false);
@@ -509,7 +509,7 @@ export function TeamPanel() {
                     className="h-8 text-xs"
                     value={joinUrl}
                     onChange={(e) => setJoinUrl(e.target.value)}
-                    placeholder="https://abc.ngrok-free.app/?relay_invite=…"
+                    placeholder="https://abc.ngrok-free.app/?latch_invite=…"
                   />
                 </div>
                 <div>

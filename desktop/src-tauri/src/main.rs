@@ -15,7 +15,7 @@ fn spawn_daemon() -> Child {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .expect("failed to spawn Relay daemon")
+        .expect("failed to spawn Latch daemon")
 }
 
 fn main() {
@@ -36,5 +36,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running Relay");
+        .expect("error while running Latch");
 }

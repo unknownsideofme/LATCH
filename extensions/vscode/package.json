@@ -1,13 +1,13 @@
 {
-  "name": "relay-vscode",
-  "displayName": "Relay",
-  "description": "Always-on Relay coordination for any workspace",
+  "name": "latch-vscode",
+  "displayName": "Latch",
+  "description": "Always-on Latch coordination for any workspace",
   "version": "0.1.0",
-  "publisher": "relay",
+  "publisher": "latch",
   "engines": { "vscode": "^1.85.0" },
   "activationEvents": ["onStartupFinished"],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{ "command": "relay.openMissionControl", "title": "Relay: Open Mission Control" }]
+    "commands": [{ "command": "latch.openMissionControl", "title": "Latch: Open Mission Control" }]
   }
 }

@@ -3,7 +3,7 @@ const path = require("path");
 const { clientEventId } = require("./memorySync");
 
 function configPath(workspacePath) {
-  return path.join(workspacePath, ".relay", "central-config.json");
+  return path.join(workspacePath, ".latch", "central-config.json");
 }
 
 function loadConfig(workspacePath) {
@@ -63,7 +63,7 @@ async function pullCentralChanges(workspacePath) {
   const body = await res.json();
   const events = body.events || [];
   if (!events.length) return { pulled: 0 };
-  const file = path.join(workspacePath, ".relay", "central_events.jsonl");
+  const file = path.join(workspacePath, ".latch", "central_events.jsonl");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   let last = since;
   for (const ev of events) {
@@ -73,7 +73,7 @@ async function pullCentralChanges(workspacePath) {
   cfg.lastPulledCentralEventId = last;
   saveConfig(workspacePath, cfg);
   const ctx = jsonContextSafe(events);
-  fs.writeFileSync(path.join(workspacePath, ".relay", "central_context.json"), JSON.stringify(ctx, null, 2));
+  fs.writeFileSync(path.join(workspacePath, ".latch", "central_context.json"), JSON.stringify(ctx, null, 2));
   return { pulled: events.length, last };
 }
 

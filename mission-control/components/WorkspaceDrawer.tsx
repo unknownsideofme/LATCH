@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconX, IconMoreVertical, IconPlus } from "@/components/ui/icons";
@@ -29,7 +29,7 @@ export function WorkspaceDrawer() {
     setAddOpen,
     leaveWorkspace,
     removeWorkspace,
-  } = useRelay();
+  } = useLatch();
 
   const activeId = selectedProjectId || dashboard?.project.id;
   const [menuId, setMenuId] = useState<string | null>(null);

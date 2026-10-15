@@ -1,0 +1,12 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="2" width="28" height="28" rx="8" fill="#211D1B" stroke="rgba(216, 161, 125, 0.25)" stroke-width="1.2"/>
+  <!-- Latch junction symbol: two interlocking coordination brackets with central sync node -->
+  <path d="M9 12C9 10.3431 10.3431 9 12 9H14" stroke="#D8A17D" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M9 20C9 21.6569 10.3431 23 12 23H14" stroke="#D8A17D" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M23 12C23 10.3431 21.6569 9 20 9H18" stroke="#D8A17D" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M23 20C23 21.6569 21.6569 23 20 23H18" stroke="#D8A17D" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M11 16H21" stroke="#A85459" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="16" cy="16" r="3" fill="#A85459" stroke="#D8A17D" stroke-width="1.2"/>
+  <circle cx="10" cy="16" r="1.5" fill="#D8A17D"/>
+  <circle cx="22" cy="16" r="1.5" fill="#D8A17D"/>
+</svg>

@@ -1,6 +1,6 @@
 # Hooks reference
 
-Hooks are how Relay gets underneath an agent without the agent knowing. Four phases, five
+Hooks are how Latch gets underneath an agent without the agent knowing. Four phases, five
 products, one shared implementation.
 
 ---
@@ -14,7 +14,7 @@ products, one shared implementation.
 | **Post-tool** | `-post-tool.js` | Flushes the finished file as a patch, then releases the lock. |
 | **Stop** | `-stop.js` | Flushes everything owned, releases all locks, ingests the transcript. |
 
-The twenty files in `hooks/` are thin shims. Each calls into `hooks/relay-hook-lib.js`
+The twenty files in `hooks/` are thin shims. Each calls into `hooks/latch-hook-lib.js`
 with a declared mode — and the declared mode is only a fallback, because the library
 re-detects the product from the payload.
 
@@ -24,7 +24,7 @@ re-detects the product from the payload.
 
 The script's filename cannot answer this. `.claude/settings.json` is read by Claude Code,
 by Cursor (which maps the Claude-style config onto its own events) and by Copilot (which
-documents reading it from the repository). So `relay-claude-pre-tool.js` runs under at
+documents reading it from the repository). So `latch-claude-pre-tool.js` runs under at
 least three products, and trusting the filename is what put "Claude Code" on Cursor's
 edits and made one editor claim the same file twice under two names.
 
@@ -75,7 +75,7 @@ Notes that cost real debugging to learn:
 
 Every agent names this field differently, and renames it between versions. A hook that
 does not recognise the shape claims nothing and stays silent, so the failure looks like
-"Relay isn't locking" rather than "Relay didn't find the path".
+"Latch isn't locking" rather than "Latch didn't find the path".
 
 So the library does both:
 
@@ -109,7 +109,7 @@ Then each candidate is normalized:
 
 ## Finding the workspace
 
-In order: `RELAY_WORKSPACE_PATH`, `payload.cwd`, `payload.workspace_root`,
+In order: `LATCH_WORKSPACE_PATH`, `payload.cwd`, `payload.workspace_root`,
 `payload.workspace_roots[]`, `payload.workspacePaths[]` (Antigravity's only root field),
 then `process.cwd()`.
 
@@ -155,7 +155,7 @@ greps and cats as reads and miss everything else, so Codex contributes edits onl
 
 ## Config shapes
 
-Each product's hook file has its own structure. `relay init` writes all of them.
+Each product's hook file has its own structure. `latch init` writes all of them.
 
 **Claude Code** — `.claude/settings.json`, `hooks.PreToolUse[]` / `PostToolUse[]` /
 `Stop[]`, each entry `{ matcher, hooks: [{ type: "command", command }] }`. This file is
@@ -168,19 +168,19 @@ Each product's hook file has its own structure. `relay init` writes all of them.
 **Codex** — `.codex/hooks.json`, same `{ matcher, hooks: [...] }` shape as Claude Code,
 with `timeout` in seconds. Stop gets 120 s.
 
-**Copilot CLI** — `.github/hooks/relay-os.json`, `version: 1`, with `preToolUse`,
+**Copilot CLI** — `.github/hooks/latch-os.json`, `version: 1`, with `preToolUse`,
 `postToolUse` and `agentStop`. Entries carry **both** `bash` and `powershell` commands,
 plus `cwd` and `timeoutSec`.
 
 **Antigravity** — `.agents/hooks.json`, keyed by hook **name** at the top level:
-`{ "relay": { "PreToolUse": [...], "PostToolUse": [...], "Stop": [...] } }`. Note that
+`{ "latch": { "PreToolUse": [...], "PostToolUse": [...], "Stop": [...] } }`. Note that
 `PreToolUse` and `PostToolUse` take a matcher group wrapping a `hooks` array, while `Stop`
 takes the handler directly. (Writing `{"hooks": {...}}` here only ever worked by accident,
 as a hook that happened to be named "hooks".)
 
 Global equivalents live in `~/.claude`, `~/.cursor`, `~/.codex`, `~/.copilot` and
 `~/.gemini/config` — the last both directly and as a plugin bundle under
-`plugins/relay/`.
+`plugins/latch/`.
 
 ---
 
@@ -208,10 +208,10 @@ Hooks fail open, which means a broken one leaves no trace and "nothing showed up
 unfalsifiable. Set:
 
 ```bash
-export RELAY_HOOK_DEBUG=1
+export LATCH_HOOK_DEBUG=1
 ```
 
-Every hook then appends a JSON line to `~/.relay/hook-debug.log`. Phases:
+Every hook then appends a JSON line to `~/.latch/hook-debug.log`. Phases:
 
 `pre:no-files` · `pre:claim` · `read` · `post:enter` · `post:no-files` · `post:flush` ·
 `post:release` · `post:flush-fail` · `post:error` · `stop:enter` · `stop:flush-owned` ·
@@ -223,5 +223,5 @@ payload means path extraction missed the shape — that is the report worth fili
 
 The server side logs too: every request to a hook route
 (`/api/ensure-workspace`, `/api/ingest-stop`, `/api/flush-file`, `/api/flush-owned`,
-`/api/coord/{claim,release,release-all,heartbeat}`) prints a `[relay-hook]` line with
+`/api/coord/{claim,release,release-all,heartbeat}`) prints a `[latch-hook]` line with
 method, path, status, duration, workspace, agent and files.

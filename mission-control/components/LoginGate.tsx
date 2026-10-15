@@ -1,11 +1,11 @@
 "use client";
 
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export function LoginGate() {
-  const { users, login } = useRelay();
+  const { users, login } = useLatch();
   return (
     <div className="h-screen w-screen grid place-items-center bg-[var(--bg,#F2EEE8)] p-4">
       <Card className="w-full max-w-[400px] shadow-lg border-[var(--border,#DDD3C9)] bg-[var(--card,#FFFCF8)]">

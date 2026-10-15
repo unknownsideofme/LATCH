@@ -24,23 +24,24 @@
 }
 
 .brainPath {
-    stroke: #fff !important;
-    stroke-width: 1;
+    stroke: #D8A17D !important;
+    stroke-width: 1.2;
+    opacity: 0.85;
 }
 
 .brainCircle {
-    stroke: #fff !important;
-    fill: #fff !important;
+    stroke: #A85459 !important;
+    fill: #A85459 !important;
 }
 
 .brainRect {
-    stroke: #fff !important;
-    fill: #fff !important;
+    stroke: #D8A17D !important;
+    fill: #D8A17D !important;
 }
 
 .brainEllipse {
-    stroke: #fff !important;
-    fill: #fff !important;
+    stroke: #A85459 !important;
+    fill: #A85459 !important;
 }
 
 .animatePaths {

@@ -1,6 +1,6 @@
 # Concepts
 
-Six terms carry most of the meaning in Relay. Everything else in the documentation assumes
+Six terms carry most of the meaning in Latch. Everything else in the documentation assumes
 these.
 
 ---
@@ -14,7 +14,7 @@ An absolute path to a repository checkout on one machine — `C:\work\api` or
 This matters more than it sounds. Two machines never agree on the path of "the same" repo,
 so if each side used its own path, two agents editing `src/auth.ts` would land in two
 different namespaces and the coordinator would arbitrate nothing while looking like it was
-working. Relay solves this by rewriting a guest's workspace onto the **host's** workspace
+working. Latch solves this by rewriting a guest's workspace onto the **host's** workspace
 path before the claim reaches the lock table — twice, in fact: once on the way out of the
 guest's coordinator client, and again on the host for any request carrying a member token.
 
@@ -24,12 +24,12 @@ stripped and Windows drive letters are un-doubled.
 
 ## Project
 
-A workspace that Relay has registered. A project has an `id` (`prj_…`), a `name`, a `path`
+A workspace that Latch has registered. A project has an `id` (`prj_…`), a `name`, a `path`
 and, when detectable, a `remoteUrl`. The registry lives at
-`~/.relay/data/registry.json`; per-project state lives under
-`~/.relay/data/projects/<id>/`.
+`~/.latch/data/registry.json`; per-project state lives under
+`~/.latch/data/projects/<id>/`.
 
-`relay add`, `relay clone` and `relay init` all create a project. A workspace can also be
+`latch add`, `latch clone` and `latch init` all create a project. A workspace can also be
 registered implicitly: a hook posting to `/api/ensure-workspace` will register the
 workspace it is running in.
 
@@ -38,7 +38,7 @@ project row pointing at their own clone.
 
 ## Agent ID
 
-The identity Relay arbitrates against, formatted `label:host:session` — for example
+The identity Latch arbitrates against, formatted `label:host:session` — for example
 `Claude Code:ana-laptop:sess_9f3a`.
 
 - **label** — the product, detected from the hook payload's fingerprint rather than from
@@ -82,11 +82,11 @@ See [Locking](./LOCKING.md) for the full state machine.
 ## Room
 
 A shared coordination session across machines. One member is the **host**: their
-`relay serve` is exposed through an ngrok tunnel and their lock table is the single mutex
-for everyone. Every other member is a **guest** with their own local relay.
+`latch serve` is exposed through an ngrok tunnel and their lock table is the single mutex
+for everyone. Every other member is a **guest** with their own local latch.
 
 A room is identified by a `roomId` (`rlr_…`) and is described by `room.json`, written both
-to `~/.relay/room.json` and to `<repo>/.relay/room.json`. Membership is proven with two
+to `~/.latch/room.json` and to `<repo>/.latch/room.json`. Membership is proven with two
 credentials — a single-use **invite code** and a long-lived **member token** — of which
 only hashes are ever written to disk.
 
@@ -99,7 +99,7 @@ carries its `sha256`, a `git diff` (or the first 4 KB of content when there is n
 the full content when the file is text and under 1 MB, and a **Lamport** counter for
 ordering.
 
-Patches, not project copies, are what `relay push` and `relay pull` move. They are ordered
+Patches, not project copies, are what `latch push` and `latch pull` move. They are ordered
 by Lamport clock, buffered until their predecessors arrive, transformed pairwise, and
 applied to disk only when the content actually differs from what is already there — that
 last check is what stops two machines in a room from trading the same file forever.
@@ -110,14 +110,14 @@ See [Sync and patches](./SYNC.md).
 
 ## Two planes, and why they fail differently
 
-Relay has a **control plane** (claims, releases, heartbeats — what actually arbitrates)
+Latch has a **control plane** (claims, releases, heartbeats — what actually arbitrates)
 and a **view plane** (the lock mirror, SSE streams, the board). They are fed differently
 and they fail differently.
 
 A hook claims straight against the coordinator over loopback, and a guest's claim goes
 over a small WebSocket RPC to the host. The board, meanwhile, is fed by a mirror that
 polls on its own clock. So "locking works but Mission Control shows nothing" is a normal
-and otherwise invisible failure mode — and precisely what `relay doctor` exists to
+and otherwise invisible failure mode — and precisely what `latch doctor` exists to
 diagnose.
 
 ## Fail-open, on purpose
@@ -125,7 +125,7 @@ diagnose.
 Every hook fails open. If the coordinator is unreachable, the claim falls back to an
 exclusive lock file on disk (`wx` flag), and if even that fails the tool is allowed to
 run. An agent must never be frozen by its coordination layer. The cost is that a hook
-which fails silently leaves no trace — which is why `RELAY_HOOK_DEBUG=1` exists.
+which fails silently leaves no trace — which is why `LATCH_HOOK_DEBUG=1` exists.
 
 The one exception is Copilot CLI, whose hook contract is fail-*closed*: a non-zero exit
 denies the tool call, so the allow path must always exit 0.

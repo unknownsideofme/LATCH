@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import ui from "@/styles/ui.module.css";
 
 function formatTokens(count: number): string {
@@ -11,7 +11,7 @@ function formatTokens(count: number): string {
 }
 
 export function RightRail() {
-  const { dashboard } = useRelay();
+  const { dashboard } = useLatch();
 
   const { totalTokens, avgTokens } = useMemo(() => {
     if (!dashboard) return { totalTokens: 0, avgTokens: 0 };

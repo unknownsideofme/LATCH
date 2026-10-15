@@ -1,6 +1,6 @@
 "use client";
 
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import type { TabId } from "@/lib/types";
 import { CodeEdits } from "./CodeEdits";
 import { LayoutSwitcher } from "./LayoutSwitcher";
@@ -21,7 +21,7 @@ const TAB_TITLES: Partial<Record<TabId, { title: string; subtitle: string }>> = 
 };
 
 export function ProjectDashboard() {
-  const { tab } = useRelay();
+  const { tab } = useLatch();
   const current = TAB_TITLES[tab] || { title: "Dashboard", subtitle: "" };
 
   return (

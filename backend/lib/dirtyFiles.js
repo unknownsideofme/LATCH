@@ -1,7 +1,7 @@
 const { execFileSync } = require("child_process");
 const path = require("path");
 
-const SKIP = /(^|\/)(\.git|\.relay|node_modules|\.next|dist|out)(\/|$)/i;
+const SKIP = /(^|\/)(\.git|\.latch|\.relay|node_modules|\.next|dist|out)(\/|$)/i;
 
 function dirtyFiles(workspacePath) {
   if (!workspacePath) return [];

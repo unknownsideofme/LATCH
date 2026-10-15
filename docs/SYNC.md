@@ -1,6 +1,6 @@
 # Sync and patches
 
-Your teammate has their own filesystem, their own environment and their own agents. Relay
+Your teammate has their own filesystem, their own environment and their own agents. Latch
 propagates **patches**, not whole-project copies.
 
 ---
@@ -102,12 +102,12 @@ A filesystem watcher (`backend/lib/watchWorkspace.js`) covers edits made outside
 ### On demand
 
 ```bash
-relay push    # POST /api/push  — fan out every dirty working-tree file
-relay pull    # POST /api/pull  — fetch the host's dirty files and apply them
+latch push    # POST /api/push  — fan out every dirty working-tree file
+latch pull    # POST /api/pull  — fetch the host's dirty files and apply them
 ```
 
-"Dirty" is `git status --porcelain -uall`, minus `.git`, `.relay`, `node_modules`,
-`.next`, `dist` and `out`. `relay pull` is guest-only; on a host it returns
+"Dirty" is `git status --porcelain -uall`, minus `.git`, `.latch`, `node_modules`,
+`.next`, `dist` and `out`. `latch pull` is guest-only; on a host it returns
 `{ ok: true, files: [], note: "host already has the working tree" }` because the host is
 already holding the working tree.
 
@@ -139,7 +139,7 @@ Replays every recorded patch with `lamport <= 37`, keeping only the latest patch
 and writes those to disk. It answers with the files touched, the apply results and the
 patches replayed, and emits a `rewind` SSE event.
 
-Rewind is a working-tree operation on top of Relay's own patch log. It is not git, does
+Rewind is a working-tree operation on top of Latch's own patch log. It is not git, does
 not touch git, and does not know about commits.
 
 ---
@@ -149,13 +149,13 @@ not touch git, and does not know about commits.
 Separate from the transform layer, `detectConflicts()` reports files touched by **two or
 more distinct agents within the last five minutes**, with a two-line summary of each edit.
 This is the "conflicts" surface in Mission Control and the MCP tool
-`relay_get_conflicts`. It is a report, not a gate.
+`latch_get_conflicts`. It is a report, not a gate.
 
 ---
 
 ## Transcript harvesting
 
-Relay also unifies what the agents *said*, not just what they wrote.
+Latch also unifies what the agents *said*, not just what they wrote.
 
 On every stop hook, `POST /api/ingest-stop` triggers a transcript sync. Discovery looks in
 each product's own location:

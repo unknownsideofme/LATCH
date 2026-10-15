@@ -1,21 +1,21 @@
-# Contributing to Relay
+# Contributing to Latch
 
-Thanks for your interest. Relay is a coordination layer for AI coding agents — file locks,
+Thanks for your interest. Latch is a coordination layer for AI coding agents — file locks,
 dependency-aware locks, patch sync and one shared board across Cursor, Claude Code, Codex,
 GitHub Copilot CLI and Google Antigravity.
 
 Before changing anything substantial, skim [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-Most of Relay's surprising decisions are load-bearing, and the code comments explain why.
+Most of Latch's surprising decisions are load-bearing, and the code comments explain why.
 
 ---
 
 ## Getting set up
 
 ```bash
-git clone https://github.com/prakrititz/relayBrain.git
-cd relayBrain
+git clone https://github.com/unknownsideofme/LATCH.git
+cd latch
 npm install
-npm link            # puts `relay` on your PATH
+npm link            # puts `latch` on your PATH
 ```
 
 Node 20+ is required, matching the `engines.node` field in `package.json`. There is no database and no
@@ -24,8 +24,8 @@ hosted backend to configure.
 Run it against a scratch repository rather than this one:
 
 ```bash
-relay add /path/to/some/test/repo
-relay serve
+latch add /path/to/some/test/repo
+latch serve
 ```
 
 | Script | What it does |
@@ -35,7 +35,7 @@ relay serve
 | `npm run dev:ui` | Mission Control only |
 | `npm start` | `node backend/server.js --port 3001` |
 | `npm run coordinator` | The coordinator standalone, useful for lock-table work |
-| `npm run relay -- <cmd>` | The CLI without linking |
+| `npm run latch -- <cmd>` | The CLI without linking |
 
 ---
 
@@ -43,7 +43,7 @@ relay serve
 
 | Area | Path | Read first |
 |---|---|---|
-| CLI | `cli/relay.js` | [docs/CLI.md](docs/CLI.md) |
+| CLI | `cli/latch.js` | [docs/CLI.md](docs/CLI.md) |
 | API server | `backend/server.js` | [docs/HTTP-API.md](docs/HTTP-API.md) |
 | Lock table | `backend/coordinator/` | [docs/LOCKING.md](docs/LOCKING.md) |
 | Dependency graph | `backend/lib/depGraph.js`, `treeSitterImports.js` | [docs/LOCKING.md](docs/LOCKING.md) |
@@ -74,31 +74,31 @@ touched. Say in the PR what you actually did.
 
 ```bash
 npm install
-relay serve
-relay status
+latch serve
+latch status
 ```
 
 **Lock table or coordinator**
 
 Run two agents against one repository and make one of them try to edit a file the other is
 holding. Confirm the second is refused with a useful message, and that the lock disappears
-after the TTL. `relay doctor` prints the table as the board would render it.
+after the TTL. `latch doctor` prints the table as the board would render it.
 
 **Hooks**
 
 ```bash
-export RELAY_HOOK_DEBUG=1
+export LATCH_HOOK_DEBUG=1
 ```
 
-then run the agent and read `~/.relay/hook-debug.log`. A hook change is not verified until
+then run the agent and read `~/.latch/hook-debug.log`. A hook change is not verified until
 you have confirmed the phases you touched appear there — `pre:claim`, `post:flush`,
 `post:release`, `stop:release-all`. Test on **every** product you could have affected: the
 five have four different response dialects, and getting one wrong fails silently.
 
 **Rooms and patches**
 
-You need two machines, or two clones with two `relay serve` instances on different ports.
-Confirm a claim on one blocks the other, and that `relay push` / `relay pull` move files
+You need two machines, or two clones with two `latch serve` instances on different ports.
+Confirm a claim on one blocks the other, and that `latch push` / `latch pull` move files
 in both directions.
 
 **Mission Control**
@@ -111,7 +111,7 @@ in both directions.
 
 - Match the surrounding code. No new formatter, linter or framework in a PR that is
   about something else.
-- **Comment the why, not the what.** Relay's existing comments explain the failure that
+- **Comment the why, not the what.** Latch's existing comments explain the failure that
   motivated a decision — which product sends which payload shape, why readers do not block
   writers, why identical content is never rewritten. That is the standard; a PR that
   changes such behaviour should update the comment that explains it.
@@ -132,7 +132,7 @@ update the docs in the same PR:
 
 | You changed | Update |
 |---|---|
-| A CLI command or flag | `docs/CLI.md`, and the `help()` text in `cli/relay.js` |
+| A CLI command or flag | `docs/CLI.md`, and the `help()` text in `cli/latch.js` |
 | An endpoint | `docs/HTTP-API.md` |
 | An MCP tool | `docs/MCP.md` |
 | Hook behaviour or a matcher | `docs/HOOKS.md` |
@@ -152,10 +152,10 @@ Include:
 
 - What you were trying to do.
 - What happened, and what you expected.
-- `relay status` and `relay doctor` output.
+- `latch status` and `latch doctor` output.
 - Node version and OS.
-- For hook problems: the relevant lines from `~/.relay/hook-debug.log` with
-  `RELAY_HOOK_DEBUG=1` set. A `pre:no-files` line records the payload keys the path
+- For hook problems: the relevant lines from `~/.latch/hook-debug.log` with
+  `LATCH_HOOK_DEBUG=1` set. A `pre:no-files` line records the payload keys the path
   extractor did not recognise — that is exactly the report that lets us fix it.
 
 For a security issue — anything touching invite codes, member tokens, or what a room

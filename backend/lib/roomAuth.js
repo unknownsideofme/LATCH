@@ -173,7 +173,7 @@ function publicRoom(room) {
 
 /** Reads the member credential off a request. */
 function roomToken(req) {
-  const header = req.headers?.["x-relay-room-token"];
+  const header = req.headers?.["x-latch-room-token"] || req.headers?.["x-relay-room-token"];
   if (header) return String(header);
   const auth = String(req.headers?.authorization || "");
   if (/^Room\s+/i.test(auth)) return auth.replace(/^Room\s+/i, "").trim();

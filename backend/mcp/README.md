@@ -1,10 +1,10 @@
 # Querying the room
 
-Relay collects every member's agent transcripts, edits, locks and presence into
+Latch collects every member's agent transcripts, edits, locks and presence into
 one place. This is how an agent — or a shell script, or you — asks that store a
 question.
 
-Relay does not answer questions. It scopes and returns facts; whoever asked does
+Latch does not answer questions. It scopes and returns facts; whoever asked does
 the interpreting. That is deliberate: the caller is already a language model, so
 a second one in the middle would only add cost, latency and a way to be wrong.
 
@@ -14,7 +14,7 @@ a second one in the middle would only add cost, latency and a way to be wrong.
 
 Anything that reads — chat history, edits, locks, conflicts — answers for every
 member of the room. Anything that writes — claiming a lock, reporting a change —
-only ever runs against the relay on your own machine, over the transport that
+only ever runs against the latch on your own machine, over the transport that
 still works when the tunnel does not.
 
 ## Two transports, one tool surface
@@ -24,27 +24,27 @@ Both are served by [`tools.js`](./tools.js). They expose the same fifteen tools.
 ### stdio — what your agents already use
 
 `backend/mcp/server.js`, started by the agent itself. Nothing to configure; if
-relay is installed, this already works, and after this change its reads span the
+latch is installed, this already works, and after this change its reads span the
 room instead of just this machine.
 
 ### HTTP — through the room tunnel
 
 `POST /mcp` on the host. For an agent on another machine, or one on a box with
-no relay installed at all. Print the config with:
+no latch installed at all. Print the config with:
 
 ```
-relay mcp-url
+latch mcp-url
 ```
 
 ```json
 {
   "mcpServers": {
-    "relay-room": {
+    "latch-room": {
       "type": "http",
       "url": "https://<tunnel>.ngrok-free.app/mcp",
       "headers": {
-        "ngrok-skip-browser-warning": "relay",
-        "x-relay-room-token": "<your member token>"
+        "ngrok-skip-browser-warning": "latch",
+        "x-latch-room-token": "<your member token>"
       }
     }
   }
@@ -65,22 +65,22 @@ remote agent never sees a tool it cannot call.
 
 | Tool | Answers |
 |---|---|
-| `relay_get_chat_history` | what everyone told their agents to do, and what the agents said back |
-| `relay_room_brief` | teammate activity brief — **`/relay ask`** in Cursor, Claude, Codex, Copilot, Antigravity |
-| `relay_get_recent_changes` | which files changed, by whom, with diffs |
-| `relay_status` | who holds which lock right now |
-| `relay_get_conflicts` | who edited the same file as someone else in the last 5 minutes |
-| `relay_get_collision_stats` | lifetime counters for collisions Relay prevented |
-| `relay_get_project_context` | Central's view: changes, decisions, tasks, agents |
-| `relay_get_decisions` / `relay_get_active_tasks` | the decision and task logs |
+| `latch_get_chat_history` | what everyone told their agents to do, and what the agents said back |
+| `latch_room_brief` | teammate activity brief — **`/latch ask`** in Cursor, Claude, Codex, Copilot, Antigravity |
+| `latch_get_recent_changes` | which files changed, by whom, with diffs |
+| `latch_status` | who holds which lock right now |
+| `latch_get_conflicts` | who edited the same file as someone else in the last 5 minutes |
+| `latch_get_collision_stats` | lifetime counters for collisions Latch prevented |
+| `latch_get_project_context` | Central's view: changes, decisions, tasks, agents |
+| `latch_get_decisions` / `latch_get_active_tasks` | the decision and task logs |
 
-Writers (local only): `relay_claim_file`, `relay_release_file`,
-`relay_report_change`, `relay_report_decision`, `relay_update_task`,
-`relay_sync`.
+Writers (local only): `latch_claim_file`, `latch_release_file`,
+`latch_report_change`, `latch_report_decision`, `latch_update_task`,
+`latch_sync`.
 
 ### Scoping a question
 
-`relay_get_chat_history` takes `agent`, `ownerLogin` and `limit`. Those three
+`latch_get_chat_history` takes `agent`, `ownerLogin` and `limit`. Those three
 are the whole query language — "who, which agent, how much".
 
 ```jsonc
@@ -123,8 +123,8 @@ any context window, and a remote read has to cross a tunnel to get here.
 }
 ```
 
-`relay_get_recent_changes` returns `edits`, each with `file`, `agent`,
-`ownerLogin`, `ts` and `diff`. `relay_get_conflicts` returns `conflicts`. Both
+`latch_get_recent_changes` returns `edits`, each with `file`, `agent`,
+`ownerLogin`, `ts` and `diff`. `latch_get_conflicts` returns `conflicts`. Both
 carry the same `room` block.
 
 ## Reading the `room` block
@@ -155,19 +155,19 @@ than a single request would have been.
 An agent about to edit a locked file, asking who is in its way:
 
 ```jsonc
-// relay_status — keyed "<workspaceId>::<filePath>"
+// latch_status — keyed "<workspaceId>::<filePath>"
 { "locks": {
-    "C:\\repos\\relay.it::src/auth.ts": {
+    "C:\\repos\\latch.it::src/auth.ts": {
       "filePath": "src/auth.ts", "holder": "ana", "agentId": "antigravity:ana",
       "mode": "write", "claimedAt": 1786996352000, "ttlMs": 40000,
       "expiresAt": 1786996392000, "readers": [], "escalated": false
     } },
   "uptime": 812.4 }
 
-// relay_get_chat_history { "ownerLogin": "ana", "agent": "Antigravity", "limit": 5 }
+// latch_get_chat_history { "ownerLogin": "ana", "agent": "Antigravity", "limit": 5 }
 // → "make the session cookie httpOnly"
 
-// relay_get_recent_changes → ana has touched auth.ts, session.ts, auth.test.ts
+// latch_get_recent_changes → ana has touched auth.ts, session.ts, auth.test.ts
 ```
 
 Three calls, no model in the middle, and the agent can decide for itself: work
@@ -177,15 +177,15 @@ started being an explanation.
 ## Troubleshooting
 
 **`"source": "solo"` but you are in a room.** `loadRoom()` found no room for
-this workspace. Check `.relay/room.json` in the repo, or `~/.relay/room.json`.
+this workspace. Check `.latch/room.json` in the repo, or `~/.latch/room.json`.
 
 **`401 not_a_member` on the HTTP endpoint.** The host made the room
 invite-only and your member token is missing or revoked. Re-join with the invite
-link, then `relay mcp-url` again.
+link, then `latch mcp-url` again.
 
 **A remote call returns "not available to remote callers".** Working as
-intended — that tool writes. Call it against your own relay over stdio.
+intended — that tool writes. Call it against your own latch over stdio.
 
 **Peers visible in Mission Control but not from MCP.** Both read the same merge
-now, so this should not happen; if it does, `relay doctor` on the machine that
+now, so this should not happen; if it does, `latch doctor` on the machine that
 sees nothing is the place to start.

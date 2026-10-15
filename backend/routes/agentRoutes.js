@@ -4,7 +4,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const { loadRegistry, loadSession, loadMemory, saveMemory, id } = require("../lib/store");
-const { homeRelayDir } = require("../lib/paths");
+const { homeLatchDir, homeRelayDir } = require("../lib/paths");
 const { appendStopTurn } = require("../lib/memorySync");
 const { harvest } = require("../lib/harvest");
 const { syncTranscriptsQueued } = require("../lib/transcripts/sync");
@@ -76,12 +76,15 @@ function createAgentRoutes({ sse, watcher, presence, lockTable, lockService, wor
     saveMemory(project.id, memory);
     const token = id("hs");
     try {
-      fs.writeFileSync(
-        path.join(project.path, ".relay", `.handshake_${(agent || "agent").replace(/\s+/g, "_")}`),
-        token
-      );
+      const latchDir = path.join(project.path, ".latch");
+      const relayDir = path.join(project.path, ".relay");
+      fs.mkdirSync(latchDir, { recursive: true });
+      fs.mkdirSync(relayDir, { recursive: true });
+      const hsFile = `.handshake_${(agent || "agent").replace(/\s+/g, "_")}`;
+      fs.writeFileSync(path.join(latchDir, hsFile), token);
+      fs.writeFileSync(path.join(relayDir, hsFile), token);
     } catch {
-      fs.mkdirSync(path.join(homeRelayDir(), "handshakes"), { recursive: true });
+      fs.mkdirSync(path.join(homeLatchDir(), "handshakes"), { recursive: true });
     }
     if (sse) sse.emit("agents", { workspaceId: project.id, agents: memory.agents });
     res.json({ ok: true, status: "handshaking", token });
@@ -112,7 +115,7 @@ function createAgentRoutes({ sse, watcher, presence, lockTable, lockService, wor
   router.get("/api/events", (req, res) => {
     const workspaceId = req.query.projectId;
     const session = loadSession();
-    const userId = req.headers["x-relay-user"] || session.login;
+    const userId = req.headers["x-latch-user"] || req.headers["x-relay-user"] || session.login;
     if (workspaceId && userId && presence) {
       const out = presence.join(workspaceId, userId);
       if (out.escalated) {

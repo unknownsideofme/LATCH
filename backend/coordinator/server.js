@@ -4,14 +4,14 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const { LockTable, sameOwner, normalizeFile } = require("./lockTable");
-const { coordinatorStatePath, locksDirFor, homeRelayDir } = require("../lib/paths");
+const { coordinatorStatePath, locksDirFor, homeLatchDir, homeRelayDir } = require("../lib/paths");
 const { softBlock } = require("../lib/depGraph");
 const { initTreeSitter } = require("../lib/treeSitterImports");
 const { ingest: ingestSupergraph, snapshot: superSnapshot } = require("../lib/supergraph");
 const { Presence } = require("../lib/presence");
 
 function parseArgs(argv) {
-  const args = { port: process.env.RELAY_COORDINATOR_PORT || 0, workspacePath: null };
+  const args = { port: process.env.LATCH_COORDINATOR_PORT || process.env.RELAY_COORDINATOR_PORT || 0, workspacePath: null };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--port") args.port = Number(argv[++i]);
@@ -23,7 +23,7 @@ function parseArgs(argv) {
 function createCoordinator({ workspacePath, preferredPort } = {}) {
   const locksDir = workspacePath
     ? locksDirFor(workspacePath)
-    : path.join(homeRelayDir(), "locks");
+    : path.join(homeLatchDir(), "locks");
   const lockTable = new LockTable({ locksDir, workspacePath });
   lockTable.loadFromDisk();
   lockTable.startCleanup();
@@ -165,7 +165,7 @@ async function startStandalone() {
   const port = await listen(server, Number(args.port) || 0);
   app.set("port", port);
   writeState(args.workspacePath, port);
-  console.log(`[relay-coordinator] listening on 127.0.0.1:${port}`);
+  console.log(`[latch-coordinator] listening on 127.0.0.1:${port}`);
   return { port, lockTable, server };
 }
 

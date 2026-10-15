@@ -187,7 +187,7 @@ function syncTranscripts(project, opts = {}) {
       // Swallowing this silently is how a parser crash turns into an empty
       // Activity/Chats panel with no way to tell that from "nothing happened".
       failed += 1;
-      console.warn(`[relay-transcripts] ${agent} parse failed for ${file}: ${err.message || err}`);
+      console.warn(`[latch-transcripts] ${agent} parse failed for ${file}: ${err.message || err}`);
       continue;
     }
     refreshed.add(agent);
@@ -203,7 +203,7 @@ function syncTranscripts(project, opts = {}) {
   // leave lastTranscriptSyncAt alone so the next poll retries instead of
   // treating the empty result as the current truth.
   if (failed && failed === found.length) {
-    console.warn(`[relay-transcripts] ${project.id}: all ${failed} transcript(s) failed to parse — keeping previous history`);
+    console.warn(`[latch-transcripts] ${project.id}: all ${failed} transcript(s) failed to parse — keeping previous history`);
     return existing;
   }
 
@@ -224,7 +224,7 @@ function syncTranscripts(project, opts = {}) {
   }
   if (carried) {
     const kept = [...new Set((existing.history || []).filter((e) => !refreshed.has(e.agent)).map((e) => e.agent))];
-    console.log(`[relay-transcripts] ${project.id}: kept ${carried} event(s) from ${kept.join(", ")} (not re-read this pass)`);
+    console.log(`[latch-transcripts] ${project.id}: kept ${carried} event(s) from ${kept.join(", ")} (not re-read this pass)`);
   }
 
   history.sort(compareEvents);

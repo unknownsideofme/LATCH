@@ -7,8 +7,8 @@
     "mission-control"
   ],
   "bin": {
-    "latch": "cli/relay.js",
-    "relay": "cli/relay.js"
+    "latch": "cli/latch.js",
+    "relay": "cli/latch.js"
   },
   "scripts": {
     "dev": "concurrently -n api,ui -c cyan,magenta \"node backend/server.js --port 3001\" \"npm run dev -w mission-control\"",

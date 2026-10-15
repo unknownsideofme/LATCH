@@ -2,22 +2,31 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|Replace",
+        "matcher": "Edit|Write|NotebookEdit|MultiEdit|Replace",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"C:/Users/Prakrititz Borah/Downloads/Relay/relay.it/hooks/relay-claude-pre-tool.js\""
+            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-claude-pre-tool.js\""
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-claude-pre-read.js\""
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|Replace",
+        "matcher": "Edit|Write|NotebookEdit|MultiEdit|Replace",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"C:/Users/Prakrititz Borah/Downloads/Relay/relay.it/hooks/relay-claude-post-tool.js\""
+            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-claude-post-tool.js\""
           }
         ]
       }
@@ -28,10 +37,32 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"C:/Users/Prakrititz Borah/Downloads/Relay/relay.it/hooks/relay-claude-stop.js\""
+            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-claude-stop.js\""
           }
         ]
       }
     ]
+  },
+  "mcpServers": {
+    "latch": {
+      "command": "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node",
+      "args": [
+        "/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"
+      ],
+      "env": {
+        "LATCH_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain/mission-control",
+        "RELAY_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain/mission-control"
+      }
+    },
+    "relay": {
+      "command": "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node",
+      "args": [
+        "/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"
+      ],
+      "env": {
+        "LATCH_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain/mission-control",
+        "RELAY_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain/mission-control"
+      }
+    }
   }
 }

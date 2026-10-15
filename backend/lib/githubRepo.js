@@ -1,7 +1,7 @@
 const { spawn } = require("child_process");
 
 // In-memory only — a per-repo cache is enough to stop every dashboard poll
-// (RelayContext polls on an interval) from re-hitting GitHub's API/gh CLI.
+// (LatchContext polls on an interval) from re-hitting GitHub's API/gh CLI.
 const CACHE_MS = 60_000;
 const cache = new Map(); // "owner/repo" -> { at, data }
 
@@ -57,7 +57,7 @@ async function fetchCollaboratorsRaw(owner, repo) {
     // invites) but better than an empty panel.
     try {
       const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contributors`, {
-        headers: { "User-Agent": "relay-it" },
+        headers: { "User-Agent": "latch-it" },
       });
       if (!res.ok) throw new Error(`http_${res.status}`);
       const list = await res.json();

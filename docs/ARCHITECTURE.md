@@ -4,12 +4,12 @@
 
 ## Process model
 
-`relay serve` starts one Node process that binds three things:
+`latch serve` starts one Node process that binds three things:
 
 ```
-┌─ relay serve (one process) ──────────────────────────────────────┐
+┌─ latch serve (one process) ──────────────────────────────────────┐
 │                                                                  │
-│  API server            127.0.0.1:3001   (RELAY_PORT)             │
+│  API server            127.0.0.1:3001   (LATCH_PORT)             │
 │    ├── /api/*          REST + SSE                                │
 │    ├── /mcp            MCP over HTTP, read-only for remotes      │
 │    ├── /ws/patches     patch fan-out                             │
@@ -18,7 +18,7 @@
 │  Coordinator           127.0.0.1:<ephemeral>                     │
 │    └── owns the LockTable instance                               │
 │                                                                  │
-│  Mission Control       localhost:3002   (RELAY_UI_PORT)          │
+│  Mission Control       localhost:3002   (LATCH_UI_PORT)          │
 │    └── spawned as a child `next dev`; skipped with --no-ui       │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -30,7 +30,7 @@ separate process. `backend/coordinator/server.js` can also run standalone
 
 The API port is fixed and therefore the one target that cannot go stale. The coordinator
 port is ephemeral and published to `coordinator-state.json` — but only *after* the API
-port successfully binds, so a second `relay serve` that dies on `EADDRINUSE` cannot
+port successfully binds, so a second `latch serve` that dies on `EADDRINUSE` cannot
 overwrite the live instance's pointer with a port that is about to disappear.
 
 Agents run as separate processes entirely. Each hook invocation is its own short-lived
@@ -40,7 +40,7 @@ Node process.
 
 ## The two planes
 
-Relay separates what **arbitrates** from what is **displayed**, and they fail
+Latch separates what **arbitrates** from what is **displayed**, and they fail
 independently.
 
 ### Control plane — claims, releases, heartbeats
@@ -85,10 +85,10 @@ guest's board ◄── RoomLockMirror (polls host /api/locks) ── host
 
 Because the mirror polls on its own clock, a lock claimed a moment ago has not necessarily
 landed on a guest's board yet — and a guest whose mirror never started will see an empty
-board while its locks arbitrate perfectly. This is exactly the case `relay doctor` was
+board while its locks arbitrate perfectly. This is exactly the case `latch doctor` was
 written to name.
 
-The lock table also re-scans its workspace's `.relay/locks` directory (gated on the
+The lock table also re-scans its workspace's `.latch/locks` directory (gated on the
 directory's mtime, and at most once a second) so that locks written by fail-open hooks in
 other processes still surface on the board.
 
@@ -133,7 +133,7 @@ An agent in a joined room is about to run `Edit` on `src/auth.ts`.
 
 ```
                     ┌──────────────── HOST ────────────────┐
-                    │  relay serve                         │
+                    │  latch serve                         │
    ngrok tunnel ───►│   • LockTable  (the shared mutex)    │
                     │   • /ws/control  lock RPC            │
                     │   • /ws/patches  patch fan-out       │
@@ -143,8 +143,8 @@ An agent in a joined room is about to run `Edit` on `src/auth.ts`.
                                     │
               ┌─────────────────────┼─────────────────────┐
               ▼                     ▼                     ▼
-        GUEST relay           GUEST relay           MCP client
-        • own clone           • own clone           (no relay needed)
+        GUEST latch           GUEST latch           MCP client
+        • own clone           • own clone           (no latch needed)
         • lock mirror         • lock mirror         read-only
         • own agents          • own agents
 ```
@@ -170,14 +170,14 @@ Everything is a JSON file. Nothing is a database.
 
 | | Where | Contains |
 |---|---|---|
-| Registry | `~/.relay/data/registry.json` | projects, users |
-| Session | `~/.relay/data/session.json` | signed-in user, selected project |
-| Memory | `~/.relay/data/projects/<id>/memory.json` | history, chats, timeline, edits, patches, `patchBuffer`, `lastAppliedLamport`, `agents`, `roomPeers`, `stats` |
-| Collisions | `~/.relay/data/projects/<id>/collisions.json` | authoritative counters |
-| Collisions mirror | `<repo>/.relay/collisions.json` | git-visible copy |
-| Room | `~/.relay/room.json` and `<repo>/.relay/room.json` | role, url, roomId, invite + member-token **hashes** |
-| Coordinator state | `~/.relay/coordinator-state.json` and `<repo>/.relay/coordinator-state.json` | `port`, `apiPort`, `pid`, `startedAt` |
-| Locks | `<repo>/.relay/locks/*.lock` | one file per live lock |
+| Registry | `~/.latch/data/registry.json` | projects, users |
+| Session | `~/.latch/data/session.json` | signed-in user, selected project |
+| Memory | `~/.latch/data/projects/<id>/memory.json` | history, chats, timeline, edits, patches, `patchBuffer`, `lastAppliedLamport`, `agents`, `roomPeers`, `stats` |
+| Collisions | `~/.latch/data/projects/<id>/collisions.json` | authoritative counters |
+| Collisions mirror | `<repo>/.latch/collisions.json` | git-visible copy |
+| Room | `~/.latch/room.json` and `<repo>/.latch/room.json` | role, url, roomId, invite + member-token **hashes** |
+| Coordinator state | `~/.latch/coordinator-state.json` and `<repo>/.latch/coordinator-state.json` | `port`, `apiPort`, `pid`, `startedAt` |
+| Locks | `<repo>/.latch/locks/*.lock` | one file per live lock |
 
 `room.json` is a credential store — it holds hashed invite codes and member tokens, plus
 this machine's own `memberToken` in the clear. It is never served raw: `/api/room` and
@@ -190,7 +190,7 @@ this machine's own `memberToken` in the clear. It is never served raw: `/api/roo
 
 | Path | Responsibility |
 |---|---|
-| `cli/relay.js` | Command dispatch, `relay serve` supervision, `relay doctor` |
+| `cli/latch.js` | Command dispatch, `latch serve` supervision, `latch doctor` |
 | `backend/server.js` | API server, room orchestration, WebSocket servers |
 | `backend/coordinator/lockTable.js` | The lock table: claim, release, heartbeat, reads, waiters, sweep |
 | `backend/coordinator/server.js` | Coordinator HTTP surface and `createCoordinator()` |
@@ -203,12 +203,12 @@ this machine's own `memberToken` in the clear. It is never served raw: `/api/roo
 | `backend/lib/roomAuth.js` | Invite codes, member tokens, `publicRoom`, remote detection |
 | `backend/lib/roomLocks.js`, `roomControl.js`, `roomSync.js` | Lock mirror, control socket, peer snapshot merge |
 | `backend/lib/transcripts/` | Discover, parse and sync agent transcripts |
-| `backend/lib/installHooks.js`, `installAgentRelay.js` | Writing hooks, MCP config and instructions |
+| `backend/lib/installHooks.js`, `installAgentLatch.js` | Writing hooks, MCP config and instructions |
 | `backend/mcp/tools.js` | The MCP tool surface, transport-independent |
-| `hooks/relay-hook-lib.js` | Shared hook implementation for all five agents |
+| `hooks/latch-hook-lib.js` | Shared hook implementation for all five agents |
 | `mission-control/` | Next.js dashboard |
 | `landing/` | Marketing site and hosted docs |
 
-The twenty `hooks/relay-<agent>-<phase>.js` files are thin shims: each one calls into
-`relay-hook-lib.js` with its declared mode. The declared mode is only a fallback — the
+The twenty `hooks/latch-<agent>-<phase>.js` files are thin shims: each one calls into
+`latch-hook-lib.js` with its declared mode. The declared mode is only a fallback — the
 library re-detects the actual product from the payload.

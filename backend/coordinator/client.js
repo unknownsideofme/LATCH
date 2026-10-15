@@ -31,7 +31,7 @@ function readPort(workspacePath) {
 // readPort — a `relay serve` that dies after binding the coordinator but before
 // binding the API leaves a pointer to a dead port behind.
 function apiPort(workspacePath) {
-  if (process.env.RELAY_PORT) return Number(process.env.RELAY_PORT);
+  if (process.env.LATCH_PORT || process.env.RELAY_PORT) return Number(process.env.LATCH_PORT || process.env.RELAY_PORT);
   const state = readState(workspacePath);
   return Number(state?.apiPort) || 3001;
 }
@@ -196,9 +196,7 @@ async function postRemote(url, pathname, body, timeoutMs, token) {
       headers: {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "relay",
-        // An invite-only host rejects unauthenticated lock traffic; without the
-        // token every claim would silently fall back to local-only locking.
-        ...(token ? { "x-relay-room-token": token } : {}),
+        ...(token ? { "x-latch-room-token": token, "x-relay-room-token": token } : {}),
       },
       body: JSON.stringify(body || {}),
       signal: ctrl.signal,
@@ -253,7 +251,7 @@ async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {})
   // a guest whose host is unreachable, consulting them would only launder an
   // unanswered question into a confident yes. Refuse with the reason instead.
   if (degraded) {
-    console.warn("[relay] HOST_UNREACHABLE — claim refused rather than granted locally");
+    console.warn("[latch] HOST_UNREACHABLE — claim refused rather than granted locally");
     return degraded;
   }
   const port = readPort(workspacePath);
@@ -274,7 +272,7 @@ async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {})
       /* fail open */
     }
   }
-  console.warn("[relay] COORDINATOR_UNAVAILABLE — fail-open");
+  console.warn("[latch] COORDINATOR_UNAVAILABLE — fail-open");
   return { allowed: true, source: "fail-open" };
 }
 

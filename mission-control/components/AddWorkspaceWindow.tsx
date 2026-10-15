@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { apiUrl } from "@/lib/api";
 import { DirectoryPicker } from "./DirectoryPicker";
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,7 @@ function FolderPopup({
 }
 
 export function AddWorkspaceWindow() {
-  const { addOpen, setAddOpen, addProject, projects, user } = useRelay();
+  const { addOpen, setAddOpen, addProject, projects, user } = useLatch();
   const [source, setSource] = useState<Source>("github");
 
   const [repos, setRepos] = useState<Repo[]>([]);
@@ -451,7 +451,7 @@ export function AddWorkspaceWindow() {
                 className={ui.field}
                 value={roomUrl}
                 onChange={(e) => setRoomUrl(e.target.value)}
-                  placeholder="https://abc.ngrok-free.app/?relay_invite=…"
+                  placeholder="https://abc.ngrok-free.app/?latch_invite=…"
               />
             </>
           )}

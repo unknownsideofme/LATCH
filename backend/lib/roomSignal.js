@@ -2,9 +2,9 @@ const { spawn } = require("child_process");
 const { parseGithubRepo } = require("./githubRepo");
 const { inviteState, invitesOf, normLogin } = require("./roomAuth");
 
-const SIGNAL_PREFIX = "relay-room:";
-const SIGNAL_FILE = "relay-signal.json";
-const PROOF_FILE = "relay-proof.json";
+const SIGNAL_PREFIX = "latch-room:";
+const SIGNAL_FILE = "latch-signal.json";
+const PROOF_FILE = "latch-proof.json";
 
 function repoKeyFromRemote(remoteUrl) {
   const parsed = parseGithubRepo(remoteUrl);
@@ -58,7 +58,7 @@ async function readGist(id) {
   } catch {
     try {
       const res = await fetch(`https://api.github.com/gists/${id}`, {
-        headers: { "User-Agent": "relay-it", Accept: "application/vnd.github+json" },
+        headers: { "User-Agent": "latch-it", Accept: "application/vnd.github+json" },
         signal: AbortSignal.timeout(5000),
       });
       if (!res.ok) return null;
@@ -166,7 +166,7 @@ async function findSignal({ gistId, hostLogin, repoKey, roomId } = {}) {
   } catch {
     try {
       const res = await fetch(`https://api.github.com/users/${encodeURIComponent(hostLogin)}/gists`, {
-        headers: { "User-Agent": "relay-it", Accept: "application/vnd.github+json" },
+        headers: { "User-Agent": "latch-it", Accept: "application/vnd.github+json" },
         signal: AbortSignal.timeout(6000),
       });
       if (res.ok) gists = await res.json();
@@ -212,7 +212,7 @@ async function createProof({ roomId, nonce, login }) {
   const gist = await ghApi("gists", {
     method: "POST",
     body: {
-      description: `relay-proof:${roomId}`,
+      description: `latch-proof:${roomId}`,
       public: false,
       files: {
         [PROOF_FILE]: {
@@ -250,7 +250,7 @@ async function verifyProof({ gistId, roomId, nonce, login }) {
 }
 
 const GIST_SCOPE_HINT =
-  "Sharing is up, but teammates cannot auto-find you yet. Run `gh auth refresh -s gist` once so Relay can publish a join signal. Until then, send them the invite link.";
+  "Sharing is up, but teammates cannot auto-find you yet. Run `gh auth refresh -s gist` once so Latch can publish a join signal. Until then, send them the invite link.";
 
 module.exports = {
   repoKeyFromRemote,

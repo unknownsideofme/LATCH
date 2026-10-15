@@ -32,7 +32,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
         raw: scope ? lockTable.status(scope) : { locks: {} },
       });
     } catch (err) {
-      console.warn(`[relay] /api/locks: ${err.message || err}`);
+      console.warn(`[latch] /api/locks: ${err.message || err}`);
       res.json({ locks: [], reads: [], raw: { locks: {} } });
     }
   });
@@ -53,7 +53,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
         };
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
       } catch (err) {
-        console.warn(`[relay] locks/stream: ${err.message || err}`);
+        console.warn(`[latch] locks/stream: ${err.message || err}`);
       }
     };
     send();

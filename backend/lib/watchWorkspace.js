@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { EventEmitter } = require("events");
 
-const SKIP = new Set(["node_modules", ".git", ".next", ".relay", "out"]);
+const SKIP = new Set(["node_modules", ".git", ".next", ".latch", ".relay", "out"]);
 
 class WorkspaceWatcher extends EventEmitter {
   constructor() {

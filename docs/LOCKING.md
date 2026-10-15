@@ -17,14 +17,14 @@ Normalization lowercases, converts backslashes to forward slashes and strips tra
 separators. File paths additionally drop a leading `./`.
 
 The lock **file** on disk is named `sha256(<normalized workspace>::<file>)[:16] + ".lock"`
-and lives in `<repo>/.relay/locks/`, falling back to a hashed subdirectory of
-`~/.relay/locks/` when the repository's own directory cannot be created. (The fail-open
+and lives in `<repo>/.latch/locks/`, falling back to a hashed subdirectory of
+`~/.latch/locks/` when the repository's own directory cannot be created. (The fail-open
 filesystem claim in `coordinator/client.js` hashes the file path alone, without the
 workspace prefix; `unpersist` removes both spellings, so a lock written either way is
 cleaned up.)
 
 Because the key includes the workspace path, cross-machine locking only works if both
-sides use the *same* path. Relay guarantees that by rewriting a guest's `workspaceId` to
+sides use the *same* path. Latch guarantees that by rewriting a guest's `workspaceId` to
 the host's `hostWorkspacePath` — in `coordinator/client.js` on the way out, and again on
 the host for any request that carries a member token or arrives from a remote address.
 
@@ -149,7 +149,7 @@ locked?"*.
 ### Building the graph
 
 The workspace is walked, skipping `node_modules`, `.git`, `.next`, `out`, `dist`,
-`coverage`, `.relay` and any dot-directory. Files with these extensions are parsed:
+`coverage`, `.latch` and any dot-directory. Files with these extensions are parsed:
 
 `.ts .tsx .js .jsx .mjs .cjs .py .go .rs .java .cs .cpp .cc .cxx .h .hpp .php .rb`
 
@@ -165,7 +165,7 @@ as **one lock unit**.
 
 ### Overrides
 
-Drop a `.relay/deps.json` into the repository:
+Drop a `.latch/deps.json` into the repository:
 
 ```json
 {
@@ -175,7 +175,7 @@ Drop a `.relay/deps.json` into the repository:
 ```
 
 - `lockDepth` — how many hops out from the edited file to consider. Default 1. Also
-  settable with `RELAY_LOCK_DEPTH`; the file wins.
+  settable with `LATCH_LOCK_DEPTH`; the file wins.
 - `edges` — extra `[from, to]` dependencies the parser cannot see (generated code,
   runtime wiring, config-driven imports).
 
@@ -206,7 +206,7 @@ file, everything one hop from it in either direction, every member of its cycle,
 ## Collision counters
 
 Every prevented collision is counted, persisted to
-`~/.relay/data/projects/<id>/collisions.json`, and mirrored to `<repo>/.relay/collisions.json`.
+`~/.latch/data/projects/<id>/collisions.json`, and mirrored to `<repo>/.latch/collisions.json`.
 
 | Counter | Incremented when |
 |---|---|
@@ -222,4 +222,4 @@ patch is expected to arrive. The last 40 events are kept in `recent`.
 
 In a room the counters merge across every peer snapshot, and the merged result carries
 `scope: "room"`, a `byMember` breakdown and `peerLogins`. Solo, the scope is `"solo"`.
-Read them with the MCP tool `relay_get_collision_stats`.
+Read them with the MCP tool `latch_get_collision_stats`.

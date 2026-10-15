@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import type { Agent } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ export function agentBrand(label: string) {
 }
 
 function AgentRow({ agent }: { agent: Agent }) {
-  const { handshake, user } = useRelay();
+  const { handshake, user } = useLatch();
   const mine = !agent.ownerLogin || agent.ownerLogin === user?.login;
   const label =
     agent.status === "connected" ? "Connected" : agent.status === "handshaking" ? "Connecting…" : "Connect";
@@ -73,7 +73,7 @@ function AgentRow({ agent }: { agent: Agent }) {
 }
 
 export function ConnectedAgentsDropdown() {
-  const { dashboard, selectedProjectId } = useRelay();
+  const { dashboard, selectedProjectId } = useLatch();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 

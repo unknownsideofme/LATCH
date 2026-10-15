@@ -11,7 +11,7 @@ function adminKey() {
   // No insecure fallback: Central admin access is disabled entirely unless the
   // operator explicitly sets RELAY_CENTRAL_ADMIN_KEY. A hardcoded default here
   // would be a publicly known admin credential for every install.
-  return process.env.RELAY_CENTRAL_ADMIN_KEY || null;
+  return process.env.LATCH_CENTRAL_ADMIN_KEY || process.env.RELAY_CENTRAL_ADMIN_KEY || null;
 }
 
 function sameSecret(a, b) {
@@ -22,7 +22,7 @@ function sameSecret(a, b) {
 }
 
 function registryPath() {
-  return path.join(os.homedir(), ".relay-os", "central", "central-projects.json");
+  return path.join(os.homedir(), ".latch-os", "central", "central-projects.json");
 }
 
 function loadProjects() {
@@ -37,7 +37,7 @@ function createProject(name) {
   const raw = `central_${crypto.randomBytes(24).toString("hex")}`;
   const project = {
     id: `p_${crypto.randomBytes(8).toString("hex")}`,
-    name: name || "relay-project",
+    name: name || "latch-project",
     apiKeyHash: hashKey(raw),
     keyPrefix: raw.slice(0, 12),
     createdAt: new Date().toISOString(),

@@ -7,7 +7,7 @@ function post(pathname, body) {
     const req = http.request(
       {
         host: "127.0.0.1",
-        port: process.env.RELAY_PORT || 3001,
+        port: process.env.LATCH_PORT || process.env.RELAY_PORT || 3001,
         path: pathname,
         method: "POST",
         headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) },
@@ -47,6 +47,10 @@ function activate(context) {
     })
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("latch.openMissionControl", () => {
+      vscode.env.openExternal(vscode.Uri.parse("http://localhost:3002"));
+    });
   context.subscriptions.push(
     vscode.commands.registerCommand("relay.openMissionControl", () => {
       vscode.env.openExternal(vscode.Uri.parse("http://localhost:3002"));

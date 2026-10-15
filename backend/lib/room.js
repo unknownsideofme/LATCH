@@ -2,21 +2,29 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
-const { homeRelayDir } = require("./paths");
+const { homeLatchDir, homeRelayDir } = require("./paths");
 const { normalizeWorkspaceRoot } = require("./transcripts/util");
 
 function roomPath(workspacePath) {
   if (workspacePath) {
     const root = normalizeWorkspaceRoot(workspacePath) || workspacePath;
-    return path.join(root, ".relay", "room.json");
+    const latchDir = path.join(root, ".latch");
+    const relayDir = path.join(root, ".relay");
+    const dir = fs.existsSync(latchDir) ? latchDir : (fs.existsSync(relayDir) ? relayDir : latchDir);
+    return path.join(dir, "room.json");
   }
-  return path.join(homeRelayDir(), "room.json");
+  return path.join(homeLatchDir(), "room.json");
 }
 
 function loadRoom(workspacePath) {
   const files = [roomPath(workspacePath), roomPath(null)];
-  if (process.env.RELAY_ROOM_URL) {
-    return { role: process.env.RELAY_ROOM_ROLE || "guest", url: process.env.RELAY_ROOM_URL, hostProjectId: process.env.RELAY_ROOM_PROJECT || null };
+  const roomUrl = process.env.LATCH_ROOM_URL || process.env.RELAY_ROOM_URL;
+  if (roomUrl) {
+    return {
+      role: process.env.LATCH_ROOM_ROLE || process.env.RELAY_ROOM_ROLE || "guest",
+      url: roomUrl,
+      hostProjectId: process.env.LATCH_ROOM_PROJECT || process.env.RELAY_ROOM_PROJECT || null
+    };
   }
   for (const file of files) {
     try {
@@ -226,7 +234,7 @@ function spawnNgrok(port) {
 }
 
 const NGROK_HINT =
-  "ngrok is installed but has no authtoken yet. Sign up at https://dashboard.ngrok.com/signup, copy the token from https://dashboard.ngrok.com/get-started/your-authtoken, run `ngrok config add-authtoken <token>`, keep `relay serve` running, then click Share again. Or in another terminal: `ngrok http 3001` and paste the https Forwarding URL.";
+  "ngrok is installed but has no authtoken yet. Sign up at https://dashboard.ngrok.com/signup, copy the token from https://dashboard.ngrok.com/get-started/your-authtoken, run `ngrok config add-authtoken <token>`, keep `latch serve` running, then click Share again. Or in another terminal: `ngrok http 3001` and paste the https Forwarding URL.";
 
 async function listedTunnels() {
   try {

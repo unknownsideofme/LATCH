@@ -149,11 +149,11 @@ async function initTreeSitter() {
           try {
             queries.set(lang, new Query(language, src));
           } catch (err) {
-            console.warn(`[relay] tree-sitter query failed for ${lang}:`, err.message);
+            console.warn(`[latch] tree-sitter query failed for ${lang}:`, err.message);
           }
         }
       } catch (err) {
-        console.warn(`[relay] tree-sitter language ${lang} failed:`, err.message);
+        console.warn(`[latch] tree-sitter language ${lang} failed:`, err.message);
       }
     }
     return true;

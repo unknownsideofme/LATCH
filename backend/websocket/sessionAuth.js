@@ -12,7 +12,7 @@ function authorizeRoomSocket(socket, req) {
     return null;
   }
   const url = new URL(req.url, "http://localhost");
-  const token = req.headers["x-relay-room-token"] || url.searchParams.get("token");
+  const token = req.headers["x-latch-room-token"] || req.headers["x-relay-room-token"] || url.searchParams.get("token");
   const member = authorizeMember(room, token);
   if (!member && !room.open) {
     socket.close(4401, "not_a_member");

@@ -213,14 +213,14 @@ async function main() {
       shareRoom(port, roomService.shareExtras(ContextService.currentProject()))
         .then(async (result) => {
           if (!result.ok) {
-            console.warn(`[relay-room] could not resume hosting: ${result.hint || result.error}`);
+            console.warn(`[latch-room] could not resume hosting: ${result.hint || result.error}`);
             return;
           }
           const warning = await roomService.publishAndWatch(result.room, ContextService.currentProject());
-          console.log(`[relay-room] resumed hosting at ${result.room.url}`);
-          if (warning) console.warn(`[relay-room] ${warning}`);
+          console.log(`[latch-room] resumed hosting at ${result.room.url}`);
+          if (warning) console.warn(`[latch-room] ${warning}`);
         })
-        .catch((err) => console.warn(`[relay-room] resume failed: ${err.message || err}`));
+        .catch((err) => console.warn(`[latch-room] resume failed: ${err.message || err}`));
     } else if (existingRoom?.role === "guest") {
       roomService
         .refreshGuestRoom(existingRoom)

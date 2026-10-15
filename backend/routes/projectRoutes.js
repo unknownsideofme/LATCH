@@ -413,12 +413,14 @@ function createProjectRoutes({
       limit,
     });
     let written = null;
-    if (writeFile) {
-      const out = path.join(project.path, ".relay", "relay_ask.md");
+      const latchOut = path.join(project.path, ".latch", "latch_ask.md");
+      const relayOut = path.join(project.path, ".relay", "relay_ask.md");
       try {
-        fs.mkdirSync(path.dirname(out), { recursive: true });
-        fs.writeFileSync(out, brief.markdown);
-        written = out;
+        fs.mkdirSync(path.dirname(latchOut), { recursive: true });
+        fs.writeFileSync(latchOut, brief.markdown);
+        fs.mkdirSync(path.dirname(relayOut), { recursive: true });
+        fs.writeFileSync(relayOut, brief.markdown);
+        written = latchOut;
       } catch (err) {
         return res.status(500).json({ error: "write_failed", detail: String(err.message || err) });
       }

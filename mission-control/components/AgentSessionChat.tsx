@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AgentLogo, UserAvatar, UserTag } from "@/components/Identity";
-import { useRelay } from "@/lib/RelayContext";
+import { useLatch } from "@/lib/LatchContext";
 import { ExpandableMarkdown, MarkdownView, plainPreview } from "@/lib/markdown";
 import type { ChatMessage, ChatThread } from "@/lib/types";
 import { IconFileCode, IconBrain } from "@/components/ui/icons";
@@ -223,7 +223,7 @@ function CombinedView({ threads }: { threads: ChatThread[] }) {
 }
 
 export function AgentSessionChat() {
-  const { dashboard } = useRelay();
+  const { dashboard } = useLatch();
   const [view, setView] = useState<"sessions" | "combined">("sessions");
   const [agentFilter, setAgentFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");

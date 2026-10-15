@@ -29,43 +29,54 @@ const MAX_LIMIT = 200;
 // also answer from its own last sync. Wait briefly, then do exactly that.
 const HOST_TIMEOUT_MS = 1500;
 
-const TOOLS = [
-  { name: "relay_get_chat_history", description: "Query unified agent chat history (time-ordered, filterable by agent and owner). In a room this spans every member, not just this machine.", inputSchema: { type: "object", properties: { agent: { type: "string" }, ownerLogin: { type: "string" }, limit: { type: "number" } } } },
-  { name: "relay_sync", description: "Re-read agent transcripts into unified memory.json history", inputSchema: { type: "object", properties: {} } },
-  { name: "relay_claim_file", description: "Acquire exclusive write lock before editing", inputSchema: { type: "object", properties: { file: { type: "string" }, ttl_ms: { type: "number" } }, required: ["file"] } },
-  { name: "relay_release_file", description: "Release a lock after editing", inputSchema: { type: "object", properties: { file: { type: "string" } }, required: ["file"] } },
-  { name: "relay_status", description: "View full lock table", inputSchema: { type: "object", properties: {} } },
-  { name: "relay_report_change", description: "Push a code-change event to Central (JSON, not markdown)", inputSchema: { type: "object", properties: { file: { type: "string" }, content: { type: "string" } } } },
-  { name: "relay_get_project_context", description: "Pull Central JSON context (changes, decisions, tasks, agents)", inputSchema: { type: "object", properties: {} } },
-  { name: "relay_get_recent_changes", description: "Recent code_edit events from memory.json + Central", inputSchema: { type: "object", properties: {} } },
-  { name: "relay_get_decisions", description: "Decision events from Central JSONL", inputSchema: { type: "object", properties: {} } },
-  { name: "relay_get_active_tasks", description: "Task events from Central JSONL", inputSchema: { type: "object", properties: {} } },
-  { name: "relay_report_decision", description: "Append a decision event", inputSchema: { type: "object", properties: { decision_id: { type: "string" }, decision: { type: "string" }, status: { type: "string" } } } },
-  { name: "relay_update_task", description: "Append a task event", inputSchema: { type: "object", properties: { task_id: { type: "string" }, description: { type: "string" }, status: { type: "string" } } } },
-  { name: "relay_get_conflicts", description: "Overlapping edits in the last 5 minutes", inputSchema: { type: "object", properties: {} } },
+const LATCH_TOOLS = [
+  { name: "latch_get_chat_history", description: "Query unified agent chat history (time-ordered, filterable by agent and owner). In a room this spans every member, not just this machine.", inputSchema: { type: "object", properties: { agent: { type: "string" }, ownerLogin: { type: "string" }, limit: { type: "number" } } } },
+  { name: "latch_sync", description: "Re-read agent transcripts into unified memory.json history", inputSchema: { type: "object", properties: {} } },
+  { name: "latch_claim_file", description: "Acquire exclusive write lock before editing", inputSchema: { type: "object", properties: { file: { type: "string" }, ttl_ms: { type: "number" } }, required: ["file"] } },
+  { name: "latch_release_file", description: "Release a lock after editing", inputSchema: { type: "object", properties: { file: { type: "string" } }, required: ["file"] } },
+  { name: "latch_status", description: "View full lock table", inputSchema: { type: "object", properties: {} } },
+  { name: "latch_report_change", description: "Push a code-change event to Central (JSON, not markdown)", inputSchema: { type: "object", properties: { file: { type: "string" }, content: { type: "string" } } } },
+  { name: "latch_get_project_context", description: "Pull Central JSON context (changes, decisions, tasks, agents)", inputSchema: { type: "object", properties: {} } },
+  { name: "latch_get_recent_changes", description: "Recent code_edit events from memory.json + Central", inputSchema: { type: "object", properties: {} } },
+  { name: "latch_get_decisions", description: "Decision events from Central JSONL", inputSchema: { type: "object", properties: {} } },
+  { name: "latch_get_active_tasks", description: "Task events from Central JSONL", inputSchema: { type: "object", properties: {} } },
+  { name: "latch_report_decision", description: "Append a decision event", inputSchema: { type: "object", properties: { decision_id: { type: "string" }, decision: { type: "string" }, status: { type: "string" } } } },
+  { name: "latch_update_task", description: "Append a task event", inputSchema: { type: "object", properties: { task_id: { type: "string" }, description: { type: "string" }, status: { type: "string" } } } },
+  { name: "latch_get_conflicts", description: "Overlapping edits in the last 5 minutes", inputSchema: { type: "object", properties: {} } },
   {
-    name: "relay_room_brief",
+    name: "latch_room_brief",
     description:
-      "Teammate activity brief for /relay ask — peer chat, code edits, tool activity, and live locks. Read-only; safe on the room MCP endpoint.",
+      "Teammate activity brief for /latch ask — peer chat, code edits, tool activity, and live locks. Read-only; safe on the room MCP endpoint.",
     inputSchema: { type: "object", properties: { limit: { type: "number" } } },
   },
   {
-    name: "relay_get_collision_stats",
-    description: "Lifetime counters for collisions Relay prevented (blocked claims, held-back patches, merge flags).",
+    name: "latch_get_collision_stats",
+    description: "Lifetime counters for collisions Latch prevented (blocked claims, held-back patches, merge flags).",
     inputSchema: { type: "object", properties: {} },
   },
 ];
 
+// Add relay_* legacy aliases so any cached agent schema continues to resolve
+const RELAY_ALIASES = LATCH_TOOLS.map(t => ({
+  ...t,
+  name: t.name.replace(/^latch_/, "relay_")
+}));
+
+const TOOLS = [...LATCH_TOOLS, ...RELAY_ALIASES];
+
 /**
  * What a caller reached through the tunnel is allowed to do.
- *
- * Everything absent from this set writes somewhere — the lock table, Central,
- * memory.json — and would write it as *this* machine: the host's workspace
- * path, the host's RELAY_USER, an agentId the host cannot verify. A guest
- * already has a local relay for those, on a transport that works when the
- * tunnel does not, so the remote surface stays a read.
  */
 const READ_ONLY = new Set([
+  "latch_get_chat_history",
+  "latch_status",
+  "latch_get_project_context",
+  "latch_get_recent_changes",
+  "latch_get_decisions",
+  "latch_get_active_tasks",
+  "latch_get_conflicts",
+  "latch_room_brief",
+  "latch_get_collision_stats",
   "relay_get_chat_history",
   "relay_status",
   "relay_get_project_context",
@@ -223,17 +234,18 @@ function withCtx(context = {}) {
   return { ...defaultCtx(), ...supplied };
 }
 
-async function callTool(name, args = {}, context = {}) {
+async function callTool(rawName, args = {}, context = {}) {
+  const name = String(rawName || "").replace(/^relay_/, "latch_");
   const ctx = withCtx(context);
-  if (ctx.readOnly && !READ_ONLY.has(name)) {
-    throw new Error(`${name} is not available to remote callers - run it against your own relay.`);
+  if (ctx.readOnly && !READ_ONLY.has(name) && !READ_ONLY.has(rawName)) {
+    throw new Error(`${name} is not available to remote callers - run it against your own latch.`);
   }
   const pid = ctx.projectId;
   const memory = pid ? loadMemory(pid) : { chats: [], timeline: [], edits: [] };
   const centralId = ctx.centralProjectId || pid;
 
   switch (name) {
-    case "relay_get_chat_history": {
+    case "latch_get_chat_history": {
       const limit = clampLimit(args.limit);
       const view = await roomView(ctx, memory);
       const history = (view.history || []).filter(
@@ -249,30 +261,30 @@ async function callTool(name, args = {}, context = {}) {
         room: view.room,
       };
     }
-    case "relay_sync": {
+    case "latch_sync": {
       const reg = loadRegistry();
       const project = reg.projects.find((p) => p.id === pid);
       if (!project) return { ok: false, error: "no_project" };
       const next = await syncTranscriptsQueued(project, { ownerLogin: ctx.owner });
       return { ok: true, events: (next.history || []).length, chats: (next.chats || []).length };
     }
-    case "relay_claim_file":
+    case "latch_claim_file":
       return client.claimFile(ctx.workspace, ctx.agentId, args.file, args.ttl_ms, {
         dependsOn: dependsOn(ctx.workspace, args.file),
       });
-    case "relay_release_file":
+    case "latch_release_file":
       return client.releaseFile(ctx.workspace, ctx.agentId, args.file);
-    case "relay_status":
+    case "latch_status":
       return client.status(ctx.workspace);
-    case "relay_get_recent_changes": {
+    case "latch_get_recent_changes": {
       const view = await roomView(ctx, memory);
       return { edits: view.edits || [], room: view.room };
     }
-    case "relay_get_conflicts": {
+    case "latch_get_conflicts": {
       const view = await roomView(ctx, memory);
       return { conflicts: detectConflicts({ ...memory, edits: view.edits || [] }), room: view.room };
     }
-    case "relay_room_brief": {
+    case "latch_room_brief": {
       const limit = Math.min(80, Math.max(5, clampLimit(args.limit || 30)));
       const reg = loadRegistry();
       const project = reg.projects.find((p) => p.id === pid);
@@ -295,12 +307,12 @@ async function callTool(name, args = {}, context = {}) {
       });
       return { markdown: brief.markdown, data: brief.json, room: view.room };
     }
-    case "relay_get_collision_stats": {
+    case "latch_get_collision_stats": {
       const login = ctx.owner || ctx.user || "local";
       const merged = mergeCollisionStats(memory, { localLogin: login, projectId: pid });
       return { collisions: merged, local: getCollisionStats(pid), room: (await roomView(ctx, memory)).room };
     }
-    case "relay_report_change":
+    case "latch_report_change":
       return appendEvent(centralId, {
         kind: "change",
         client_event_id: clientEventId(Date.now(), args.file || "", 0),
@@ -309,15 +321,15 @@ async function callTool(name, args = {}, context = {}) {
         file: args.file,
         agent_source: ctx.agentId,
       });
-    case "relay_get_project_context": {
+    case "latch_get_project_context": {
       const events = await listEvents(centralId, { limit: 500 });
       return jsonContext(events);
     }
-    case "relay_get_decisions":
+    case "latch_get_decisions":
       return { decisions: jsonContext(await listEvents(centralId, { kind: "decision", limit: 200 })).decisions };
-    case "relay_get_active_tasks":
+    case "latch_get_active_tasks":
       return { tasks: jsonContext(await listEvents(centralId, { kind: "task", limit: 200 })).tasks };
-    case "relay_report_decision":
+    case "latch_report_decision":
       return appendEvent(centralId, {
         kind: "decision",
         client_event_id: clientEventId(Date.now(), args.decision_id || "", 0),
@@ -327,7 +339,7 @@ async function callTool(name, args = {}, context = {}) {
         status: args.status || "open",
         agent_source: ctx.agentId,
       });
-    case "relay_update_task":
+    case "latch_update_task":
       return appendEvent(centralId, {
         kind: "task",
         client_event_id: clientEventId(Date.now(), args.task_id || "", 0),
@@ -354,7 +366,7 @@ async function handleRpc(msg, ctx = {}) {
       id,
       result: {
         protocolVersion: params?.protocolVersion || PROTOCOL_VERSION,
-        serverInfo: { name: "relay", version: "0.1.0" },
+        serverInfo: { name: "latch", version: "0.1.0" },
         capabilities: { tools: {} },
       },
     };

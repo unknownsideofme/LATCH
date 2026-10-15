@@ -52,7 +52,7 @@ class LockService {
       const onHost = new Set(mirrored.map((r) => `${r.filePath}::${r.agentId}`));
       return [...mirrored, ...local.filter((r) => !onHost.has(`${r.filePath}::${r.agentId}`))];
     } catch (err) {
-      console.warn(`[relay] readsFor: ${err.message || err}`);
+      console.warn(`[latch] readsFor: ${err.message || err}`);
       return [];
     }
   }
@@ -65,7 +65,7 @@ class LockService {
       const onHost = new Set(mirrored.map((l) => `${l.filePath}::${l.agentId}`));
       return [...mirrored, ...local.filter((l) => !onHost.has(`${l.filePath}::${l.agentId}`))];
     } catch (err) {
-      console.warn(`[relay] locksFor: ${err.message || err}`);
+      console.warn(`[latch] locksFor: ${err.message || err}`);
       return [];
     }
   }

@@ -28,7 +28,7 @@ function tryMkdir(dir) {
 }
 
 function dataDir() {
-  const dir = path.join(homeRelayDir(), "data");
+  const dir = path.join(homeLatchDir(), "data");
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -51,12 +51,21 @@ function nativeWorkspaceRoot(workspacePath) {
   return path.resolve(trimmed);
 }
 
+function workspaceLatchDir(root) {
+  const latchDir = path.join(root, ".latch");
+  const relayDir = path.join(root, ".relay");
+  if (fs.existsSync(latchDir)) return latchDir;
+  if (fs.existsSync(relayDir)) return relayDir;
+  return latchDir;
+}
+
 function coordinatorStatePath(workspacePath) {
   if (workspacePath) {
-    const dir = path.join(nativeWorkspaceRoot(workspacePath), ".relay");
+    const root = nativeWorkspaceRoot(workspacePath);
+    const dir = workspaceLatchDir(root);
     if (tryMkdir(dir)) return path.join(dir, "coordinator-state.json");
   }
-  return path.join(homeRelayDir(), "coordinator-state.json");
+  return path.join(homeLatchDir(), "coordinator-state.json");
 }
 
 function normKey(value) {
@@ -67,13 +76,13 @@ function normKey(value) {
 }
 
 function locksDirFor(workspacePath) {
-  const homeLocks = path.join(homeRelayDir(), "locks");
+  const homeLocks = path.join(homeLatchDir(), "locks");
   if (!workspacePath) {
     tryMkdir(homeLocks);
     return homeLocks;
   }
   const root = nativeWorkspaceRoot(workspacePath);
-  const dir = path.join(root, ".relay", "locks");
+  const dir = path.join(workspaceLatchDir(root), "locks");
   if (tryMkdir(dir)) return dir;
   const slug = crypto.createHash("sha256").update(normKey(root)).digest("hex").slice(0, 16);
   const fallback = path.join(homeLocks, slug);

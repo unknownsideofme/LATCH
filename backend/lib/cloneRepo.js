@@ -43,6 +43,7 @@ function registerProject({ name, workspacePath, remoteUrl, mode }) {
     createdAt: Date.now(),
     lastSyncAt: Date.now(),
   };
+  fs.mkdirSync(path.join(workspacePath, ".latch"), { recursive: true });
   fs.mkdirSync(path.join(workspacePath, ".relay"), { recursive: true });
   try {
     installProjectHooks(workspacePath);
@@ -58,7 +59,7 @@ function registerProject({ name, workspacePath, remoteUrl, mode }) {
 }
 
 async function cloneRepo(remoteUrl, dest) {
-  if (!remoteUrl) throw new Error("usage: relay clone <git-url> [directory]");
+  if (!remoteUrl) throw new Error("usage: latch clone <git-url> [directory]");
   const target = path.resolve(dest || defaultCloneDir(remoteUrl));
   if (!fs.existsSync(target)) {
     fs.mkdirSync(path.dirname(target), { recursive: true });

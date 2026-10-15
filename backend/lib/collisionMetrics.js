@@ -44,8 +44,10 @@ function collisionsDataPath(projectId) {
 
 function workspaceCollisionsPath(projectId) {
   const project = loadRegistry().projects.find((p) => p.id === projectId);
-  if (!project?.path) return null;
-  return path.join(project.path, ".relay", FILE_NAME);
+  const latchDir = path.join(project.path, ".latch");
+  const relayDir = path.join(project.path, ".relay");
+  const dir = fs.existsSync(latchDir) ? latchDir : (fs.existsSync(relayDir) ? relayDir : latchDir);
+  return path.join(dir, FILE_NAME);
 }
 
 function normalizeStats(raw) {

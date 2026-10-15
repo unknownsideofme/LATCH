@@ -8,7 +8,7 @@ Please update the frontend code to reflect the following structural and state-dr
 
 1. Authentication & User Scope (Top-Left)
 
-Current State: The top-left corner shows a simple dropdown with ./relay and user1.
+Current State: The top-left corner shows a simple dropdown with ./latch and user1.
 
 Modification: Convert this into a robust GitHub Account / Profile Switcher.
 
@@ -24,9 +24,9 @@ Functionality: Clicking between them should completely swap the dashboard's cont
 
 The "+" Action: Wiring up the "+" button should open a modal offering two distinct onboarding options, similar to GitHub Desktop:
 
-Relay Clone: A combined git clone + relay init command to pull a remote repository and immediately initialize the shared agent context.
+Latch Clone: A combined git clone + latch init command to pull a remote repository and immediately initialize the shared agent context.
 
-Add Local Repository: Allow the user to select an existing local folder/repository from their hard drive and initialize the Relay agent context for it.
+Add Local Repository: Allow the user to select an existing local folder/repository from their hard drive and initialize the Latch agent context for it.
 
 3. Collaborators Presence (Middle-Right Section)
 
@@ -38,7 +38,7 @@ Functionality: Show which collaborators are currently active in the selected rep
 
 4. Data Scoping & Event-Driven UI Updates
 
-Strict Repo Isolation: Ensure the state management (React Context, Redux, or Zustand) scopes the entire view to the active workspace. The Agent Integrations (left sidebar), Recent Agent Activity, Handoff / Project, and Relay Brain panels must immediately re-render with repo-specific data when a new workspace is clicked.
+Strict Repo Isolation: Ensure the state management (React Context, Redux, or Zustand) scopes the entire view to the active workspace. The Agent Integrations (left sidebar), Recent Agent Activity, Handoff / Project, and Latch Brain panels must immediately re-render with repo-specific data when a new workspace is clicked.
 
 Shared Context Visualization: Add a visual indicator (perhaps a small badge in the Agent Integrations or Recent Agent Activity areas) when an action was performed by another user's agent vs. your own agent.
 

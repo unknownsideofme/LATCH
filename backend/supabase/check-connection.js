@@ -28,29 +28,29 @@ async function checkConnection() {
   // Test 1: relay_locks
   try {
     const start = Date.now();
-    const { data, error } = await client.from("relay_locks").select("id").limit(1);
+    const { data, error } = await client.from("latch_locks").select("id").limit(1);
     const latency = Date.now() - start;
     if (error) {
-      console.log(`   - relay_locks:   \x1b[31m✖ FAILED (${error.message})\x1b[0m`);
+      console.log(`   - latch_locks:   \x1b[31m✖ FAILED (${error.message})\x1b[0m`);
     } else {
-      console.log(`   - relay_locks:   \x1b[32m✔ CONNECTED\x1b[0m (${latency}ms, ${data.length} sample row)`);
+      console.log(`   - latch_locks:   \x1b[32m✔ CONNECTED\x1b[0m (${latency}ms, ${data.length} sample row)`);
     }
   } catch (err) {
-    console.log(`   - relay_locks:   \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
+    console.log(`   - latch_locks:   \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
   }
 
   // Test 2: relay_patches
   try {
     const start = Date.now();
-    const { data, error } = await client.from("relay_patches").select("id").limit(1);
+    const { data, error } = await client.from("latch_patches").select("id").limit(1);
     const latency = Date.now() - start;
     if (error) {
-      console.log(`   - relay_patches: \x1b[31m✖ FAILED (${error.message})\x1b[0m`);
+      console.log(`   - latch_patches: \x1b[31m✖ FAILED (${error.message})\x1b[0m`);
     } else {
-      console.log(`   - relay_patches: \x1b[32m✔ CONNECTED\x1b[0m (${latency}ms, ${data.length} sample row)`);
+      console.log(`   - latch_patches: \x1b[32m✔ CONNECTED\x1b[0m (${latency}ms, ${data.length} sample row)`);
     }
   } catch (err) {
-    console.log(`   - relay_patches: \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
+    console.log(`   - latch_patches: \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
   }
 
   console.log("\n3. Testing Stored Procedures (RPCs):");
@@ -61,7 +61,7 @@ async function checkConnection() {
   const testAgent = "health-check-agent";
 
   try {
-    const { data: claimData, error: claimErr } = await client.rpc("relay_claim_lock", {
+    const { data: claimData, error: claimErr } = await client.rpc("latch_claim_lock", {
       p_workspace_id: testWs,
       p_file_path: testLockId,
       p_agent_id: testAgent,
@@ -71,31 +71,31 @@ async function checkConnection() {
     });
 
     if (claimErr) {
-      console.log(`   - relay_claim_lock:   \x1b[31m✖ FAILED (${claimErr.message})\x1b[0m`);
+      console.log(`   - latch_claim_lock:   \x1b[31m✖ FAILED (${claimErr.message})\x1b[0m`);
     } else if (claimData && claimData.allowed) {
-      console.log(`   - relay_claim_lock:   \x1b[32m✔ SUCCESS\x1b[0m (acquired distributed test lock)`);
+      console.log(`   - latch_claim_lock:   \x1b[32m✔ SUCCESS\x1b[0m (acquired distributed test lock)`);
     } else {
-      console.log(`   - relay_claim_lock:   \x1b[33m⚠ WARNING\x1b[0m (returned: ${JSON.stringify(claimData)})`);
+      console.log(`   - latch_claim_lock:   \x1b[33m⚠ WARNING\x1b[0m (returned: ${JSON.stringify(claimData)})`);
     }
   } catch (err) {
-    console.log(`   - relay_claim_lock:   \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
+    console.log(`   - latch_claim_lock:   \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
   }
 
   // Test 4: relay_release_lock RPC
   try {
-    const { data: relData, error: relErr } = await client.rpc("relay_release_lock", {
+    const { data: relData, error: relErr } = await client.rpc("latch_release_lock", {
       p_workspace_id: testWs,
       p_file_path: testLockId,
       p_agent_id: testAgent,
     });
 
     if (relErr) {
-      console.log(`   - relay_release_lock: \x1b[31m✖ FAILED (${relErr.message})\x1b[0m`);
+      console.log(`   - latch_release_lock: \x1b[31m✖ FAILED (${relErr.message})\x1b[0m`);
     } else {
-      console.log(`   - relay_release_lock: \x1b[32m✔ SUCCESS\x1b[0m (released distributed test lock)`);
+      console.log(`   - latch_release_lock: \x1b[32m✔ SUCCESS\x1b[0m (released distributed test lock)`);
     }
   } catch (err) {
-    console.log(`   - relay_release_lock: \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
+    console.log(`   - latch_release_lock: \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
   }
 
   console.log("\n=======================================================");

@@ -16,31 +16,31 @@ npm install
 npm link
 ```
 
-`npm link` puts `relay` on your `PATH`. Verify it:
+`npm link` puts `latch` on your `PATH`. Verify it:
 
 ```bash
-relay help
+latch help
 ```
 
 If you would rather not link globally, every command below also works as
-`npm run relay -- <command>` from the repository root, or as `npx relay <command>`.
+`npm run latch -- <command>` from the repository root, or as `npx latch <command>`.
 
 ---
 
 ## 2. Attach a repository
 
-Pick one. Both register the repository as a Relay *project* and install hooks, MCP config
-and the relay-os instruction block into every supported agent surface.
+Pick one. Both register the repository as a Latch *project* and install hooks, MCP config
+and the latch-os instruction block into every supported agent surface.
 
 ```bash
 # You already have the repo checked out
-relay add /path/to/repo
+latch add /path/to/repo
 
 # You do not have it yet
-relay clone https://github.com/you/repo.git
+latch clone https://github.com/you/repo.git
 
 # You are already inside the repo
-relay init
+latch init
 ```
 
 What this writes into the repository is listed in
@@ -52,7 +52,7 @@ committed for you; review and commit or ignore as you prefer.
 ## 3. Sign in (optional, but do it)
 
 ```bash
-relay login
+latch login
 ```
 
 This reads your identity from the [GitHub CLI](https://cli.github.com) (`gh auth login`).
@@ -68,7 +68,7 @@ Control.
 ## 4. Start the server
 
 ```bash
-relay serve
+latch serve
 ```
 
 Three things come up:
@@ -79,7 +79,7 @@ Three things come up:
 | Mission Control | `http://localhost:3002` |
 | Coordinator | `127.0.0.1:<ephemeral>` (printed at startup) |
 
-Use `relay serve --no-ui` to skip Mission Control and run the API and coordinator only.
+Use `latch serve --no-ui` to skip Mission Control and run the API and coordinator only.
 
 Leave this running. It is the process that owns the lock table.
 
@@ -93,8 +93,8 @@ before each write tool runs and release it after.
 
 Open `http://localhost:3002` and you will see claims appear as agents work.
 
-To confirm the wiring end to end, ask any agent `/relay ask`. It calls the Relay MCP tool
-`relay_room_brief` and reports back on locks, recent edits and teammate activity.
+To confirm the wiring end to end, ask any agent `/latch ask`. It calls the Latch MCP tool
+`latch_room_brief` and reports back on locks, recent edits and teammate activity.
 
 ---
 
@@ -103,22 +103,22 @@ To confirm the wiring end to end, ask any agent `/relay ask`. It calls the Relay
 The host — the person whose machine will hold the shared lock table:
 
 ```bash
-relay serve
+latch serve
 ```
 
-Then open Mission Control → **Team** → **Share**. Relay starts an ngrok tunnel and mints an
+Then open Mission Control → **Team** → **Share**. Latch starts an ngrok tunnel and mints an
 invite link addressed to one GitHub login.
 
 The teammate:
 
 ```bash
-relay serve            # their own local relay
+latch serve            # their own local latch
 # paste the host's invite link on the Team tab
-relay pull             # take the host's current working state
+latch pull             # take the host's current working state
 ```
 
-From here both machines arbitrate against the host's lock table, and `relay push` /
-`relay pull` move dirty working-tree files between them as patches.
+From here both machines arbitrate against the host's lock table, and `latch push` /
+`latch pull` move dirty working-tree files between them as patches.
 
 Full details, including how invites and member tokens work, are in [Rooms and
 teams](./ROOMS.md).
@@ -128,12 +128,12 @@ teams](./ROOMS.md).
 ## Verifying it works
 
 ```bash
-relay status     # health: room, role, host, ports
-relay doctor     # walks the chain the board depends on and names the broken link
+latch status     # health: room, role, host, ports
+latch doctor     # walks the chain the board depends on and names the broken link
 ```
 
 The most common surprise is a board that looks empty while locking is in fact working
-correctly — locks and the board are separate subsystems. `relay doctor` distinguishes the
+correctly — locks and the board are separate subsystems. `latch doctor` distinguishes the
 two. See [Troubleshooting](./TROUBLESHOOTING.md).
 
 ---

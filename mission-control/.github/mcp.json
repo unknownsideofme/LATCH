@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "latch": {
+      "type": "local",
+      "command": "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node",
+      "args": [
+        "/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"
+      ],
+      "env": {
+        "LATCH_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain/mission-control",
+        "RELAY_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain/mission-control"
+      },
+      "tools": [
+        "*"
+      ]
+    },
+    "relay": {
+      "type": "local",
+      "command": "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node",
+      "args": [
+        "/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"
+      ],
+      "env": {
+        "LATCH_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain/mission-control",
+        "RELAY_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain/mission-control"
+      },
+      "tools": [
+        "*"
+      ]
+    }
+  }
+}

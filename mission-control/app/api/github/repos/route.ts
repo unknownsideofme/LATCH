@@ -1,6 +1,6 @@
 // Lists the signed-in GitHub account's repositories for the "Add workspace"
 // window. Runs in the Next.js server process on the same machine as the user,
-// so it can shell out to the GitHub CLI directly — the Relay backend is not
+// so it can shell out to the GitHub CLI directly — the Latch backend is not
 // involved and is not modified by this feature.
 
 import { NextResponse } from 'next/server';
