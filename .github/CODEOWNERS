@@ -1,0 +1,3 @@
+# Global code owners
+# Only unknownsideofme and ArnavSurana can approve PRs across the repository
+* @unknownsideofme @ArnavSurana
