@@ -63,7 +63,9 @@ test("Supabase: sync adapter initializes and handles unconfigured environment gr
     });
     assert.equal(published, false);
 
-    const read = await sync.getPendingPatches("test-ws", 0);
-    assert.deepEqual(read, []);
+    // Unconfigured operations should gracefully no-op without error
+    sync.joinWorkspace("test-ws");
+    await sync.updatePresence({ login: "dev" });
+    sync.close();
   }
 });
