@@ -67,8 +67,25 @@ latch serve
 
 ## Verifying your change
 
-There is no automated test suite yet, so verification is manual and specific to what you
-touched. Say in the PR what you actually did.
+Latch includes an automated test suite covering the backend, mission-control, and landing modules, which runs automatically in GitHub Actions on push and pull requests to `main`.
+
+Run the test suite locally:
+
+```bash
+npm test
+```
+
+You can also run module-specific tests:
+
+```bash
+npm run test:backend
+npm run test:mission-control
+npm run test:landing
+```
+
+### Manual verification
+
+In addition to automated tests, perform manual verification specific to what you touched:
 
 **Any change**
 

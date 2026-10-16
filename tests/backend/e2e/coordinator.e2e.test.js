@@ -2,14 +2,16 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { LockTable } = require("../../../backend/coordinator/lockTable");
 
 test("backend e2e: multi-agent coordinator contention and handover workflow", async () => {
-  const table = new LockTable();
-  const ws = path.join(os.tmpdir(), "latch-e2e-ws");
-  const file = "shared/config.json";
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-e2e-ws-"));
+  try {
+    const table = new LockTable();
+    const file = "shared/config.json";
 
   // Step 1: Agent Alpha claims shared config
   const claimAlpha = table.claim({
@@ -69,4 +71,7 @@ test("backend e2e: multi-agent coordinator contention and handover workflow", as
   const lockEntry = Object.values(status.locks).find((l) => l.filePath === file);
   assert.ok(lockEntry);
   assert.equal(lockEntry.agentId, "beta:host1:s2");
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
 });
