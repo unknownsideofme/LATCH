@@ -1,6 +1,5 @@
 "use strict";
 
-const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
@@ -79,9 +78,9 @@ test("lockTable helper: filterKeys handles string and object filters", () => {
   assert.ok(keysFromObj.has("/alias/path"));
 });
 
-test("LockTable: claim write lock and prevent cross-agent collisions", (t) => {
+test("LockTable: claim write lock and prevent cross-agent collisions", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-test-ws-"));
-  t.after(() => fs.rmSync(ws, { recursive: true, force: true }));
+ try {
   const table = new LockTable();
 
   // Agent 1 claims file
@@ -140,11 +139,14 @@ test("LockTable: claim write lock and prevent cross-agent collisions", (t) => {
     workspaceId: ws,
   });
   assert.equal(claim3.allowed, true);
+ } finally {
+ fs.rmSync(ws, { recursive: true, force: true });
+ }
 });
 
-test("LockTable: read mode presence tracking does not block writers", (t) => {
+test("LockTable: read mode presence tracking does not block writers", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-test-ws-"));
-  t.after(() => fs.rmSync(ws, { recursive: true, force: true }));
+ try {
   const table = new LockTable();
 
   // Note a read presence
@@ -165,11 +167,14 @@ test("LockTable: read mode presence tracking does not block writers", (t) => {
     mode: "write",
   });
   assert.equal(writeRes.allowed, true);
+ } finally {
+ fs.rmSync(ws, { recursive: true, force: true });
+ }
 });
 
-test("LockTable: batch claim holds all or none", (t) => {
+test("LockTable: batch claim holds all or none", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-test-ws-"));
-  t.after(() => fs.rmSync(ws, { recursive: true, force: true }));
+ try {
   const table = new LockTable();
 
   // Agent 1 locks file B
@@ -195,11 +200,14 @@ test("LockTable: batch claim holds all or none", (t) => {
     workspaceId: ws,
   });
   assert.equal(checkA.allowed, true);
+ } finally {
+ fs.rmSync(ws, { recursive: true, force: true });
+ }
 });
 
-test("LockTable: heartbeat and releaseAll", (t) => {
+test("LockTable: heartbeat and releaseAll", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-test-ws-hb-"));
-  t.after(() => fs.rmSync(ws, { recursive: true, force: true }));
+ try {
   const table = new LockTable();
 
   table.claim({ agentId: "agent1:host1:s1", file: "x.ts", workspaceId: ws });
@@ -215,11 +223,14 @@ test("LockTable: heartbeat and releaseAll", (t) => {
   const relAll = table.releaseAll("agent1:host1:s1", ws);
   assert.equal(relAll.released.length, 2);
   assert.equal(table.locks.size, 0);
+ } finally {
+ fs.rmSync(ws, { recursive: true, force: true });
+ }
 });
 
-test("LockTable: waiters recording when claim is denied", (t) => {
+test("LockTable: waiters recording when claim is denied", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-test-ws-"));
-  t.after(() => fs.rmSync(ws, { recursive: true, force: true }));
+ try {
   const table = new LockTable();
 
   table.claim({ agentId: "holder:host1:s1", file: "locked.ts", workspaceId: ws });
@@ -228,4 +239,7 @@ test("LockTable: waiters recording when claim is denied", (t) => {
   const waiters = table.takeWaiters("locked.ts", ws);
   assert.equal(waiters.length, 1);
   assert.equal(waiters[0].agentId, "waiter:host1:s2");
+ } finally {
+ fs.rmSync(ws, { recursive: true, force: true });
+ }
 });

@@ -1,6 +1,5 @@
 "use strict";
 
-const test = require("node:test");
 const assert = require("node:assert/strict");
 
 test("mission-control e2e: /api/github/repos route handler returns safe structure", async () => {
