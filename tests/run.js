@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { spawnSync } = require('child_process');
 
 const testsDir = path.resolve(__dirname);
@@ -31,8 +32,16 @@ if (matchingFiles.length === 0) {
 }
 
 const relativeFiles = matchingFiles.map(f => path.relative(process.cwd(), f));
+const loaderUrl = pathToFileURL(path.join(__dirname, 'register-loader.mjs')).href;
 
-const result = spawnSync(process.execPath, ['--test', ...relativeFiles], {
+const nodeArgs = [
+  '--import',
+  loaderUrl,
+  '--test',
+  ...relativeFiles,
+];
+
+const result = spawnSync(process.execPath, nodeArgs, {
   stdio: 'inherit',
   env: process.env,
 });
