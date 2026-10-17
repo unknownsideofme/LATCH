@@ -1,6 +1,5 @@
 "use strict";
 
-const test = require("node:test");
 const assert = require("node:assert/strict");
 const { isSupabaseConfigured, loadSupabaseConfig } = require("../../../backend/supabase/client");
 const { SupabaseLockAdapter } = require("../../../backend/supabase/SupabaseLockAdapter");

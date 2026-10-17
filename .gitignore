@@ -24,3 +24,5 @@ test.txt
 .github/hooks/latch-os.json
 
 
+
+coverage/

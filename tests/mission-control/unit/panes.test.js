@@ -1,6 +1,5 @@
 "use strict";
 
-const test = require("node:test");
 const assert = require("node:assert/strict");
 
 test("mission-control panes: clamp limits values within lower and upper bounds", async () => {

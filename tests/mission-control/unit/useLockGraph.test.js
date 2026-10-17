@@ -1,6 +1,5 @@
 "use strict";
 
-const test = require("node:test");
 const assert = require("node:assert/strict");
 
 test("mission-control useLockGraph: parseAgentId handles labels, hosts, sessions, and @login suffix", async () => {

@@ -2,7 +2,7 @@
   "name": "latch",
   "version": "0.1.0",
   "private": true,
-  "description": "GitHub Desktop for AI agents — coordination, locks, and Mission Control.",
+  "description": "GitHub Desktop for AI agents â€” coordination, locks, and Mission Control.",
   "workspaces": [
     "mission-control"
   ],
@@ -17,12 +17,14 @@
     "start": "node backend/server.js --port 3001",
     "coordinator": "node backend/coordinator/server.js",
     "check:db": "node backend/supabase/check-connection.js",
-    "test": "node tests/run.js",
-    "test:backend": "node tests/run.js backend",
-    "test:mission-control": "node tests/run.js mission-control",
-    "test:landing": "node tests/run.js landing",
-    "test:unit": "node tests/run.js unit",
-    "test:e2e": "node tests/run.js e2e"
+    "test": "vitest run",
+    "test:backend": "vitest run tests/backend",
+    "test:mission-control": "vitest run tests/mission-control",
+    "test:landing": "vitest run tests/landing",
+    "test:unit": "vitest run tests/**/unit",
+    "test:e2e": "vitest run tests/**/e2e",
+    "test:coverage": "vitest run --coverage",
+    "test:node": "node tests/run.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -33,7 +35,9 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "vitest": "^5.0.0",
+    "@vitest/coverage-v8": "^5.0.0"
   },
   "engines": {
     "node": ">=20"

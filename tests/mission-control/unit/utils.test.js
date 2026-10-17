@@ -1,6 +1,5 @@
 "use strict";
 
-const test = require("node:test");
 const assert = require("node:assert/strict");
 
 test("mission-control utils: cn combines class names and filters falsy values", async () => {
