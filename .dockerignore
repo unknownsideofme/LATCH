@@ -1,0 +1,30 @@
+# Version control & Git
+.git
+.github
+
+# Client apps & IDE extensions (not needed in container)
+desktop
+extensions
+landing
+
+# Documentation & large media assets
+docs
+support_images
+*.pdf
+*.gif
+*.png
+
+# Tests, coverage & local build artifacts
+tests
+coverage
+vitest.config.mjs
+mission-control/.next
+.next
+
+# Dependencies & local environment files
+node_modules
+.env
+.env.*
+.latch
+.relay
+npm-debug.log*
