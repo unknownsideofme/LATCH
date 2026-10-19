@@ -88,10 +88,10 @@ function AgentNode({ data }: NodeProps) {
   };
 
   const statusConfig = {
-    hold: { text: "Editing lease", color: "text-[var(--primary)]", bg: "bg-[var(--accent)]", border: "border-[var(--border)]" },
+    hold: { text: "Editing lease", color: "text-[var(--accent-foreground)]", bg: "bg-[var(--accent)]", border: "border-[var(--border)]" },
     clash: { text: "Contested", color: "text-[var(--destructive)]", bg: "bg-[var(--destructive)]/15", border: "border-[var(--destructive)]" },
     read: { text: "Reading AST", color: "text-[var(--secondary-foreground)]", bg: "bg-[var(--secondary)]", border: "border-[var(--border)]" },
-    idle: { text: "Idle", color: "text-[var(--muted-foreground)]", bg: "bg-[var(--muted)]", border: "border-[var(--border)]" },
+    idle: { text: "Idle", color: "text-[var(--card-foreground)]", bg: "bg-[var(--muted)]", border: "border-[var(--border)]" },
   }[d.status];
 
   return (
@@ -201,7 +201,7 @@ function FileNode({ data }: NodeProps) {
               ? "bg-[var(--destructive)]/15 text-[var(--destructive)] border-[var(--destructive)]"
               : isLocked
               ? "bg-[var(--accent)] text-[var(--accent-foreground)] border-[var(--border)]"
-              : "bg-[var(--muted)] text-[var(--muted-foreground)] border-[var(--border)]"
+              : "bg-[var(--muted)] text-[var(--card-foreground)] border-[var(--border)]"
           }`}
         >
           {isContested ? "CONTESTED" : isLocked ? "EXCLUSIVE" : "FREE"}

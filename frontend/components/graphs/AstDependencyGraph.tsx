@@ -94,7 +94,7 @@ function ModuleNode({ data }: NodeProps) {
               ? "bg-[var(--accent)] text-[var(--accent-foreground)] border-[var(--border)]"
               : isBounded
               ? "bg-[var(--destructive)]/15 text-[var(--destructive)] border-[var(--destructive)]"
-              : "bg-[var(--muted)] text-[var(--muted-foreground)] border-[var(--border)]"
+              : "bg-[var(--muted)] text-[var(--card-foreground)] border-[var(--border)]"
           }`}
         >
           {isLocked ? "LOCKED" : isBounded ? "BOUNDED" : "SAFE"}
@@ -108,7 +108,7 @@ function ModuleNode({ data }: NodeProps) {
         </div>
 
         {isLocked && (
-          <div className="flex items-center justify-between text-[var(--primary)] bg-[var(--accent)] px-2 py-1 rounded">
+          <div className="flex items-center justify-between text-[var(--accent-foreground)] bg-[var(--accent)] px-2 py-1 rounded font-medium">
             <span>Locked by:</span>
             <span className="font-bold">{d.lockedBy}</span>
           </div>
