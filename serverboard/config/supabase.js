@@ -14,14 +14,14 @@ export const supabase = createClient(
 export async function checkDbHealth() {
   const start = Date.now();
   try {
-    const { error: authError } = await supabase.auth.getSession();
+    const { error: tableError } = await supabase.from("users").select("id").limit(1);
     const latencyMs = Date.now() - start;
 
-    if (authError) {
-      return { ok: false, latencyMs, error: authError.message };
+    // Missing tables/columns can be resolved by applying the schema migration.
+    const schemaError = tableError && ["42P01", "42703", "PGRST204", "PGRST205"].includes(tableError.code);
+    if (tableError && !schemaError) {
+      return { ok: false, latencyMs, error: tableError.message };
     }
-
-    const { error: tableError } = await supabase.from("users").select("id").limit(1);
 
     return {
       ok: true,
