@@ -10,6 +10,7 @@ import { DecoInput } from "@/components/deco/DecoInput";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ArrowUpRight } from "lucide-react";
+import { ThinkingOrb } from "thinking-orbs";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -140,9 +141,16 @@ export default function LoginPage() {
               variant="outline"
               size="default"
               disabled={loading}
-              className="w-full mt-2"
+              className="w-full mt-2 min-h-[40px] flex items-center justify-center gap-2"
             >
-              {loading ? "Authenticating…" : "Sign In with Email"}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <ThinkingOrb state="connecting" size={20} />
+                  <span>Authenticating…</span>
+                </span>
+              ) : (
+                "Sign In with Email"
+              )}
             </DecoButton>
           </form>
         </div>

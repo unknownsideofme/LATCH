@@ -32,6 +32,7 @@ import type { ProjectRecord } from "@/lib/types";
 import { SwarmLockGraph } from "@/components/graphs/SwarmLockGraph";
 import { AstDependencyGraph } from "@/components/graphs/AstDependencyGraph";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThinkingOrb } from "thinking-orbs";
 
 interface LiveLock {
   id: string;
@@ -159,6 +160,22 @@ function ProjectDashboardContent() {
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-4">
+        <ThinkingOrb state="solving" size={64} />
+        <div className="text-center space-y-1">
+          <p className="text-sm font-mono font-medium text-foreground">
+            Initializing Cockpit & AST Graphs…
+          </p>
+          <p className="text-xs font-mono text-muted-foreground">
+            Calibrating collision-free AST lock tables
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-background text-foreground font-sans antialiased transition-colors duration-200">
@@ -752,8 +769,11 @@ export default function ProjectDashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background text-primary font-mono text-xs">
-          Loading project studio…
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-3">
+          <ThinkingOrb state="solving" size={64} />
+          <p className="text-xs font-mono text-muted-foreground">
+            Synchronizing Project Studio…
+          </p>
         </div>
       }
     >

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import gsap from "gsap";
+import { ThinkingOrb } from "thinking-orbs";
 
 export function LoadingCurtain() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,25 +75,30 @@ export function LoadingCurtain() {
         className="w-1/2 h-full bg-background border-l border-border flex items-center justify-start pl-6"
       />
 
-      {/* Center wordmark */}
+      {/* Center wordmark with ThinkingOrb loading state */}
       <div
         ref={logoRef}
         className="absolute inset-0 flex flex-col items-center justify-center z-10 select-none"
       >
-        <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center mb-3 shadow-md border border-border bg-card p-1">
-          <Image
-            src="/latch-logo.png"
-            alt="Latch Logo"
-            width={56}
-            height={56}
-            className="w-full h-full object-contain"
-            priority
-          />
+        <div className="mb-4 flex items-center justify-center">
+          <ThinkingOrb state="weaving" size={64} />
         </div>
-        <h1 className="font-[var(--font-display)] text-2xl font-bold tracking-tight text-foreground">
-          Latch
-        </h1>
-        <p className="font-mono text-[11px] uppercase tracking-wider text-primary mt-1 font-semibold">
+        <div className="flex items-center gap-3 mb-1.5">
+          <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center shadow-md border border-border bg-card p-0.5">
+            <Image
+              src="/latch-logo.png"
+              alt="Latch Logo"
+              width={36}
+              height={36}
+              className="w-full h-full object-contain"
+              priority
+            />
+          </div>
+          <h1 className="font-[var(--font-display)] text-2xl font-bold tracking-tight text-foreground">
+            Latch
+          </h1>
+        </div>
+        <p className="font-mono text-[11px] uppercase tracking-wider text-primary font-semibold">
           Zero-Collision AI Swarm Engine
         </p>
       </div>

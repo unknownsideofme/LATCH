@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Lock, AlertOctagon, GitCommit, ShieldCheck, FileCode, Terminal } from "lucide-react";
+import { ThinkingOrb } from "thinking-orbs";
 
 interface StreamEvent {
   id: string;
@@ -67,7 +68,7 @@ export function LiveActivityStream() {
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <ThinkingOrb state="listening" size={20} />
           <span>Real-time Causal Bus</span>
         </div>
       </div>

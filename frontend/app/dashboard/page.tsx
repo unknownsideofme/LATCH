@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ThinkingOrb } from "thinking-orbs";
 import {
   LayoutGrid,
   FolderGit2,
@@ -535,9 +536,16 @@ export default function DashboardPage() {
 
           {/* MAIN BODY CONTENT */}
           {loading ? (
-            <div className="py-24 text-center text-xs font-mono text-muted-foreground flex flex-col items-center gap-3">
-              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span>Loading projects…</span>
+            <div className="py-24 text-center text-xs font-mono text-muted-foreground flex flex-col items-center gap-4">
+              <ThinkingOrb state="searching" size={64} />
+              <div className="space-y-1">
+                <span className="text-sm font-medium text-foreground block">
+                  Scanning Project Workspaces
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Synchronizing daemon state & repository configurations…
+                </span>
+              </div>
             </div>
           ) : projects.length === 0 ? (
             /* SUPABASE STUDIO EMPTY STATE */
@@ -910,9 +918,16 @@ export default function DashboardPage() {
                     <button
                       type="submit"
                       disabled={submitting || !projectName.trim()}
-                      className="flex-1 py-2 px-4 rounded-md bg-primary hover:opacity-90 text-primary-foreground font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                      className="flex-1 py-2 px-4 rounded-md bg-primary hover:opacity-90 text-primary-foreground font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm min-h-[36px]"
                     >
-                      {submitting ? "Creating Project…" : "Create new project"}
+                      {submitting ? (
+                        <span className="inline-flex items-center gap-2">
+                          <ThinkingOrb state="connecting" size={20} />
+                          <span>Provisioning Workspace…</span>
+                        </span>
+                      ) : (
+                        "Create new project"
+                      )}
                     </button>
                   </div>
                 </form>

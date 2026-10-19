@@ -10,6 +10,7 @@ import { DecoInput } from "@/components/deco/DecoInput";
 import { Sparkles, Terminal, ArrowUpRight } from "lucide-react";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThinkingOrb } from "thinking-orbs";
 
 function SignupForm() {
   const router = useRouter();
@@ -204,9 +205,16 @@ function SignupForm() {
               variant="outline"
               size="default"
               disabled={loading}
-              className="w-full mt-2"
+              className="w-full mt-2 min-h-[40px] flex items-center justify-center gap-2"
             >
-              {loading ? "Registering…" : `Confirm ${selectedPlan === "pro" ? "Pro" : "Free"} Account`}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <ThinkingOrb state="connecting" size={20} />
+                  <span>Registering Account…</span>
+                </span>
+              ) : (
+                `Confirm ${selectedPlan === "pro" ? "Pro" : "Free"} Account`
+              )}
             </DecoButton>
           </form>
         </div>
@@ -230,8 +238,11 @@ export default function SignupPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="w-7 h-7 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-3">
+          <ThinkingOrb state="breathing" size={64} />
+          <p className="text-xs font-mono text-muted-foreground">
+            Preparing Latch Workspace…
+          </p>
         </div>
       }
     >
