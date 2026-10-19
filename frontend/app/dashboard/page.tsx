@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -380,10 +381,17 @@ export default function DashboardPage() {
           {/* Logo */}
           <Link
             href="/"
-            className="w-8 h-8 rounded-md bg-primary text-primary-foreground font-extrabold text-sm flex items-center justify-center hover:opacity-90 transition-all shadow-sm"
+            className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center border border-sidebar-border bg-card hover:border-primary/50 transition-all shadow-sm p-0.5"
             title="Latch Systems"
           >
-            L
+            <Image
+              src="/latch-logo.png"
+              alt="Latch Systems"
+              width={32}
+              height={32}
+              className="w-full h-full object-contain"
+              priority
+            />
           </Link>
 
           <div className="w-8 h-[1px] bg-sidebar-border" />

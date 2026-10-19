@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DecoButton } from "@/components/deco/DecoButton";
@@ -64,8 +65,15 @@ export default function LoginPage() {
 
       {/* Brand Header */}
       <Link href="/" className="mb-6 flex items-center gap-2.5 group">
-        <div className="w-8 h-8 rounded-md bg-primary text-primary-foreground font-[var(--font-display)] font-bold text-base flex items-center justify-center shadow-sm">
-          L
+        <div className="w-9 h-9 rounded-md overflow-hidden flex items-center justify-center border border-border bg-card shadow-sm group-hover:border-primary/50 transition-colors p-0.5">
+          <Image
+            src="/latch-logo.png"
+            alt="Latch Logo"
+            width={36}
+            height={36}
+            className="w-full h-full object-contain"
+            priority
+          />
         </div>
         <span className="font-[var(--font-display)] text-xl font-bold text-foreground">
           Latch

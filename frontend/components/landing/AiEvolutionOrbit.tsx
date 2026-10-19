@@ -67,7 +67,7 @@ const AI_AGENTS_ORBIT_DATA: OrbitTimelineYear[] = [
     events: [
       {
         date: "Now",
-        icon: <img src="/logo.png" alt="Latch Protocol" />,
+        icon: <img src="/latch-logo.png" alt="Latch Protocol" />,
         title: "Latch — Multi-Agent Coordination",
         description:
           "The missing protocol for parallel AI coders: distributed AST file locks, causal Lamport clocks, and 0ms collision prevention.",

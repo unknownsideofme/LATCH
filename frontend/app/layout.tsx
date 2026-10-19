@@ -18,6 +18,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "LATCH — The Coordination Layer for AI Coding Agents",
   description: "Zero-collision coordination engine for machine-speed AI agents. Exclusive write locking, dependency blast radius checks, and live causal patch sync.",
+  icons: {
+    icon: "/latch-logo.png",
+    shortcut: "/latch-logo.png",
+    apple: "/latch-logo.png",
+  },
 };
 
 export default function RootLayout({

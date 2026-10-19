@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 
 export function LoadingCurtain() {
@@ -78,8 +79,15 @@ export function LoadingCurtain() {
         ref={logoRef}
         className="absolute inset-0 flex flex-col items-center justify-center z-10 select-none"
       >
-        <div className="w-12 h-12 rounded-lg bg-primary text-primary-foreground font-[var(--font-display)] font-bold text-2xl flex items-center justify-center mb-3 shadow-md">
-          L
+        <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center mb-3 shadow-md border border-border bg-card p-1">
+          <Image
+            src="/latch-logo.png"
+            alt="Latch Logo"
+            width={56}
+            height={56}
+            className="w-full h-full object-contain"
+            priority
+          />
         </div>
         <h1 className="font-[var(--font-display)] text-2xl font-bold tracking-tight text-foreground">
           Latch
