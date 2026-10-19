@@ -53,10 +53,52 @@ const CSS = `
 @property --ot-k { syntax: '<number>'; inherits: false; initial-value: 1; }
 @property --ot-rr { syntax: '<length>'; inherits: false; initial-value: 0px; }
 .ot-root, .ot-root *, .ot-root *::before { box-sizing: border-box; }
-.ot-root { position: relative; width: 100%; height: 100%; min-height: 360px; overflow: hidden; background: var(--ot-bg); color: rgb(var(--ot-fg));
-  -webkit-tap-highlight-color: transparent; --ot-glow: .6; }
-.ot-root[data-theme="dark"] { --ot-o1: #e4e4e8; --ot-o2: #3e3e45; --ot-o3: #96969e; --ot-ac: #3ECF8E; --ot-on-ac: #000000; --ot-bg: #09090b; --ot-fg: 250,250,250; color-scheme: dark; }
-.ot-root[data-theme="light"] { --ot-o1: #ffffff; --ot-o2: #a3a3aa; --ot-o3: #dadadf; --ot-ac: #26262b; --ot-on-ac: #ffffff; --ot-bg: #f7f7f5; --ot-fg: 23,23,26; color-scheme: light; }
+.ot-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  overflow: hidden;
+  background: var(--ot-bg);
+  color: rgb(var(--ot-fg));
+  -webkit-tap-highlight-color: transparent;
+  --ot-glow: .6;
+  font-family: inherit;
+}
+
+.ot-root[data-theme="dark"] {
+  --ot-o1: #ffe0c2;
+  --ot-o2: #393028;
+  --ot-o3: #644a40;
+  --ot-ac: #ffe0c2;
+  --ot-on-ac: #111111;
+  --ot-bg: #111111;
+  --ot-card-bg: #191919;
+  --ot-fg: 238, 238, 238;
+  --ot-border: #393028;
+  --ot-node-bg: #1d1a18;
+  --ot-node-img-bg: #141312;
+  --ot-btn-bg: #22201d;
+  --ot-btn-border: #393028;
+  color-scheme: dark;
+}
+
+.ot-root[data-theme="light"] {
+  --ot-o1: #644a40;
+  --ot-o2: #ffdfb5;
+  --ot-o3: #e8e8e8;
+  --ot-ac: #644a40;
+  --ot-on-ac: #ffffff;
+  --ot-bg: #f9f9f9;
+  --ot-card-bg: #fcfcfc;
+  --ot-fg: 32, 32, 32;
+  --ot-border: #d8d8d8;
+  --ot-node-bg: #ffffff;
+  --ot-node-img-bg: #f5f2ed;
+  --ot-btn-bg: #efefef;
+  --ot-btn-border: #d8d8d8;
+  color-scheme: light;
+}
 
 .ot-orbit { position: absolute; left: 50%; top: 50%; border-radius: 50%; pointer-events: none; --ot-rw: 1.25px; --ot-g0: 0deg; --ot-g1: 0deg;
   transform: translate(-50%, -50%) scale(var(--ot-s, 1)); opacity: var(--ot-o, 1); transition: opacity .5s, transform .9s cubic-bezier(.2,.8,.2,1); }
@@ -81,12 +123,12 @@ const CSS = `
 .ot-orbit.ot-hidden { --ot-s: .2; --ot-o: 0; }
 
 .ot-year { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; cursor: pointer; background: none; border: 0; padding: 2px 4px; margin: 0;
-  font: 300 12px/1 var(--ot-year-font); letter-spacing: .12em; font-variant-numeric: lining-nums tabular-nums;
-  color: rgba(var(--ot-fg), .6); transition: color .35s, opacity .6s; z-index: 2; }
-.ot-year:hover { color: rgba(var(--ot-fg), .9); }
-.ot-year:focus-visible, .ot-node:focus-visible, .ot-card button:focus-visible { outline: 2px solid rgba(var(--ot-fg), .6); outline-offset: 2px; }
-.ot-year.ot-on { color: var(--ot-ac); text-shadow: 0 0 4px color-mix(in srgb, var(--ot-ac) 45%, transparent); }
-.ot-root.ot-focus .ot-year:not(.ot-on) { color: rgba(var(--ot-fg), .22); }
+  font: 500 12px/1 var(--ot-year-font, monospace); letter-spacing: .12em; font-variant-numeric: lining-nums tabular-nums;
+  color: rgba(var(--ot-fg), .65); transition: color .35s, opacity .6s; z-index: 2; }
+.ot-year:hover { color: rgba(var(--ot-fg), .95); }
+.ot-year:focus-visible, .ot-node:focus-visible, .ot-card button:focus-visible { outline: 2px solid var(--ot-ac); outline-offset: 2px; }
+.ot-year.ot-on { color: var(--ot-ac); font-weight: 700; text-shadow: 0 0 6px color-mix(in srgb, var(--ot-ac) 45%, transparent); }
+.ot-root.ot-focus .ot-year:not(.ot-on) { color: rgba(var(--ot-fg), .25); }
 .ot-year.ot-hidden { opacity: 0; }
 .ot-root.ot-no-years .ot-year { display: none; }
 
@@ -96,66 +138,65 @@ const CSS = `
 .ot-b1 { background: var(--ot-o1); left: -5%; top: -10%; animation: ot-d1 9s ease-in-out infinite; }
 .ot-b2 { background: var(--ot-o2); right: -10%; top: 10%; animation: ot-d2 11s ease-in-out infinite; }
 .ot-b3 { background: var(--ot-o3); left: 15%; bottom: -15%; animation: ot-d3 8s ease-in-out infinite; }
-.ot-b4 { background: #fff; width: 36%; height: 36%; left: 28%; top: 26%; opacity: .18; animation: ot-d4 7s ease-in-out infinite; }
+.ot-b4 { background: #fff; width: 36%; height: 36%; left: 28%; top: 26%; opacity: .22; animation: ot-d4 7s ease-in-out infinite; }
 .ot-core-gloss { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.5) 0, rgba(255,255,255,0) 34%); }
 .ot-core-shine { position: absolute; left: 18%; top: 9%; width: 40%; height: 26%; border-radius: 50%; transform: rotate(-20deg); filter: blur(1.5px); opacity: .35;
   background: radial-gradient(ellipse at 50% 35%, rgba(255,255,255,.8) 0, rgba(255,255,255,.2) 50%, rgba(255,255,255,0) 75%); }
 .ot-emit { position: absolute; left: 50%; top: 50%; width: var(--ot-rr); height: var(--ot-rr); border-radius: 50%; pointer-events: none; z-index: 1;
-  transform: translate(-50%, -50%); border: 1px solid rgba(var(--ot-fg), .55); opacity: 0; animation: ot-emit 4.2s cubic-bezier(.25,.6,.35,1) infinite; }
+  transform: translate(-50%, -50%); border: 1px solid rgba(var(--ot-fg), .4); opacity: 0; animation: ot-emit 4.2s cubic-bezier(.25,.6,.35,1) infinite; }
 .ot-emit-2 { animation-delay: 1.4s; } .ot-emit-3 { animation-delay: 2.8s; }
-@keyframes ot-emit { 0% { --ot-rr: var(--ot-from); opacity: 0; } 30% { opacity: .38; } 75% { opacity: .08; } 100% { --ot-rr: var(--ot-to); opacity: 0; } }
+@keyframes ot-emit { 0% { --ot-rr: var(--ot-from); opacity: 0; } 30% { opacity: .35; } 75% { opacity: .08; } 100% { --ot-rr: var(--ot-to); opacity: 0; } }
 @keyframes ot-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
 @keyframes ot-d1 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(30%, 25%) scale(1.2); } 66% { transform: translate(10%, 45%) scale(.9); } }
 @keyframes ot-d2 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(-35%, 30%) scale(1.1); } 66% { transform: translate(-15%, -10%) scale(1.3); } }
 @keyframes ot-d3 { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(25%, -40%) scale(1.15); } 66% { transform: translate(-20%, -20%) scale(.95); } }
 @keyframes ot-d4 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-25%, -30%) scale(1.3); } }
 
-.ot-node { position: absolute; left: 0; top: 0; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 1.5px solid rgba(var(--ot-fg), .35); padding: 0;
-  display: grid; place-items: center; cursor: pointer; z-index: 3; color: rgba(var(--ot-fg), .85);
-  background: #12161C; overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,.6);
-  transition: border-color .25s, opacity .35s, transform .2s, --ot-k .3s cubic-bezier(.2,.8,.2,1); }
+.ot-node { position: absolute; left: 0; top: 0; width: 32px; height: 32px; margin: -16px 0 0 -16px; border-radius: 50%;
+  border: 1.5px solid var(--ot-border); padding: 0;
+  display: grid; place-items: center; cursor: pointer; z-index: 3; color: rgb(var(--ot-fg));
+  background: var(--ot-node-bg); overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  transition: border-color .25s, opacity .35s, transform .2s, box-shadow .25s, --ot-k .3s cubic-bezier(.2,.8,.2,1); }
+.ot-root[data-theme="dark"] .ot-node { box-shadow: 0 2px 10px rgba(0,0,0,.5); }
 .ot-node:hover { border-color: var(--ot-ac); transform: scale(1.15); }
-.ot-root .ot-node.ot-on, .ot-root .ot-node.ot-sel { border-color: var(--ot-ac); box-shadow: 0 0 10px rgba(62,207,142,.45); }
-.ot-node img { width: 100%; height: 100%; object-fit: contain; padding: 2.5px; border-radius: 50%; background: #0B0E11; }
+.ot-root .ot-node.ot-on, .ot-root .ot-node.ot-sel { border-color: var(--ot-ac); box-shadow: 0 0 12px color-mix(in srgb, var(--ot-ac) 50%, transparent); }
+.ot-node img { width: 100%; height: 100%; object-fit: contain; padding: 3px; border-radius: 50%; background: var(--ot-node-img-bg); }
 .ot-node svg { width: 14px; height: 14px; stroke: var(--ot-ac); stroke-width: 1.75; fill: none; }
-  --ot-ring: conic-gradient(from -70deg, rgba(var(--ot-fg), .1), rgba(var(--ot-fg), .2) 25%, rgba(var(--ot-fg), .36) 50%, rgba(var(--ot-fg), .2) 75%, rgba(var(--ot-fg), .1));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 1px 2px rgba(0,0,0,.05), 0 6px 14px -8px rgba(0,0,0,.14); }
-.ot-node svg { width: 14px; height: 14px; position: relative; stroke: var(--ot-ig); stroke-width: 1.5; fill: none; }
 .ot-node .ot-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; position: relative; }
-.ot-node:hover { color: rgba(var(--ot-fg), 1); }
-.ot-node:hover::before { filter: brightness(1.6); }
-.ot-root .ot-node.ot-on { color: var(--ot-ac); --ot-ring: var(--ot-ac); }
-.ot-node.ot-on svg, .ot-node.ot-sel svg { stroke: currentColor; }
+.ot-node:hover { color: rgb(var(--ot-fg)); }
 .ot-root.ot-focus .ot-node:not(.ot-on) { opacity: .28; }
-.ot-root .ot-node.ot-sel { --ot-k: 1.3; background: var(--ot-ac); color: var(--ot-on-ac); --ot-ring: var(--ot-ac);
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--ot-ac) 14%, transparent), 0 0 14px color-mix(in srgb, var(--ot-ac) 45%, transparent); }
-.ot-root[data-theme="light"] .ot-node.ot-sel { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ot-ac) 10%, transparent), 0 8px 18px -8px rgba(0,0,0,.35); }
+.ot-root .ot-node.ot-sel { --ot-k: 1.3; background: var(--ot-ac); color: var(--ot-on-ac);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--ot-ac) 20%, transparent), 0 0 14px color-mix(in srgb, var(--ot-ac) 45%, transparent); }
 .ot-node.ot-hidden { opacity: 0 !important; --ot-k: .4; }
 
-.ot-card { position: absolute; left: 0; top: 0; width: 280px; padding: 18px 18px 16px; border-radius: 0px; z-index: 4; text-align: left;
-  background: #09090B; -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
-  border: 2px solid #3F3F46; box-shadow: 0 12px 30px -10px rgba(0,0,0,.8);
+.ot-card { position: absolute; left: 0; top: 0; width: 280px; padding: 18px 18px 16px; border-radius: 0.5rem; z-index: 4; text-align: left;
+  background: var(--ot-card-bg); -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
+  border: 1.5px solid var(--ot-border); box-shadow: 0 12px 30px -10px rgba(0,0,0,.35);
   opacity: 0; transform: translateY(6px) scale(.98); pointer-events: none; transition: opacity .25s, transform .3s cubic-bezier(.2,.8,.2,1); }
+.ot-root[data-theme="dark"] .ot-card { box-shadow: 0 14px 34px -8px rgba(0,0,0,.8); }
 .ot-card.ot-open { opacity: 1; transform: none; pointer-events: auto; }
-.ot-card-meta { display: flex; justify-content: space-between; gap: 12px; font: 700 10.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--ot-ac); }
-.ot-card-meta span:last-child { color: rgba(var(--ot-fg), .4); }
-.ot-card-title { margin: 10px 0 6px; font-size: 16px; line-height: 1.25; font-weight: 700; letter-spacing: -.02em; color: rgb(var(--ot-fg)); font-family: var(--font-display); text-transform: uppercase; }
-.ot-card-text { margin: 0; font-size: 13px; line-height: 1.5; color: rgba(var(--ot-fg), .7); font-family: var(--font-body); }
-.ot-card-nav { display: flex; gap: 6px; margin-top: 14px; }
-.ot-card-nav button { appearance: none; flex: 1; border: 1px solid #3F3F46; background: #18181B; color: rgba(var(--ot-fg), .85);
-  font: inherit; font-size: 11px; font-weight: 700; padding: 6px 8px; border-radius: 0px; cursor: pointer; text-transform: uppercase; font-family: var(--font-display); }
+.ot-card-meta { display: flex; justify-content: space-between; gap: 12px; font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--ot-ac); }
+.ot-card-meta span:last-child { color: rgba(var(--ot-fg), .45); }
+.ot-card-title { margin: 10px 0 6px; font-size: 15px; line-height: 1.3; font-weight: 700; letter-spacing: -.01em; color: rgb(var(--ot-fg)); font-family: var(--font-display, inherit); }
+.ot-card-text { margin: 0; font-size: 12px; line-height: 1.5; color: rgba(var(--ot-fg), .75); font-family: var(--font-body, inherit); }
+.ot-card-nav { display: flex; gap: 8px; margin-top: 14px; }
+.ot-card-nav button { appearance: none; flex: 1; border: 1px solid var(--ot-btn-border); background: var(--ot-btn-bg); color: rgb(var(--ot-fg));
+  font: inherit; font-size: 11px; font-weight: 600; padding: 6px 10px; border-radius: 0.375rem; cursor: pointer; transition: border-color .2s, color .2s, background-color .2s; }
 .ot-card-nav button:hover { border-color: var(--ot-ac); color: var(--ot-ac); }
 @media (prefers-reduced-motion: reduce) { .ot-core, .ot-core *, .ot-emit { animation: none !important; } .ot-emit { display: none; } }
 `;
 
 function useStyles() {
-  React.useInsertionEffect?.(() => {
-    if (typeof document === "undefined" || document.getElementById(STYLE_ID)) return;
-    const el = document.createElement("style");
-    el.id = STYLE_ID;
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    let el = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+    if (!el) {
+      el = document.createElement("style");
+      el.id = STYLE_ID;
+      document.head.appendChild(el);
+    }
     el.textContent = CSS;
-    document.head.appendChild(el);
   }, []);
 }
 
@@ -169,7 +210,7 @@ export function OrbitTimeline({
   direction = "same",
   intro = true,
   replayKey = 0,
-  yearFont = '"Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif',
+  yearFont = 'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
   onSelect,
   className,
   style,
@@ -353,8 +394,8 @@ export function OrbitTimeline({
       <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
         <defs>
           <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1="2" y1="2" x2="22" y2="22">
-            <stop offset="0" stopColor={theme === "dark" ? "rgba(62,207,142,0.95)" : "rgba(23,23,26,.5)"} />
-            <stop offset="1" stopColor={theme === "dark" ? "rgba(62,207,142,0.4)" : "rgba(23,23,26,.95)"} />
+            <stop offset="0" stopColor={theme === "dark" ? "rgba(255,224,194,0.95)" : "rgba(100,74,64,0.95)"} />
+            <stop offset="1" stopColor={theme === "dark" ? "rgba(255,224,194,0.4)" : "rgba(100,74,64,0.4)"} />
           </linearGradient>
         </defs>
       </svg>
