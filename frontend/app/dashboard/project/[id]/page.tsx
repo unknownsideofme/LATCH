@@ -27,6 +27,8 @@ import {
   Network,
   Users,
   ArrowRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import type { ProjectRecord } from "@/lib/types";
 import { SwarmLockGraph } from "@/components/graphs/SwarmLockGraph";
@@ -91,6 +93,7 @@ function ProjectDashboardContent() {
 
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<
     "overview" | "swarm-graph" | "ast-graph" | "locks" | "logs" | "settings"
   >("swarm-graph");
@@ -177,128 +180,237 @@ function ProjectDashboardContent() {
     );
   }
 
+  const NAV_ITEMS = [
+    {
+      id: "swarm-graph" as const,
+      label: "AI Swarm Concurrency",
+      shortLabel: "Swarm Graph",
+      kicker: "Lock concurrency & collision",
+      icon: Bot,
+    },
+    {
+      id: "ast-graph" as const,
+      label: "AST Dependency Tree",
+      shortLabel: "AST Tree",
+      kicker: "Blast radius & boundaries",
+      icon: Network,
+    },
+    {
+      id: "overview" as const,
+      label: "Project Overview",
+      shortLabel: "Overview",
+      kicker: "Telemetry & node status",
+      icon: Activity,
+    },
+    {
+      id: "locks" as const,
+      label: "File Mutex Leases",
+      shortLabel: "Locks",
+      kicker: "Distributed lock table",
+      icon: TableIcon,
+      badge: locks.length,
+    },
+    {
+      id: "logs" as const,
+      label: "Realtime Logs",
+      shortLabel: "Logs",
+      kicker: "Daemon event stream",
+      icon: Terminal,
+    },
+    {
+      id: "settings" as const,
+      label: "Project Settings",
+      shortLabel: "Settings",
+      kicker: "Quotas & agent limits",
+      icon: Settings,
+    },
+  ];
+
   return (
     <div className="min-h-screen flex bg-background text-foreground font-sans antialiased transition-colors duration-200">
-      {/* 1. SUPABASE-STYLE SLIM LEFT ICON RAIL (56px) */}
-      <aside className="w-14 bg-sidebar border-r border-sidebar-border flex flex-col items-center justify-between py-3 shrink-0 z-40 select-none transition-colors duration-200">
-        <div className="flex flex-col items-center gap-4 w-full">
-          {/* Logo */}
-          <Link
-            href="/"
-            className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center border border-sidebar-border bg-card hover:border-primary/50 transition-all shadow-sm p-0.5"
-            title="Latch Systems"
-          >
-            <Image
-              src="/latch-logo.png"
-              alt="Latch Systems"
-              width={32}
-              height={32}
-              className="w-full h-full object-contain"
-              priority
-            />
-          </Link>
+      {/* 1. COLLAPSIBLE LEFT NAVIGATION SIDEBAR (Openable / Closeable) */}
+      <aside
+        className={`${
+          sidebarOpen ? "w-64" : "w-14"
+        } bg-sidebar border-r border-sidebar-border flex flex-col justify-between py-3 shrink-0 z-40 select-none transition-all duration-300 ease-in-out`}
+      >
+        <div className="flex flex-col gap-3 w-full">
+          {/* Top Brand & Toggle Header */}
+          {sidebarOpen ? (
+            <div className="flex items-center justify-between px-3 pb-2 border-b border-sidebar-border">
+              <Link href="/" className="flex items-center gap-2.5 group min-w-0" title="Latch Systems">
+                <div className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center border border-sidebar-border bg-card shadow-sm group-hover:border-primary/50 transition-colors p-0.5 shrink-0">
+                  <Image
+                    src="/latch-logo.png"
+                    alt="Latch Systems"
+                    width={32}
+                    height={32}
+                    className="w-full h-full object-contain"
+                    priority
+                  />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-[var(--font-display)] font-bold text-sm tracking-tight text-foreground block truncate">
+                    Latch
+                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground block truncate">
+                    Mission Control
+                  </span>
+                </div>
+              </Link>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent border border-sidebar-border transition-colors cursor-pointer"
+                title="Collapse Sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 w-full pb-2 border-b border-sidebar-border">
+              <Link
+                href="/"
+                className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center border border-sidebar-border bg-card hover:border-primary/50 transition-all shadow-sm p-0.5"
+                title="Latch Systems"
+              >
+                <Image
+                  src="/latch-logo.png"
+                  alt="Latch Systems"
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-contain"
+                  priority
+                />
+              </Link>
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent border border-sidebar-border transition-colors cursor-pointer"
+                title="Expand Sidebar"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
-          <div className="w-8 h-[1px] bg-sidebar-border" />
+          {/* Expanded Project Workspace Card */}
+          {sidebarOpen && (
+            <div className="px-3 pt-1">
+              <div className="p-2.5 rounded-lg bg-card border border-sidebar-border shadow-xs space-y-1">
+                <div className="flex items-center justify-between gap-1 text-[10px] font-mono text-muted-foreground uppercase">
+                  <span>Workspace</span>
+                  <span className="text-primary font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    Online
+                  </span>
+                </div>
+                <h3 className="text-xs font-semibold text-foreground truncate font-mono">
+                  {project?.project_name}
+                </h3>
+                <span className="text-[10px] font-mono text-muted-foreground block truncate">
+                  {project?.repo_name || "unknownsideofme/LATCH"}
+                </span>
+              </div>
 
-          {/* Navigation icons */}
-          <div className="flex flex-col items-center gap-1.5 w-full">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
-              title="All Projects"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
+              <div className="pt-3 pb-1 text-[10px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
+                Chambers
+              </div>
+            </div>
+          )}
 
-            {/* Direct Quick-switch to AI Swarm Graph */}
-            <button
-              onClick={() => setActiveTab("swarm-graph")}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                activeTab === "swarm-graph"
-                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-              }`}
-              title="AI Swarm & Lock Concurrency Canvas"
-            >
-              <Bot className="w-4 h-4" />
-            </button>
+          {/* Navigation Items (Single source of truth for tabs) */}
+          <nav className={`flex flex-col gap-1 w-full ${sidebarOpen ? "px-2" : "px-1.5 items-center"}`}>
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeTab === item.id;
+              const IconComponent = item.icon;
 
-            {/* Direct Quick-switch to AST Dependency Graph */}
-            <button
-              onClick={() => setActiveTab("ast-graph")}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                activeTab === "ast-graph"
-                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-              }`}
-              title="AST Dependency Tree Graph"
-            >
-              <Network className="w-4 h-4" />
-            </button>
+              if (sidebarOpen) {
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full p-2 rounded-lg text-left transition-colors cursor-pointer flex items-center justify-between gap-2.5 ${
+                      isActive
+                        ? "bg-sidebar-accent text-primary border border-sidebar-border font-semibold shadow-xs"
+                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent border border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className={`p-1 rounded ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                        <IconComponent className="w-4 h-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <span className="text-xs font-medium block truncate text-foreground">
+                          {item.label}
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground block truncate">
+                          {item.kicker}
+                        </span>
+                      </div>
+                    </div>
+                    {item.badge !== undefined && (
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-primary border border-border shrink-0">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              }
 
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                activeTab === "overview"
-                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-              }`}
-              title="Project Overview & Metrics"
-            >
-              <Activity className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab("locks")}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                activeTab === "locks"
-                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-              }`}
-              title="Lock Table Editor"
-            >
-              <TableIcon className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab("logs")}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                activeTab === "logs"
-                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-              }`}
-              title="Realtime Logs"
-            >
-              <Terminal className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                activeTab === "settings"
-                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-              }`}
-              title="Project Settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          </div>
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer relative ${
+                    isActive
+                      ? "text-primary bg-sidebar-accent border border-sidebar-border"
+                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                  }`}
+                  title={`${item.label} · ${item.kicker}`}
+                >
+                  <IconComponent className="w-4 h-4" />
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Bottom Rail Status */}
-        <div className="flex flex-col items-center gap-3 w-full">
-          <div
-            className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm"
-            title="Daemon Online"
-          />
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
-            title="Back to All Projects"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
+        {/* Bottom Rail / Footer Actions */}
+        <div className={`w-full border-t border-sidebar-border pt-3 ${sidebarOpen ? "px-3 space-y-2" : "flex flex-col items-center gap-3"}`}>
+          {sidebarOpen ? (
+            <>
+              <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span>Daemon :3001</span>
+                </span>
+                <span className="text-[10px] text-primary font-semibold">Active</span>
+              </div>
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="w-full py-1.5 px-2.5 rounded-md bg-sidebar-accent border border-sidebar-border text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>All Projects</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <div
+                className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm"
+                title="Daemon Online: Port 3001"
+              />
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+                title="Back to All Projects"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </aside>
 
@@ -337,7 +449,7 @@ function ProjectDashboardContent() {
           </div>
         </header>
 
-        {/* Project Header Banner & Sub-Tabs */}
+        {/* Project Header Banner with Mission-Control Status Toolbar (Non-redundant) */}
         <div className="border-b border-border bg-card px-6 py-4 transition-colors duration-200">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
@@ -357,78 +469,73 @@ function ProjectDashboardContent() {
               </div>
             </div>
 
-            {/* Supabase-styled Horizontal Sub-Tabs */}
-            <div className="flex flex-wrap items-center gap-1 bg-muted/50 p-1 rounded-lg border border-border text-xs font-mono">
-              <button
-                onClick={() => setActiveTab("swarm-graph")}
-                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === "swarm-graph"
-                    ? "bg-card text-primary font-semibold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Bot className="w-3.5 h-3.5" />
-                <span>AI Swarm & Lock Graph</span>
-              </button>
+            {/* Mission Control Live Chamber Status & Toolbar (Non-redundant) */}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/60 border border-border">
+                <span className="text-muted-foreground">Chamber:</span>
+                <span className="text-foreground font-semibold flex items-center gap-1.5">
+                  {activeTab === "swarm-graph" && (
+                    <>
+                      <Bot className="w-3.5 h-3.5 text-primary" />
+                      <span>AI Swarm Concurrency</span>
+                    </>
+                  )}
+                  {activeTab === "ast-graph" && (
+                    <>
+                      <Network className="w-3.5 h-3.5 text-primary" />
+                      <span>AST Dependency Tree</span>
+                    </>
+                  )}
+                  {activeTab === "overview" && (
+                    <>
+                      <Activity className="w-3.5 h-3.5 text-primary" />
+                      <span>Project Overview</span>
+                    </>
+                  )}
+                  {activeTab === "locks" && (
+                    <>
+                      <TableIcon className="w-3.5 h-3.5 text-primary" />
+                      <span>File Mutex Leases</span>
+                    </>
+                  )}
+                  {activeTab === "logs" && (
+                    <>
+                      <Terminal className="w-3.5 h-3.5 text-primary" />
+                      <span>Realtime Logs</span>
+                    </>
+                  )}
+                  {activeTab === "settings" && (
+                    <>
+                      <Settings className="w-3.5 h-3.5 text-primary" />
+                      <span>Project Settings</span>
+                    </>
+                  )}
+                </span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-muted-foreground">
+                <Lock className="w-3.5 h-3.5 text-primary" />
+                <span>
+                  <strong className="text-foreground">{locks.length}</strong> Mutex Leases
+                </span>
+              </div>
 
               <button
-                onClick={() => setActiveTab("ast-graph")}
-                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === "ast-graph"
-                    ? "bg-card text-primary font-semibold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                onClick={(e) => handleCopy(project?.render_url || "http://127.0.0.1:3001", "endpoint")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-foreground hover:bg-muted transition-colors cursor-pointer shadow-2xs"
+                title="Copy API Endpoint"
               >
-                <Network className="w-3.5 h-3.5" />
-                <span>AST Dependency Graph</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("overview")}
-                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === "overview"
-                    ? "bg-card text-primary font-semibold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Overview</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("locks")}
-                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === "locks"
-                    ? "bg-card text-primary font-semibold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <TableIcon className="w-3.5 h-3.5" />
-                <span>File Locks ({locks.length})</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("logs")}
-                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === "logs"
-                    ? "bg-card text-primary font-semibold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Terminal className="w-3.5 h-3.5" />
-                <span>Logs</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("settings")}
-                className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === "settings"
-                    ? "bg-card text-primary font-semibold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span>Settings</span>
+                {copiedKey === "endpoint" ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-primary font-semibold">Copied :3001</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>:3001 Endpoint</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
