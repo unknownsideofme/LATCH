@@ -25,8 +25,8 @@ export const createRenderFunction = inngest.createFunction(
   async ({ event, step }) => {
     const { projectId, payload } = event.data;
 
-    // 1. Mark as creating
-    await step.run("mark-creating", () => ProjectModel.update(projectId, { status: "creating" }));
+    // 1. Mark as deploying
+    await step.run("mark-deploying", () => ProjectModel.update(projectId, { status: "deploying" }));
 
     // 2. Call Render CLI
     const render = await step.run("provision", () => RenderService.createService(payload));
@@ -60,7 +60,7 @@ export const createRenderFunction = inngest.createFunction(
       });
 
       if (isLive) {
-        await step.run("mark-active", () => ProjectModel.update(projectId, { status: "active" }));
+        await step.run("mark-running", () => ProjectModel.update(projectId, { status: "running" }));
         return { renderId, renderUrl, live: true };
       }
     }
@@ -83,3 +83,55 @@ export const deleteRenderFunction = inngest.createFunction(
 );
 
 export const inngestFunctions = [createRenderFunction, deleteRenderFunction];
+
+// Local development worker fallback: executes Render CLI directly when running on localhost
+export async function runProvisioningWorker(projectId, payload) {
+  try {
+    const existing = await ProjectModel.findById(projectId);
+    if (!existing || existing.status === "deploying" || existing.status === "running") {
+      return;
+    }
+
+    console.log(`[worker] 🚀 Starting Render provisioning for project ${projectId} (${payload.name})...`);
+    await ProjectModel.update(projectId, { status: "deploying" });
+
+    const render = await RenderService.createService(payload);
+    const renderId = render?.id || render?.service?.id;
+    if (!renderId) throw new Error("Render provisioning response missing service id");
+
+    const renderUrl = render?.serviceDetails?.url || render?.url || `https://${payload.name}.onrender.com`;
+    await ProjectModel.update(projectId, { render_id: renderId, render_url: renderUrl, status: "deploying" });
+    console.log(`[worker] ✔ Render service created: ${renderId} (${renderUrl})`);
+
+    // Poll health endpoint in background
+    const healthUrl = `${renderUrl.replace(/\/$/, "")}/api/health`;
+    const MAX_CHECKS = 24;
+    for (let i = 0; i < MAX_CHECKS; i++) {
+      await new Promise(r => setTimeout(r, 10000));
+      try {
+        const res = await fetch(healthUrl, { signal: AbortSignal.timeout(5000) });
+        if (res.ok || res.status === 200) {
+          await ProjectModel.update(projectId, { status: "running" });
+          console.log(`[worker] 🎉 Service ${renderId} is now LIVE and marked running!`);
+          return;
+        }
+      } catch {}
+    }
+
+    console.log(`[worker] ⚠️ Health check polling finished for ${renderId}`);
+  } catch (err) {
+    console.error(`[worker] ❌ Provisioning failed for ${projectId}:`, err.message);
+    await ProjectModel.update(projectId, { status: "failed" }).catch(() => {});
+  }
+}
+
+export async function runTeardownWorker(projectId, renderId) {
+  try {
+    console.log(`[worker] 🗑 Tearing down Render service ${renderId}...`);
+    if (renderId) await RenderService.deleteService(renderId);
+    if (projectId) await ProjectModel.update(projectId, { status: "deleted" });
+    console.log(`[worker] ✔ Project ${projectId} marked deleted`);
+  } catch (err) {
+    console.error(`[worker] ❌ Teardown failed:`, err.message);
+  }
+}

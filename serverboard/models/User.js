@@ -30,11 +30,12 @@ export const UserModel = {
     const existing = await this.findByUsername(cleanUsername);
     if (existing) throw new Error(`Username '${cleanUsername}' is already taken`);
 
-    // Create Supabase Auth user
-    const { data: auth, error: authError } = await supabase.auth.signUp({
+    // Create Supabase Auth user via admin API (auto-confirms and preserves service_role headers)
+    const { data: auth, error: authError } = await supabase.auth.admin.createUser({
       email: email.trim(),
       password,
-      options: { data: { username: cleanUsername, name: name || cleanUsername } },
+      email_confirm: true,
+      user_metadata: { username: cleanUsername, name: name || cleanUsername },
     });
     if (authError) throw authError;
 
@@ -50,13 +51,27 @@ export const UserModel = {
     const { data: user, error: dbError } = await supabase.from("users").insert([profile]).select().single();
     if (dbError) throw dbError;
 
-    return { user: user || profile, session: auth.session };
+    // Return active session immediately upon registration
+    const loginResult = await this.authenticate(email.trim(), password).catch(() => ({ session: null }));
+
+    return { user: user || profile, session: loginResult.session };
   },
 
   async authenticate(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) throw error;
-    const profile = await this.findById(data.user.id);
+    let profile = await this.findById(data.user.id);
+    if (!profile) {
+      const username = data.user.user_metadata?.username || `user_${data.user.id.slice(0, 8)}`;
+      const { data: created } = await supabase.from("users").insert([{
+        id: data.user.id,
+        username,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || username,
+        project_limit: 3,
+      }]).select().maybeSingle();
+      profile = created;
+    }
     return { user: profile || data.user, session: data.session };
   },
 };

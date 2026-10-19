@@ -8,7 +8,14 @@ if (!config.supabase.url || !config.supabase.key) {
 export const supabase = createClient(
   config.supabase.url || "https://placeholder.supabase.co",
   config.supabase.key || "placeholder-key",
-  { auth: { persistSession: false } }
+  {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: {
+        Authorization: `Bearer ${config.supabase.key}`,
+      },
+    },
+  }
 );
 
 export async function checkDbHealth() {

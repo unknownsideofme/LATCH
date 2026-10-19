@@ -9,7 +9,7 @@ for (const p of [path.resolve(process.cwd(), ".env"), path.resolve(__dirname, ".
   if (fs.existsSync(p)) {
     for (const line of fs.readFileSync(p, "utf8").split("\n")) {
       const match = line.trim().match(/^([^#=]+)=(.*)$/);
-      if (match && process.env[match[1].trim()] === undefined) {
+      if (match) {
         process.env[match[1].trim()] = match[2].trim().replace(/^['"]|['"]$/g, "");
       }
     }
@@ -41,12 +41,12 @@ export const config = {
     : ["http://localhost:3000", "http://localhost:3002", "http://localhost:4000", "http://127.0.0.1:3002"],
   supabase: {
     url: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
-    key: process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    key: process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   },
   inngest: {
     eventKey: process.env.INNGEST_EVENT_KEY,
     signingKey: process.env.INNGEST_SIGNING_KEY,
-    isDev: isDev && process.env.INNGEST_DEV === "1",
+    isDev: isDev,
   },
   webhookSecret: process.env.RENDER_WEBHOOK_SECRET,
 };

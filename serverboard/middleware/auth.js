@@ -11,7 +11,19 @@ export async function requireAuth(req, res, next) {
       const { data, error } = await supabase.auth.getUser(token);
       if (!error && data?.user) {
         req.user = data.user;
-        req.userProfile = await UserModel.findById(data.user.id);
+        let profile = await UserModel.findById(data.user.id);
+        if (!profile) {
+          const username = data.user.user_metadata?.username || `user_${data.user.id.slice(0, 8)}`;
+          const { data: created } = await supabase.from("users").insert([{
+            id: data.user.id,
+            username,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || username,
+            project_limit: 3,
+          }]).select().maybeSingle();
+          profile = created;
+        }
+        req.userProfile = profile;
         return next();
       }
     }

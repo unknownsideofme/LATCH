@@ -1,6 +1,7 @@
 import { ProjectModel } from "../models/Project.js";
-import { inngest } from "../services/inngestService.js";
+import { inngest, runProvisioningWorker, runTeardownWorker } from "../services/inngestService.js";
 import { RenderService } from "../services/renderService.js";
+import { config } from "../config/env.js";
 
 const ALLOWED_REGIONS = new Set(["singapore", "oregon", "frankfurt", "ohio"]);
 const ALLOWED_PLANS = new Set(["free"]);
@@ -35,28 +36,35 @@ export const ProjectController = {
       // Plan is strictly enforced to 'free' to prevent unauthorized billing
       const selectedPlan = "free";
 
-      // 3. Create database row (status: queued)
+      // 3. Create database row (status: pending)
       const project = await ProjectModel.create({
         userId: req.user.id,
         projectName: sanitizedName,
         agentLimit: 5,
       });
 
-      // 4. Dispatch background deployment event
+      const payload = {
+        name: sanitizedName,
+        repo: ALLOWED_REPO,
+        branch: selectedBranch,
+        region: selectedRegion,
+        plan: selectedPlan,
+      };
+
+      // 4. Dispatch background deployment event to Inngest
       const event = await inngest.send({
         name: "project/create",
         data: {
           projectId: project.id,
           userId: req.user.id,
-          payload: {
-            name: sanitizedName,
-            repo: ALLOWED_REPO,
-            branch: selectedBranch,
-            region: selectedRegion,
-            plan: selectedPlan,
-          },
+          payload,
         },
       });
+
+      // 5. In local development, execute provisioning directly in background
+      if (config.isDev) {
+        setImmediate(() => runProvisioningWorker(project.id, payload));
+      }
 
       res.status(202).json({
         message: "Project queued for deployment",
@@ -100,6 +108,9 @@ export const ProjectController = {
       if (project.render_id) {
         await ProjectModel.update(project.id, { status: "deleting" });
         await inngest.send({ name: "project/delete", data: { projectId: project.id, renderId: project.render_id } });
+        if (config.isDev) {
+          setImmediate(() => runTeardownWorker(project.id, project.render_id));
+        }
         return res.json({ message: "Project teardown queued" });
       }
 
@@ -150,8 +161,8 @@ export const ProjectController = {
       const healthUrl = `${project.render_url.replace(/\/$/, "")}/api/health`;
       const response = await fetch(healthUrl, { signal: AbortSignal.timeout(4000) });
       const ok = response.ok;
-      if (ok && project.status !== "active") {
-        await ProjectModel.update(project.id, { status: "active" });
+      if (ok && project.status !== "running") {
+        await ProjectModel.update(project.id, { status: "running" });
       }
       res.json({ live: ok, url: project.render_url });
     } catch {

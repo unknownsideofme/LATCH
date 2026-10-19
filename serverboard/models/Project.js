@@ -48,7 +48,7 @@ export const ProjectModel = {
       .insert([{
         user_id: userId,
         project_name: projectName.trim(),
-        status: "queued",
+        status: "pending",
         agent_limit: Number(agentLimit) || 5,
       }])
       .select()
