@@ -24,26 +24,26 @@ export function ProblemSolutionSplit() {
             {/* Problem Checklist */}
             <div className="mt-6 space-y-2.5 text-xs text-foreground">
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
-                  ✕
+                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center shrink-0">
+                  <X className="w-2.5 h-2.5 stroke-[2.5]" />
                 </span>
                 <span>No filesystem lock coordination</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
-                  ✕
+                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center shrink-0">
+                  <X className="w-2.5 h-2.5 stroke-[2.5]" />
                 </span>
                 <span>Zero awareness of other running agents</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
-                  ✕
+                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center shrink-0">
+                  <X className="w-2.5 h-2.5 stroke-[2.5]" />
                 </span>
                 <span>Silent code clobbering & broken builds</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
-                  ✕
+                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center shrink-0">
+                  <X className="w-2.5 h-2.5 stroke-[2.5]" />
                 </span>
                 <span>Designed for solo developers, not agent swarms</span>
               </div>
@@ -89,26 +89,26 @@ export function ProblemSolutionSplit() {
             {/* Solution Checklist */}
             <div className="mt-6 space-y-2.5 text-xs text-foreground">
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
-                  ✓
+                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 stroke-[2.5]" />
                 </span>
                 <span>Sub-millisecond exclusive file mutex leases</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
-                  ✓
+                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 stroke-[2.5]" />
                 </span>
                 <span>AST dependency blast-radius bounding</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
-                  ✓
+                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 stroke-[2.5]" />
                 </span>
                 <span>Real-time causal patch streaming via vector clocks</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
-                  ✓
+                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 stroke-[2.5]" />
                 </span>
                 <span>Stop hook protocol integration for all major agents</span>
               </div>

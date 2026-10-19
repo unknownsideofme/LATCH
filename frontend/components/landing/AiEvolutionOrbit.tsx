@@ -95,7 +95,11 @@ export function AiEvolutionOrbit() {
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-muted border border-border text-[11px] font-mono text-primary">
             <span>CHRONOLOGY</span>
             <span className="text-muted-foreground">·</span>
-            <span>2021 → 2026</span>
+            <span className="inline-flex items-center gap-1">
+              <span>2021</span>
+              <ArrowRight className="w-2.5 h-2.5" />
+              <span>2026</span>
+            </span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-[var(--font-display)] font-bold text-foreground tracking-tight leading-snug">

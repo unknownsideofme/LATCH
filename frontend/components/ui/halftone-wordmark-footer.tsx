@@ -533,8 +533,11 @@ export default function HalftoneWordmarkFooter({
       </div>
       <div className="hwf-rule">
         {backToTop ? (
-          <button type="button" className="hwf-up" onClick={toTop}>
-            Back to top ↑
+          <button type="button" className="hwf-up inline-flex items-center gap-1.5" onClick={toTop}>
+            <span>Back to top</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m18 15-6-6-6 6" />
+            </svg>
           </button>
         ) : null}
       </div>

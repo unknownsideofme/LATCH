@@ -26,6 +26,7 @@ import {
   Layers,
   Sparkles,
   CheckCircle2,
+  X,
 } from "lucide-react";
 
 /* ------------------------------- Custom Node Components ------------------------------- */
@@ -570,9 +571,10 @@ export function SwarmLockGraph({ projectId, projectName }: SwarmLockGraphProps) 
               </span>
               <button
                 onClick={() => setSelectedNode(null)}
-                className="text-[var(--muted-foreground)] hover:text-[var(--card-foreground)] cursor-pointer"
+                className="text-[var(--muted-foreground)] hover:text-[var(--card-foreground)] cursor-pointer p-0.5 rounded hover:bg-[var(--muted)] transition-colors"
+                aria-label="Close inspector"
               >
-                ✕
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
             <div>

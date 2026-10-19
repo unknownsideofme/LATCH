@@ -8,6 +8,7 @@ import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoInput } from "@/components/deco/DecoInput";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ArrowUpRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -142,9 +143,10 @@ export default function LoginPage() {
           <span>Need an account?</span>
           <Link
             href="/signup"
-            className="text-primary font-medium hover:underline text-xs"
+            className="text-primary font-medium hover:underline text-xs inline-flex items-center gap-1"
           >
-            Register free ↗
+            <span>Register free</span>
+            <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>
       </div>

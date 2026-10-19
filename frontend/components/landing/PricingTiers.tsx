@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { DecoButton } from "@/components/deco/DecoButton";
-import { Check, Sparkles, Terminal } from "lucide-react";
+import { Check, Sparkles, Terminal, ArrowUpRight } from "lucide-react";
 
 export function PricingTiers() {
   return (
@@ -75,7 +75,10 @@ export function PricingTiers() {
 
           <Link href="/signup?plan=free" className="w-full">
             <DecoButton variant="outline" size="default" className="w-full">
-              Get Started Free ↗
+              <span className="inline-flex items-center gap-1">
+                <span>Get Started Free</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </span>
             </DecoButton>
           </Link>
         </div>
@@ -138,7 +141,10 @@ export function PricingTiers() {
 
           <Link href="/signup?plan=pro" className="w-full">
             <DecoButton variant="solid" size="default" className="w-full">
-              Start 14-Day Pro Trial ↗
+              <span className="inline-flex items-center gap-1">
+                <span>Start 14-Day Pro Trial</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </span>
             </DecoButton>
           </Link>
         </div>

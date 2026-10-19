@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoInput } from "@/components/deco/DecoInput";
-import { Sparkles, Terminal } from "lucide-react";
+import { Sparkles, Terminal, ArrowUpRight } from "lucide-react";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -207,9 +207,10 @@ function SignupForm() {
           <span>Already registered?</span>
           <Link
             href="/login"
-            className="text-primary font-medium hover:underline text-xs"
+            className="text-primary font-medium hover:underline text-xs inline-flex items-center gap-1"
           >
-            Sign in ↗
+            <span>Sign in</span>
+            <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>
       </div>

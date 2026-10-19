@@ -16,7 +16,7 @@ import { AiEvolutionOrbit } from "@/components/landing/AiEvolutionOrbit";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoDivider } from "@/components/deco/DecoDivider";
 import { HalftoneWordmarkFooter } from "@/components/ui/halftone-wordmark-footer";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { Sparkles, ShieldCheck, ArrowUpRight } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
@@ -73,7 +73,10 @@ export default function Home() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link href="/signup?plan=free">
                 <DecoButton variant="solid" size="lg">
-                  Start for Free ↗
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>Start for Free</span>
+                    <ArrowUpRight className="w-4 h-4" />
+                  </span>
                 </DecoButton>
               </Link>
               <Link href="/signup?plan=pro">

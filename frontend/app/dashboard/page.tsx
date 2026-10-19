@@ -17,6 +17,7 @@ import {
   X,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   Shield,
   Layers,
   Activity,
@@ -662,7 +663,8 @@ export default function DashboardPage() {
                     </button>
 
                     <span className="text-primary text-[11px] font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                      View Studio →
+                      <span>View Studio</span>
+                      <ArrowRight className="w-3 h-3" />
                     </span>
                   </div>
                 </div>
@@ -852,13 +854,22 @@ export default function DashboardPage() {
                         Allocated Swarm Slots:
                       </span>
                       {agentCount === 2 && (
-                        <span>• Claude Code CLI + Cursor IDE</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
+                          <span>Claude Code CLI + Cursor IDE</span>
+                        </div>
                       )}
                       {agentCount === 4 && (
-                        <span>• Claude Code + Cursor IDE + Copilot CLI + Codex Task Runner</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
+                          <span>Claude Code + Cursor IDE + Copilot CLI + Codex Task Runner</span>
+                        </div>
                       )}
                       {agentCount >= 6 && (
-                        <span>• Multi-Agent Swarm with parallel AST boundary mutex</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
+                          <span>Multi-Agent Swarm with parallel AST boundary mutex</span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -882,9 +893,10 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       onClick={() => setModalStep(1)}
-                      className="px-3.5 py-1.5 rounded-md bg-muted text-xs font-mono text-muted-foreground hover:text-foreground border border-border cursor-pointer transition-colors"
+                      className="px-3.5 py-1.5 rounded-md bg-muted text-xs font-mono text-muted-foreground hover:text-foreground border border-border cursor-pointer transition-colors inline-flex items-center gap-1"
                     >
-                      ← Back
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back</span>
                     </button>
 
                     <button

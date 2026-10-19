@@ -25,6 +25,7 @@ import {
   BookOpen,
   Network,
   Users,
+  ArrowRight,
 } from "lucide-react";
 import type { ProjectRecord } from "@/lib/types";
 import { SwarmLockGraph } from "@/components/graphs/SwarmLockGraph";
@@ -567,9 +568,10 @@ function ProjectDashboardContent() {
                   </span>
                   <button
                     onClick={() => setActiveTab("locks")}
-                    className="text-xs font-mono text-primary hover:underline cursor-pointer"
+                    className="text-xs font-mono text-primary hover:underline cursor-pointer inline-flex items-center gap-1"
                   >
-                    View in table editor →
+                    <span>View in table editor</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 

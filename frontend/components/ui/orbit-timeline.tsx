@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export type OrbitTimelineEvent = {
   /** Short date shown on the card, e.g. "Mar" or "Mar 12" */
@@ -433,8 +434,12 @@ export function OrbitTimeline({
             <h4 className="ot-card-title">{curEvent.title}</h4>
             {curEvent.description && <p className="ot-card-text">{curEvent.description}</p>}
             <div className="ot-card-nav">
-              <button type="button" onClick={() => step(-1)}>← Prev</button>
-              <button type="button" onClick={() => step(1)}>Next →</button>
+              <button type="button" onClick={() => step(-1)} className="inline-flex items-center gap-1">
+                <ChevronLeft className="w-3.5 h-3.5" /> Prev
+              </button>
+              <button type="button" onClick={() => step(1)} className="inline-flex items-center gap-1">
+                Next <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </>
         )}

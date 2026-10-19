@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ArrowUpRight } from "lucide-react";
 
 export function LandingHeader() {
   return (
@@ -37,8 +38,9 @@ export function LandingHeader() {
           <a href="#pricing" className="hover:text-foreground transition-colors">
             Pricing
           </a>
-          <Link href="/dashboard" className="text-primary hover:opacity-80 transition-opacity">
-            Cockpit ↗
+          <Link href="/dashboard" className="text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1">
+            <span>Cockpit</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </nav>
 
