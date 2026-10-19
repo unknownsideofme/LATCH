@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoInput } from "@/components/deco/DecoInput";
 import { GithubIcon } from "@/components/icons/GithubIcon";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,29 +56,33 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#0B0E11] text-[#F0F3F6]">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background text-foreground relative transition-colors duration-200">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
       {/* Brand Header */}
       <Link href="/" className="mb-6 flex items-center gap-2.5 group">
-        <div className="w-8 h-8 rounded-md bg-[#3ECF8E] text-black font-[var(--font-display)] font-bold text-base flex items-center justify-center">
+        <div className="w-8 h-8 rounded-md bg-primary text-primary-foreground font-[var(--font-display)] font-bold text-base flex items-center justify-center shadow-sm">
           L
         </div>
-        <span className="font-[var(--font-display)] text-xl font-bold text-[#F0F3F6]">
+        <span className="font-[var(--font-display)] text-xl font-bold text-foreground">
           Latch
         </span>
       </Link>
 
-      <div className="w-full max-w-md bg-[#12161C] border border-[#262C34] rounded-lg p-6 sm:p-8 shadow-sm">
-        <div className="pb-5 border-b border-[#262C34] mb-6 text-center">
-          <h1 className="text-xl sm:text-2xl font-[var(--font-display)] text-[#F0F3F6] font-bold tracking-tight">
+      <div className="w-full max-w-md bg-card border border-border rounded-lg p-6 sm:p-8 shadow-sm text-card-foreground">
+        <div className="pb-5 border-b border-border mb-6 text-center">
+          <h1 className="text-xl sm:text-2xl font-[var(--font-display)] text-foreground font-bold tracking-tight">
             Sign in to Latch
           </h1>
-          <p className="text-xs text-[#8B949E] mt-1.5 font-[var(--font-body)]">
+          <p className="text-xs text-muted-foreground mt-1.5 font-[var(--font-body)]">
             Connect your credentials or authorize with GitHub to coordinate machines.
           </p>
         </div>
 
         {errorMsg && (
-          <div className="mb-5 p-3 rounded bg-[#DA7756]/10 border border-[#DA7756]/40 text-[#DA7756] text-xs font-mono">
+          <div className="mb-5 p-3 rounded bg-destructive/10 border border-destructive/40 text-destructive text-xs font-mono">
             {errorMsg}
           </div>
         )}
@@ -88,18 +93,18 @@ export default function LoginPage() {
             type="button"
             onClick={handleGitHubLogin}
             disabled={loading}
-            className="w-full h-11 rounded-md bg-[#3ECF8E] text-black font-[var(--font-display)] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2.5 cursor-pointer hover:bg-[#4EFAAE] active:scale-[0.99] transition-all"
+            className="w-full h-11 rounded-md bg-primary text-primary-foreground font-[var(--font-display)] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2.5 cursor-pointer hover:opacity-90 active:scale-[0.99] transition-all shadow-sm"
           >
-            <GithubIcon className="w-4 h-4 text-black" />
+            <GithubIcon className="w-4 h-4 text-primary-foreground" />
             <span>Continue with GitHub</span>
           </button>
 
           <div className="flex items-center gap-3 my-5">
-            <div className="h-[1px] flex-1 bg-[#262C34]" />
-            <span className="text-[11px] font-mono text-[#8B949E] uppercase">
+            <div className="h-[1px] flex-1 bg-border" />
+            <span className="text-[11px] font-mono text-muted-foreground uppercase">
               or email
             </span>
-            <div className="h-[1px] flex-1 bg-[#262C34]" />
+            <div className="h-[1px] flex-1 bg-border" />
           </div>
 
           <form onSubmit={handleEmailLogin} className="space-y-4">
@@ -133,11 +138,11 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <div className="mt-6 pt-5 border-t border-[#262C34] flex items-center justify-between text-xs text-[#8B949E]">
+        <div className="mt-6 pt-5 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
           <span>Need an account?</span>
           <Link
             href="/signup"
-            className="text-[#3ECF8E] font-medium hover:underline text-xs"
+            className="text-primary font-medium hover:underline text-xs"
           >
             Register free ↗
           </Link>

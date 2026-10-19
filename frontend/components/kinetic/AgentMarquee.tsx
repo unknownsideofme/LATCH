@@ -13,30 +13,30 @@ const events = [
 
 export function AgentMarquee() {
   return (
-    <div className="w-full border-b border-[#262C34] bg-[#0E1217] py-2 select-none overflow-hidden font-mono text-xs">
+    <div className="w-full border-b border-border bg-muted/40 py-2 select-none overflow-hidden font-mono text-xs transition-colors duration-200">
       <Marquee speed={35} direction="right" gradient={false} autoFill>
         <div className="flex items-center gap-6 pr-6">
           {events.map((e, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-2 px-2.5 py-1 rounded bg-[#161B22] border border-[#262C34]"
+              className="flex items-center gap-2 px-2.5 py-1 rounded bg-card border border-border shadow-sm"
             >
-              <span className="text-[#3ECF8E]">{e.icon}</span>
-              <span className="font-medium text-[#F0F3F6]">
+              <span className="text-primary">{e.icon}</span>
+              <span className="font-medium text-foreground">
                 {e.agent}
               </span>
               <span
                 className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
                   e.action === "BLOCKED"
-                    ? "bg-[#DA7756]/15 text-[#DA7756] border border-[#DA7756]/30"
+                    ? "bg-destructive/15 text-destructive border border-destructive/30"
                     : e.action === "LOCKED"
-                    ? "bg-[#3ECF8E]/15 text-[#3ECF8E] border border-[#3ECF8E]/30"
-                    : "bg-[#21262D] text-[#8B949E]"
+                    ? "bg-primary/15 text-primary border border-primary/30"
+                    : "bg-muted text-muted-foreground border border-border"
                 }`}
               >
                 {e.action}
               </span>
-              <span className="text-[#8B949E] text-[11px]">{e.file}</span>
+              <span className="text-muted-foreground text-[11px]">{e.file}</span>
             </div>
           ))}
         </div>

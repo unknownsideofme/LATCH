@@ -7,42 +7,42 @@ export function ProblemSolutionSplit() {
     <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-16">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Column 01: The Problem */}
-        <div className="rounded-lg bg-[#12161C] border border-[#262C34] p-6 sm:p-8 flex flex-col justify-between">
+        <div className="rounded-lg bg-card border border-border p-6 sm:p-8 flex flex-col justify-between text-card-foreground shadow-sm">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#DA7756]">
+              <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-destructive">
                 01 // The Problem
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-[var(--font-display)] font-bold text-[#F0F3F6] tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-[var(--font-display)] font-bold text-foreground tracking-tight">
               AI agents are fast. But they don't coordinate.
             </h2>
-            <p className="mt-2 text-xs sm:text-sm text-[#8B949E] leading-relaxed">
+            <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
               When multiple agents edit the same repository in parallel, they overwrite each other's changes, hallucinate broken AST interfaces, and destroy work.
             </p>
 
             {/* Problem Checklist */}
-            <div className="mt-6 space-y-2.5 text-xs text-[#F0F3F6]">
+            <div className="mt-6 space-y-2.5 text-xs text-foreground">
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-[#DA7756]/15 text-[#DA7756] border border-[#DA7756]/30 flex items-center justify-center text-[10px] shrink-0">
+                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
                   ✕
                 </span>
                 <span>No filesystem lock coordination</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-[#DA7756]/15 text-[#DA7756] border border-[#DA7756]/30 flex items-center justify-center text-[10px] shrink-0">
+                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
                   ✕
                 </span>
                 <span>Zero awareness of other running agents</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-[#DA7756]/15 text-[#DA7756] border border-[#DA7756]/30 flex items-center justify-center text-[10px] shrink-0">
+                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
                   ✕
                 </span>
                 <span>Silent code clobbering & broken builds</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded bg-[#DA7756]/15 text-[#DA7756] border border-[#DA7756]/30 flex items-center justify-center text-[10px] shrink-0">
+                <span className="w-4 h-4 rounded bg-destructive/15 text-destructive border border-destructive/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
                   ✕
                 </span>
                 <span>Designed for solo developers, not agent swarms</span>
@@ -51,90 +51,103 @@ export function ProblemSolutionSplit() {
           </div>
 
           {/* Merge Conflict Code Card Inset */}
-          <div className="mt-6 p-3.5 rounded bg-[#0B0E11] border border-[#DA7756]/40 font-mono text-xs">
-            <div className="flex items-center gap-1.5 text-[#DA7756] text-[10px] font-bold uppercase mb-2">
+          <div className="mt-6 p-3.5 rounded bg-muted/30 border border-destructive/40 font-mono text-xs">
+            <div className="flex items-center gap-1.5 text-destructive text-[10px] font-bold uppercase mb-2">
               <AlertOctagon className="w-3.5 h-3.5" />
               Merge Conflict Detected (No Latch)
             </div>
             <div className="space-y-1 text-[11px] leading-relaxed">
-              <div className="text-[#8B949E]">// src/auth.ts · concurrent edits clobbered</div>
-              <div className="text-[#DA7756] bg-[#DA7756]/10 px-1 py-0.5 rounded">
+              <div className="text-muted-foreground">// src/auth.ts · concurrent edits clobbered</div>
+              <div className="text-destructive bg-destructive/10 px-1 py-0.5 rounded">
                 &lt;&lt;&lt;&lt;&lt;&lt;&lt; Claude Code: rewrite session handler
               </div>
-              <div className="text-[#8B949E] px-1">
+              <div className="text-muted-foreground px-1">
                 ======= Cursor: inline token verification
               </div>
-              <div className="text-[#DA7756] bg-[#DA7756]/10 px-1 py-0.5 rounded">
-                &gt;&gt;&gt;&gt;&gt;&gt;&gt; git merge: 2 files damaged
+              <div className="text-destructive bg-destructive/10 px-1 py-0.5 rounded">
+                &gt;&gt;&gt;&gt;&gt;&gt;&gt;
               </div>
             </div>
           </div>
         </div>
 
         {/* Column 02: The Solution */}
-        <div className="rounded-lg bg-[#12161C] border border-[#3ECF8E]/40 p-6 sm:p-8 flex flex-col justify-between">
+        <div className="rounded-lg bg-card border border-primary/30 p-6 sm:p-8 flex flex-col justify-between text-card-foreground shadow-sm">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#3ECF8E]">
+              <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-primary">
                 02 // The Solution
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-[var(--font-display)] font-bold text-[#F0F3F6] tracking-tight">
-              A single coordination layer for every agent.
+            <h2 className="text-xl sm:text-2xl font-[var(--font-display)] font-bold text-foreground tracking-tight">
+              A real-time coordination layer for machine-speed coders.
             </h2>
-            <p className="mt-2 text-xs sm:text-sm text-[#8B949E] leading-relaxed">
-              Latch adds a distributed state layer with write mutexes, dependency blast-radius awareness, and sub-millisecond patch broadcasting.
+            <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Latch wraps your repository in a distributed AST lock engine and causal patch bus. Agents request locks before editing and synchronize AST boundaries.
             </p>
 
-            {/* 4 Solution Feature Cards */}
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3 rounded bg-[#0B0E11] border border-[#262C34]">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#F0F3F6] mb-1">
-                  <Shield className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                  Smart File Locks
-                </div>
-                <p className="text-[11px] text-[#8B949E] leading-relaxed">
-                  Exclusive write claims enforced before any edit touches disk.
-                </p>
+            {/* Solution Checklist */}
+            <div className="mt-6 space-y-2.5 text-xs text-foreground">
+              <div className="flex items-center gap-2.5">
+                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                  ✓
+                </span>
+                <span>Sub-millisecond exclusive file mutex leases</span>
               </div>
-
-              <div className="p-3 rounded bg-[#0B0E11] border border-[#262C34]">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#F0F3F6] mb-1">
-                  <Network className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                  Dependency Graph
-                </div>
-                <p className="text-[11px] text-[#8B949E] leading-relaxed">
-                  Understands AST symbol imports and blocks contested blast radiuses.
-                </p>
+              <div className="flex items-center gap-2.5">
+                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                  ✓
+                </span>
+                <span>AST dependency blast-radius bounding</span>
               </div>
-
-              <div className="p-3 rounded bg-[#0B0E11] border border-[#262C34]">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#F0F3F6] mb-1">
-                  <Eye className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                  Realtime Awareness
-                </div>
-                <p className="text-[11px] text-[#8B949E] leading-relaxed">
-                  Agents see peer intentions, active leases, and tasks dynamically.
-                </p>
+              <div className="flex items-center gap-2.5">
+                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                  ✓
+                </span>
+                <span>Real-time causal patch streaming via vector clocks</span>
               </div>
-
-              <div className="p-3 rounded bg-[#0B0E11] border border-[#262C34]">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#F0F3F6] mb-1">
-                  <GitPullRequest className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                  Causal Patch Sync
-                </div>
-                <p className="text-[11px] text-[#8B949E] leading-relaxed">
-                  Propagates disk patches across all machines via Lamport clocks.
-                </p>
+              <div className="flex items-center gap-2.5">
+                <span className="w-4 h-4 rounded bg-primary/15 text-primary border border-primary/30 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                  ✓
+                </span>
+                <span>Stop hook protocol integration for all major agents</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-[#262C34] flex items-center justify-between text-xs">
-            <span className="text-[#3ECF8E] font-medium flex items-center gap-1.5">
-              <Check className="w-4 h-4" />
-              100% Collision-free parallel autonomy
-            </span>
+          {/* Solution Spec Pill Matrix */}
+          <div className="mt-6 grid grid-cols-2 gap-2 text-xs font-mono">
+            <div className="p-3 rounded bg-muted/40 border border-border">
+              <div className="flex items-center gap-1.5 text-primary text-[10px] uppercase font-bold mb-1">
+                <Shield className="w-3 h-3" />
+                <span>File Mutex</span>
+              </div>
+              <div className="text-[11px] text-muted-foreground">0ms Overwrite Rate</div>
+            </div>
+
+            <div className="p-3 rounded bg-muted/40 border border-border">
+              <div className="flex items-center gap-1.5 text-primary text-[10px] uppercase font-bold mb-1">
+                <Network className="w-3 h-3" />
+                <span>AST Blast</span>
+              </div>
+              <div className="text-[11px] text-muted-foreground">Bounded Radius</div>
+            </div>
+
+            <div className="p-3 rounded bg-muted/40 border border-border">
+              <div className="flex items-center gap-1.5 text-primary text-[10px] uppercase font-bold mb-1">
+                <GitPullRequest className="w-3 h-3" />
+                <span>Causal Clock</span>
+              </div>
+              <div className="text-[11px] text-muted-foreground">Lamport Order</div>
+            </div>
+
+            <div className="p-3 rounded bg-muted/40 border border-border">
+              <div className="flex items-center gap-1.5 text-primary text-[10px] uppercase font-bold mb-1">
+                <Eye className="w-3 h-3" />
+                <span>Zero Lock-in</span>
+              </div>
+              <div className="text-[11px] text-muted-foreground">Local Daemon :3001</div>
+            </div>
           </div>
         </div>
       </div>

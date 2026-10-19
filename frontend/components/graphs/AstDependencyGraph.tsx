@@ -44,29 +44,29 @@ function ModuleNode({ data }: NodeProps) {
 
   return (
     <div
-      className={`w-64 p-3.5 rounded-xl bg-[#17191E] border transition-all shadow-md select-none ${
+      className={`w-64 p-3.5 rounded-[var(--radius)] bg-[var(--card)] border text-[var(--card-foreground)] transition-all shadow-sm select-none ${
         isLocked
-          ? "border-[#3ECF8E] shadow-[0_0_15px_rgba(62,207,142,0.15)] bg-[#17191E]"
+          ? "border-[var(--primary)] shadow-[0_0_12px_rgba(96,96,96,0.2)] bg-[var(--card)]"
           : isBounded
-          ? "border-[#DA7756] shadow-[0_0_15px_rgba(218,119,86,0.15)] bg-[#1A1616]"
-          : "border-[#282B30] hover:border-[#8B949E]/40"
+          ? "border-[var(--destructive)] shadow-[0_0_12px_rgba(200,122,122,0.25)] bg-[var(--card)]"
+          : "border-[var(--border)] hover:border-[var(--ring)]"
       }`}
     >
       <Handle
         type="target"
         position={Position.Top}
-        className="!bg-[#3ECF8E] !w-2.5 !h-2.5 !border-2 !border-[#12161A]"
+        className="!bg-[var(--primary)] !w-2.5 !h-2.5 !border-2 !border-[var(--card)]"
       />
 
-      <div className="flex items-start justify-between pb-2 border-b border-[#23272B]">
+      <div className="flex items-start justify-between pb-2 border-b border-[var(--border)]/60">
         <div className="flex items-center gap-2 min-w-0">
           <div
             className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
               isLocked
-                ? "bg-[#3ECF8E]/20 text-[#3ECF8E]"
+                ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
                 : isBounded
-                ? "bg-[#DA7756]/20 text-[#DA7756]"
-                : "bg-[#12161A] text-[#8B949E]"
+                ? "bg-[var(--destructive)]/20 text-[var(--destructive)]"
+                : "bg-[var(--muted)] text-[var(--muted-foreground)]"
             }`}
           >
             {isLocked ? (
@@ -78,10 +78,10 @@ function ModuleNode({ data }: NodeProps) {
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-semibold text-[#EDEDED] font-mono truncate" title={d.label}>
+            <h4 className="text-xs font-semibold text-[var(--card-foreground)] font-mono truncate" title={d.label}>
               {d.label}
             </h4>
-            <span className="text-[10px] text-[#8B949E] font-mono truncate block">
+            <span className="text-[10px] text-[var(--muted-foreground)] font-mono truncate block">
               {d.path}
             </span>
           </div>
@@ -90,223 +90,228 @@ function ModuleNode({ data }: NodeProps) {
         <span
           className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 ${
             isLocked
-              ? "bg-[#3ECF8E]/20 text-[#3ECF8E] border-[#3ECF8E]/40"
+              ? "bg-[var(--accent)] text-[var(--accent-foreground)] border-[var(--border)]"
               : isBounded
-              ? "bg-[#DA7756]/20 text-[#DA7756] border-[#DA7756]/40"
-              : "bg-[#12161A] text-[#8B949E] border-[#282B30]"
+              ? "bg-[var(--destructive)]/15 text-[var(--destructive)] border-[var(--destructive)]"
+              : "bg-[var(--muted)] text-[var(--muted-foreground)] border-[var(--border)]"
           }`}
         >
           {isLocked ? "LOCKED" : isBounded ? "BOUNDED" : "SAFE"}
         </span>
       </div>
 
-      <div className="pt-2 flex items-center justify-between text-[11px] font-mono text-[#8B949E]">
-        <span>
-          {d.importsCount} imports · {d.exportsCount} exports
-        </span>
-        <span className="text-[#3ECF8E] font-semibold text-[10px] px-1 rounded bg-[#12161A]">
-          {d.language}
-        </span>
+      <div className="pt-2 space-y-1.5 text-[10px] font-mono">
+        <div className="flex items-center justify-between text-[var(--muted-foreground)]">
+          <span>AST Contract:</span>
+          <span className="text-[var(--card-foreground)] font-semibold">{d.language}</span>
+        </div>
+
+        {isLocked && (
+          <div className="flex items-center justify-between text-[var(--primary)] bg-[var(--accent)] px-2 py-1 rounded">
+            <span>Locked by:</span>
+            <span className="font-bold">{d.lockedBy}</span>
+          </div>
+        )}
+
+        {isBounded && (
+          <div className="flex items-center justify-between text-[var(--destructive)] bg-[var(--destructive)]/10 px-2 py-1 rounded">
+            <span>Blast Radius:</span>
+            <span className="font-bold">Wait for upstream</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-[var(--muted-foreground)] pt-0.5 border-t border-[var(--border)]/40">
+          <span>{d.importsCount} imports</span>
+          <span>·</span>
+          <span>{d.exportsCount} exports</span>
+        </div>
       </div>
-
-      {isLocked && d.lockedBy && (
-        <div className="mt-2 pt-1.5 border-t border-[#23272B] text-[10px] font-mono text-[#3ECF8E] flex items-center justify-between">
-          <span>Lock Lease:</span>
-          <span className="font-semibold">{d.lockedBy}</span>
-        </div>
-      )}
-
-      {isBounded && (
-        <div className="mt-2 pt-1.5 border-t border-[#23272B] text-[10px] font-mono text-[#DA7756] flex items-center justify-between">
-          <span>Blast Radius:</span>
-          <span>Pending parent release</span>
-        </div>
-      )}
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!bg-[#3ECF8E] !w-2.5 !h-2.5 !border-2 !border-[#12161A]"
+        className="!bg-[var(--primary)] !w-2.5 !h-2.5 !border-2 !border-[var(--card)]"
       />
     </div>
   );
 }
 
-const nodeTypes = {
-  module: ModuleNode,
-};
+/* ------------------------------- Main Component ------------------------------- */
 
-/* ------------------------------- Main AstDependencyGraph ------------------------------- */
+interface AstDependencyGraphProps {
+  projectId?: string;
+  projectName?: string;
+}
 
-export function AstDependencyGraph() {
-  const [selectedNode, setSelectedNode] = useState<any | null>(null);
+export function AstDependencyGraph({ projectId, projectName }: AstDependencyGraphProps) {
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
-  // AST Module Hierarchy
+  // AST Hierarchy Nodes (4 tiers from Root Orchestrator to Core to API Adapters to Leaves)
   const initialNodes: Node[] = useMemo(
     () => [
-      // Level 1: Root Gateway / Server (y: 30)
+      // Level 1: Root Engine Orchestrator
       {
         id: "mod-root",
         type: "module",
         position: { x: 420, y: 30 },
         data: {
-          label: "index.ts",
+          label: "src/index.ts",
           path: "src/index.ts",
           language: "TypeScript",
-          importsCount: 6,
-          exportsCount: 2,
-          status: "safe",
-        },
-      },
-
-      // Level 2: Core Subsystems (y: 190)
-      {
-        id: "mod-auth",
-        type: "module",
-        position: { x: 120, y: 190 },
-        data: {
-          label: "token_engine.ts",
-          path: "src/auth/token_engine.ts",
-          language: "TypeScript",
-          importsCount: 3,
-          exportsCount: 4,
-          status: "locked",
-          lockedBy: "Claude Code",
-        },
-      },
-      {
-        id: "mod-locktable",
-        type: "module",
-        position: { x: 420, y: 190 },
-        data: {
-          label: "lock_table.rs",
-          path: "src/engine/lock_table.rs",
-          language: "Rust",
-          importsCount: 4,
-          exportsCount: 8,
-          status: "locked",
-          lockedBy: "Cursor IDE",
-        },
-      },
-      {
-        id: "mod-db",
-        type: "module",
-        position: { x: 720, y: 190 },
-        data: {
-          label: "db_client.ts",
-          path: "src/db/client.ts",
-          language: "TypeScript",
-          importsCount: 2,
+          importsCount: 8,
           exportsCount: 5,
           status: "safe",
         },
       },
 
-      // Level 3: Downstream Dependents & Blast Radius (y: 360)
+      // Level 2: Core Contracts (Level where locks cause blast radius down the tree)
+      {
+        id: "mod-auth-token",
+        type: "module",
+        position: { x: 120, y: 200 },
+        data: {
+          label: "src/auth/token_engine.ts",
+          path: "src/auth/token_engine.ts",
+          language: "TypeScript",
+          importsCount: 4,
+          exportsCount: 3,
+          status: "locked",
+          lockedBy: "Cursor IDE",
+        },
+      },
+      {
+        id: "mod-lock-table",
+        type: "module",
+        position: { x: 420, y: 200 },
+        data: {
+          label: "src/engine/lock_table.rs",
+          path: "src/engine/lock_table.rs",
+          language: "Rust",
+          importsCount: 6,
+          exportsCount: 4,
+          status: "locked",
+          lockedBy: "Copilot CLI",
+        },
+      },
+      {
+        id: "mod-db-client",
+        type: "module",
+        position: { x: 720, y: 200 },
+        data: {
+          label: "src/db/client.ts",
+          path: "src/db/client.ts",
+          language: "TypeScript",
+          importsCount: 3,
+          exportsCount: 2,
+          status: "safe",
+        },
+      },
+
+      // Level 3: Transitive Dependents (Bounded because parents are locked)
       {
         id: "mod-routes",
         type: "module",
-        position: { x: 120, y: 360 },
+        position: { x: 120, y: 370 },
         data: {
-          label: "routes.ts",
+          label: "src/api/routes.ts",
           path: "src/api/routes.ts",
           language: "TypeScript",
           importsCount: 5,
-          exportsCount: 3,
+          exportsCount: 1,
           status: "bounded",
         },
       },
       {
         id: "mod-parser",
         type: "module",
-        position: { x: 420, y: 360 },
+        position: { x: 420, y: 370 },
         data: {
-          label: "parser.rs",
+          label: "crates/ast/src/parser.rs",
           path: "crates/ast/src/parser.rs",
           language: "Rust",
-          importsCount: 5,
-          exportsCount: 12,
-          status: "locked",
-          lockedBy: "Codex CLI",
-        },
-      },
-      {
-        id: "mod-schema",
-        type: "module",
-        position: { x: 720, y: 360 },
-        data: {
-          label: "schema.prisma",
-          path: "prisma/schema.prisma",
-          language: "Prisma",
-          importsCount: 0,
-          exportsCount: 6,
-          status: "safe",
+          importsCount: 7,
+          exportsCount: 3,
+          status: "bounded",
         },
       },
 
-      // Level 4: Deep Leaf AST Nodes (y: 530)
+      // Level 4: Downstream Leaves
       {
         id: "mod-traversal",
         type: "module",
         position: { x: 420, y: 530 },
         data: {
-          label: "traversal.rs",
+          label: "crates/ast/src/traversal.rs",
           path: "crates/ast/src/traversal.rs",
           language: "Rust",
-          importsCount: 3,
-          exportsCount: 4,
-          status: "bounded",
+          importsCount: 2,
+          exportsCount: 2,
+          status: "safe",
+        },
+      },
+      {
+        id: "mod-session-types",
+        type: "module",
+        position: { x: 120, y: 530 },
+        data: {
+          label: "src/types/session.d.ts",
+          path: "src/types/session.d.ts",
+          language: "TypeScript",
+          importsCount: 1,
+          exportsCount: 6,
+          status: "safe",
         },
       },
     ],
     []
   );
 
-  // AST Dependency Edges
+  // AST Direct & Transitive Edge Dependencies
   const initialEdges: Edge[] = useMemo(
     () => [
       // Root -> Level 2
       {
-        id: "e-root-auth",
+        id: "e-root-token",
         source: "mod-root",
-        target: "mod-auth",
+        target: "mod-auth-token",
         animated: true,
-        style: { stroke: "#3ECF8E", strokeWidth: 2 },
+        style: { stroke: "var(--primary)", strokeWidth: 1.75 },
       },
       {
         id: "e-root-locktable",
         source: "mod-root",
-        target: "mod-locktable",
+        target: "mod-lock-table",
         animated: true,
-        style: { stroke: "#3ECF8E", strokeWidth: 2 },
+        style: { stroke: "var(--primary)", strokeWidth: 1.75 },
       },
       {
         id: "e-root-db",
         source: "mod-root",
-        target: "mod-db",
-        style: { stroke: "#282B30", strokeWidth: 1.5 },
+        target: "mod-db-client",
+        animated: false,
+        style: { stroke: "var(--border)", strokeWidth: 1.5 },
       },
 
-      // Level 2 -> Level 3
+      // Level 2 -> Level 3 (Bounded Blast Radius Edges)
       {
-        id: "e-auth-routes",
-        source: "mod-auth",
+        id: "e-token-routes",
+        source: "mod-auth-token",
         target: "mod-routes",
         animated: true,
-        style: { stroke: "#DA7756", strokeWidth: 2.2 },
+        label: "BLAST RADIUS",
+        labelStyle: { fill: "var(--destructive)", fontSize: 9, fontFamily: "var(--font-mono)" },
+        labelBgStyle: { fill: "var(--card)", fillOpacity: 0.95, stroke: "var(--destructive)" },
+        style: { stroke: "var(--destructive)", strokeWidth: 2, strokeDasharray: "4 4" },
       },
       {
         id: "e-locktable-parser",
-        source: "mod-locktable",
+        source: "mod-lock-table",
         target: "mod-parser",
         animated: true,
-        style: { stroke: "#3ECF8E", strokeWidth: 2 },
-      },
-      {
-        id: "e-db-schema",
-        source: "mod-db",
-        target: "mod-schema",
-        style: { stroke: "#282B30", strokeWidth: 1.5 },
+        label: "BLAST RADIUS",
+        labelStyle: { fill: "var(--destructive)", fontSize: 9, fontFamily: "var(--font-mono)" },
+        labelBgStyle: { fill: "var(--card)", fillOpacity: 0.95, stroke: "var(--destructive)" },
+        style: { stroke: "var(--destructive)", strokeWidth: 2, strokeDasharray: "4 4" },
       },
 
       // Level 3 -> Level 4
@@ -314,90 +319,98 @@ export function AstDependencyGraph() {
         id: "e-parser-traversal",
         source: "mod-parser",
         target: "mod-traversal",
-        animated: true,
-        style: { stroke: "#DA7756", strokeWidth: 2.2 },
+        animated: false,
+        style: { stroke: "var(--border)", strokeWidth: 1.5 },
+      },
+      {
+        id: "e-routes-session",
+        source: "mod-routes",
+        target: "mod-session-types",
+        animated: false,
+        style: { stroke: "var(--border)", strokeWidth: 1.5 },
       },
     ],
     []
   );
 
+  const nodeTypes = useMemo(
+    () => ({
+      module: ModuleNode,
+    }),
+    []
+  );
+
   return (
-    <div className="space-y-4">
-      {/* Top Blast Radius Metric Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="p-3.5 rounded-lg bg-[#17191E] border border-[#282B30] flex items-center justify-between">
+    <div className="w-full space-y-4">
+      {/* Top Telemetry & Summary Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+        <div className="p-3.5 rounded-[var(--radius)] bg-card border border-border flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B949E] block">
-              AST Modules
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+              AST Contracts
             </span>
-            <span className="text-xl font-bold text-[#EDEDED] font-[var(--font-display)]">
-              8 Contracts
-            </span>
+            <span className="text-lg font-bold text-foreground">8 Modules</span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-[#12161A] border border-[#282B30] flex items-center justify-center text-[#3ECF8E]">
+          <div className="w-8 h-8 rounded-lg bg-accent border border-border flex items-center justify-center text-accent-foreground">
             <Network className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="p-3.5 rounded-lg bg-[#17191E] border border-[#282B30] flex items-center justify-between">
+        <div className="p-3.5 rounded-[var(--radius)] bg-card border border-border flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B949E] block">
-              Locked Branches
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+              Active Leases
             </span>
-            <span className="text-xl font-bold text-[#3ECF8E] font-[var(--font-display)]">
-              3 Active Leases
-            </span>
+            <span className="text-lg font-bold text-foreground">2 Contract Locks</span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-[#12161A] border border-[#282B30] flex items-center justify-center text-[#3ECF8E]">
+          <div className="w-8 h-8 rounded-lg bg-accent border border-border flex items-center justify-center text-accent-foreground">
             <Lock className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="p-3.5 rounded-lg bg-[#17191E] border border-[#282B30] flex items-center justify-between">
+        <div className="p-3.5 rounded-[var(--radius)] bg-card border border-border flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B949E] block">
-              Blast Radius Bounded
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
+              Bounded Dependents
             </span>
-            <span className="text-xl font-bold text-[#DA7756] font-[var(--font-display)]">
-              2 Dependent Files
+            <span className="text-lg font-bold text-destructive">
+              2 Files In Blast Radius
             </span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-[#12161A] border border-[#282B30] flex items-center justify-center text-[#DA7756]">
+          <div className="w-8 h-8 rounded-lg bg-destructive/15 border border-destructive/30 flex items-center justify-center text-destructive">
             <AlertTriangle className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="p-3.5 rounded-lg bg-[#17191E] border border-[#282B30] flex items-center justify-between">
+        <div className="p-3.5 rounded-[var(--radius)] bg-card border border-border flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B949E] block">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
               Max AST Depth
             </span>
-            <span className="text-xl font-bold text-[#EDEDED] font-[var(--font-display)]">
-              4 Layers
-            </span>
+            <span className="text-lg font-bold text-foreground">4 Tiers Tree</span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-[#12161A] border border-[#282B30] flex items-center justify-center text-[#3ECF8E]">
+          <div className="w-8 h-8 rounded-lg bg-accent border border-border flex items-center justify-center text-accent-foreground">
             <Layers className="w-4 h-4" />
           </div>
         </div>
       </div>
 
-      {/* Interactive AST React Flow Canvas */}
-      <div className="h-[580px] w-full rounded-xl bg-[#0F1115] border border-[#282B30] overflow-hidden relative shadow-inner">
+      {/* Main Canvas Container with Scoped Canvas Theme */}
+      <div className="graph-canvas-theme relative w-full h-[650px] rounded-[var(--radius)] border border-[var(--border)] overflow-hidden shadow-sm">
         {/* Graph Legend Overlay */}
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-[#17191E]/90 backdrop-blur-md px-3.5 py-2 rounded-lg border border-[#282B30] text-[11px] font-mono text-[#8B949E]">
-          <span className="text-[#EDEDED] font-semibold">AST Propagation:</span>
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-[var(--card)]/90 backdrop-blur-md px-3.5 py-2 rounded-[var(--radius)] border border-[var(--border)] text-[11px] font-mono text-[var(--muted-foreground)]">
+          <span className="text-[var(--card-foreground)] font-semibold">AST Legend:</span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#3ECF8E]" />
-            Locked Node
+            <span className="w-2 h-2 rounded-full bg-[var(--primary)]" />
+            Locked Contract
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#DA7756]" />
-            Blast Radius Bounded
+            <span className="w-2 h-2 rounded-full bg-[var(--destructive)]" />
+            Bounded (Blast Radius)
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#282B30]" />
-            Safe / Independent
+            <span className="w-2 h-2 rounded-full bg-[var(--muted-foreground)]" />
+            Safe / Invariant
           </span>
         </div>
 
@@ -406,69 +419,53 @@ export function AstDependencyGraph() {
           defaultEdges={initialEdges}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.15 }}
+          fitViewOptions={{ padding: 0.2 }}
           minZoom={0.4}
           maxZoom={1.5}
           onNodeClick={(_, node) => setSelectedNode(node)}
-          className="bg-[#0F1115]"
+          className="bg-[var(--background)]"
         >
-          <Background color="#23272B" gap={24} size={1.2} />
+          <Background color="var(--border)" gap={24} size={1.2} />
           <Controls
-            className="!bg-[#17191E] !border-[#282B30] !rounded-lg !overflow-hidden [&>button]:!bg-[#17191E] [&>button]:!border-b-[#282B30] [&>button]:!fill-[#EDEDED] [&>button:hover]:!bg-[#1C2024]"
+            className="!bg-[var(--card)] !border-[var(--border)] !rounded-[var(--radius)] !overflow-hidden [&>button]:!bg-[var(--card)] [&>button]:!border-b-[var(--border)] [&>button]:!fill-[var(--foreground)] [&>button:hover]:!bg-[var(--muted)]"
           />
           <MiniMap
             nodeColor={(node) => {
-              if (node.data.status === "locked") return "#3ECF8E";
-              if (node.data.status === "bounded") return "#DA7756";
-              return "#282B30";
+              const d = node.data as any;
+              if (d?.status === "locked") return "var(--primary)";
+              if (d?.status === "bounded") return "var(--destructive)";
+              return "var(--border)";
             }}
-            maskColor="rgba(15, 17, 21, 0.75)"
-            className="!bg-[#17191E] !border-[#282B30] !rounded-lg"
+            maskColor="rgba(0, 0, 0, 0.25)"
+            className="!bg-[var(--card)] !border-[var(--border)] !rounded-[var(--radius)]"
           />
         </ReactFlow>
 
-        {/* Selected AST Node Details Drawer */}
+        {/* Selected Node Details Drawer */}
         {selectedNode && (
-          <div className="absolute bottom-4 right-4 z-10 w-80 p-4 rounded-xl bg-[#17191E]/95 backdrop-blur-md border border-[#3ECF8E]/40 text-xs font-mono space-y-2 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150">
-            <div className="flex items-center justify-between pb-2 border-b border-[#23272B]">
-              <span className="text-[#3ECF8E] font-bold uppercase tracking-wider text-[10px]">
+          <div className="absolute bottom-4 right-4 z-10 w-80 p-4 rounded-[var(--radius)] bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] text-xs font-mono space-y-2 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150 text-[var(--card-foreground)]">
+            <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]/60">
+              <span className="text-[var(--primary)] font-bold uppercase tracking-wider text-[10px]">
                 AST Contract Inspector
               </span>
               <button
                 onClick={() => setSelectedNode(null)}
-                className="text-[#8B949E] hover:text-[#EDEDED] cursor-pointer"
+                className="text-[var(--muted-foreground)] hover:text-[var(--card-foreground)] cursor-pointer"
               >
                 ✕
               </button>
             </div>
             <div>
-              <span className="text-[#8B949E] block text-[10px]">MODULE</span>
-              <span className="text-[#EDEDED] font-semibold">
-                {selectedNode.data.label}
+              <span className="text-[var(--muted-foreground)] block text-[10px]">MODULE ID</span>
+              <span className="text-[var(--card-foreground)] font-semibold">
+                {selectedNode.id}
               </span>
             </div>
             <div>
-              <span className="text-[#8B949E] block text-[10px]">PATH</span>
-              <span className="text-[#EDEDED] text-[11px] block truncate">
-                {selectedNode.data.path}
-              </span>
-            </div>
-            <div>
-              <span className="text-[#8B949E] block text-[10px]">AST METRICS</span>
-              <div className="p-2 rounded bg-[#12161A] border border-[#23272B] space-y-1 text-[11px]">
-                <div className="flex justify-between">
-                  <span className="text-[#8B949E]">Status:</span>
-                  <span className="text-[#3ECF8E] font-bold uppercase">{selectedNode.data.status}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#8B949E]">Language:</span>
-                  <span className="text-[#EDEDED]">{selectedNode.data.language}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#8B949E]">Blast Radius:</span>
-                  <span className="text-[#DA7756]">{selectedNode.data.status === "bounded" ? "Contained" : "Isolated"}</span>
-                </div>
-              </div>
+              <span className="text-[var(--muted-foreground)] block text-[10px]">AST METADATA</span>
+              <pre className="text-[10px] text-[var(--card-foreground)] overflow-x-auto bg-[var(--background)] p-2 rounded border border-[var(--border)]">
+                {JSON.stringify(selectedNode.data, null, 2)}
+              </pre>
             </div>
           </div>
         )}

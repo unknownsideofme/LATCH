@@ -13,7 +13,7 @@ export function DecoInput({ label, error, className = "", id, ...props }: DecoIn
       {label && (
         <label
           htmlFor={inputId}
-          className="text-xs font-medium text-[#8B949E]"
+          className="text-xs font-medium text-muted-foreground"
         >
           {label}
         </label>
@@ -21,12 +21,12 @@ export function DecoInput({ label, error, className = "", id, ...props }: DecoIn
       <div className="relative">
         <input
           id={inputId}
-          className={`w-full h-10 bg-[#0B0E11] text-[#F0F3F6] px-3.5 border border-[#262C34] focus:border-[#3ECF8E] focus:outline-none focus:ring-1 focus:ring-[#3ECF8E]/25 transition-all placeholder:text-[#484F58] text-sm rounded-md ${className}`}
+          className={`w-full h-10 bg-input text-foreground px-3.5 border border-border focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/30 transition-all placeholder:text-muted-foreground/60 text-sm rounded-[var(--radius)] ${className}`}
           {...props}
         />
       </div>
       {error && (
-        <span className="text-xs text-[#DA7756] font-medium mt-0.5">
+        <span className="text-xs text-destructive font-medium mt-0.5">
           {error}
         </span>
       )}

@@ -41,10 +41,10 @@ export function LiveActivityStream() {
   }, []);
 
   const actionStyle: Record<string, string> = {
-    LOCKED: "bg-[#3ECF8E]/15 text-[#3ECF8E] border border-[#3ECF8E]/30",
-    BLOCKED: "bg-[#DA7756]/15 text-[#DA7756] border border-[#DA7756]/30",
-    SYNCED: "bg-[#161B22] text-[#F0F3F6] border border-[#262C34]",
-    RELEASED: "bg-[#161B22] text-[#8B949E] border border-[#262C34]",
+    LOCKED: "bg-primary/15 text-primary border border-primary/30",
+    BLOCKED: "bg-destructive/15 text-destructive border border-destructive/30",
+    SYNCED: "bg-muted text-foreground border border-border",
+    RELEASED: "bg-muted text-muted-foreground border border-border",
   };
 
   const actionIcon: Record<string, React.ReactNode> = {
@@ -55,64 +55,52 @@ export function LiveActivityStream() {
   };
 
   return (
-    <div className="w-full bg-[#12161C] border border-[#262C34] rounded-lg p-4 sm:p-5 shadow-sm">
+    <div className="w-full bg-card border border-border rounded-lg p-4 sm:p-5 shadow-sm text-card-foreground">
       {/* Console Title Bar with macOS dots */}
-      <div className="flex items-center justify-between pb-3.5 border-b border-[#262C34] mb-4">
+      <div className="flex items-center justify-between pb-3.5 border-b border-border mb-4">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 mr-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80" />
-          </div>
-          <Terminal className="w-3.5 h-3.5 text-[#3ECF8E]" />
-          <span className="text-xs font-mono font-medium text-[#F0F3F6]">
-            latch-daemon telemetry (port 3001)
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80" />
+          <span className="text-xs font-mono text-muted-foreground ml-2">
+            latch-telemetry-feed: port 3001
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#3ECF8E] animate-pulse"></span>
-          <span className="text-[11px] font-mono text-[#8B949E]">
-            Live Socket
-          </span>
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <span>Real-time Causal Bus</span>
         </div>
       </div>
 
-      {/* Stream Rows */}
-      <div className="space-y-1.5 font-mono text-xs">
+      {/* Stream items */}
+      <div className="space-y-2 font-mono text-xs">
         <AnimatePresence initial={false}>
-          {items.map((item) => (
+          {items.map((event) => (
             <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: -6 }}
+              key={event.id}
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded bg-[#0B0E11] border border-[#262C34] hover:border-[#3ECF8E]/30 transition-colors"
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded bg-muted/40 border border-border hover:border-ring transition-colors"
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="text-[#8B949E] text-[10px] shrink-0">
-                  {item.time}
-                </span>
-                <span className="text-[#F0F3F6] font-medium shrink-0">
-                  {item.agent}
-                </span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[10px] text-muted-foreground">{event.time}</span>
+                <span className="font-semibold text-foreground">{event.agent}</span>
                 <span
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                    actionStyle[item.action]
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
+                    actionStyle[event.action]
                   }`}
                 >
-                  {actionIcon[item.action]}
-                  {item.action}
+                  {actionIcon[event.action]}
+                  {event.action}
                 </span>
-                <span className="text-[#8B949E] truncate text-[11px]">
-                  <FileCode className="w-3 h-3 inline mr-1 text-[#3ECF8E]" />
-                  {item.file}
-                </span>
+                <span className="text-muted-foreground truncate">{event.file}</span>
               </div>
 
-              {item.reason && (
-                <span className="text-[11px] text-[#DA7756] sm:text-right shrink-0">
-                  // {item.reason}
+              {event.reason && (
+                <span className="text-[10px] text-destructive shrink-0 bg-destructive/10 px-2 py-0.5 rounded border border-destructive/20">
+                  {event.reason}
                 </span>
               )}
             </motion.div>

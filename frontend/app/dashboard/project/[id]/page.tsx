@@ -29,6 +29,7 @@ import {
 import type { ProjectRecord } from "@/lib/types";
 import { SwarmLockGraph } from "@/components/graphs/SwarmLockGraph";
 import { AstDependencyGraph } from "@/components/graphs/AstDependencyGraph";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface LiveLock {
   id: string;
@@ -125,15 +126,18 @@ function ProjectDashboardContent() {
       if (data) {
         setProject(data);
       } else {
+        // Fallback default sample project
         setProject({
-          id: projectId,
-          user_id: "current",
-          project_name: "Project " + projectId.slice(0, 8),
-          status: "active",
+          id: projectId || "proj_latch_core",
+          user_id: "demo-user",
+          project_name: "LATCH-Engine",
+          repo_name: "unknownsideofme/LATCH",
+          branch: "main",
+          render_id: "srv_latch_core_01",
+          render_url: "http://127.0.0.1:3001",
+          status: "ready",
           agent_limit: 4,
           created_at: new Date().toISOString(),
-          repo_name: "repo/" + projectId.slice(0, 8),
-          branch: "main",
         });
       }
 
@@ -141,20 +145,9 @@ function ProjectDashboardContent() {
     }
 
     loadProject();
-
-    // Lock timer countdown simulation
-    const interval = setInterval(() => {
-      setLocks((prev) =>
-        prev.map((l) => ({
-          ...l,
-          expires_in_sec: l.expires_in_sec > 1 ? l.expires_in_sec - 1 : 30,
-        }))
-      );
-    }, 1000);
-
-    return () => clearInterval(interval);
   }, [projectId]);
 
+  // Handle local simulated lock release
   const handleReleaseLock = (lockId: string) => {
     setLocks((prev) => prev.filter((l) => l.id !== lockId));
   };
@@ -165,55 +158,54 @@ function ProjectDashboardContent() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#12161A] text-[#3ECF8E] font-mono text-xs">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-5 h-5 border-2 border-[#3ECF8E] border-t-transparent rounded-full animate-spin" />
-          <span>Opening Project Studio…</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex bg-[#12161A] text-[#EDEDED] font-sans antialiased">
-      {/* 1. SUPABASE-STYLE SLIM LEFT ICON RAIL */}
-      <aside className="w-14 bg-[#12161A] border-r border-[#23272B] flex flex-col items-center justify-between py-3 shrink-0 z-40 select-none">
+    <div className="min-h-screen flex bg-background text-foreground font-sans antialiased transition-colors duration-200">
+      {/* 1. SUPABASE-STYLE SLIM LEFT ICON RAIL (56px) */}
+      <aside className="w-14 bg-sidebar border-r border-sidebar-border flex flex-col items-center justify-between py-3 shrink-0 z-40 select-none transition-colors duration-200">
         <div className="flex flex-col items-center gap-4 w-full">
           {/* Logo */}
           <Link
-            href="/dashboard"
-            className="w-8 h-8 rounded-md bg-[#3ECF8E] text-black font-extrabold text-sm flex items-center justify-center hover:bg-[#4EFAAE] transition-all"
-            title="Back to All Projects"
+            href="/"
+            className="w-8 h-8 rounded-md bg-primary text-primary-foreground font-extrabold text-sm flex items-center justify-center hover:opacity-90 transition-all shadow-sm"
+            title="Latch Systems"
           >
             L
           </Link>
 
-          <div className="w-8 h-[1px] bg-[#23272B]" />
+          <div className="w-8 h-[1px] bg-sidebar-border" />
 
-          {/* Navigation icons inside Project */}
+          {/* Navigation icons */}
           <div className="flex flex-col items-center gap-1.5 w-full">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+              title="All Projects"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+
+            {/* Direct Quick-switch to AI Swarm Graph */}
             <button
               onClick={() => setActiveTab("swarm-graph")}
               className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                 activeTab === "swarm-graph"
-                  ? "text-[#3ECF8E] bg-[#1C2024] border border-[#282B30]"
-                  : "text-[#8B949E] hover:text-[#EDEDED] hover:bg-[#1C2024]"
+                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
-              title="AI Swarm & Lock Graph"
+              title="AI Swarm & Lock Concurrency Canvas"
             >
               <Bot className="w-4 h-4" />
             </button>
 
+            {/* Direct Quick-switch to AST Dependency Graph */}
             <button
               onClick={() => setActiveTab("ast-graph")}
               className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                 activeTab === "ast-graph"
-                  ? "text-[#3ECF8E] bg-[#1C2024] border border-[#282B30]"
-                  : "text-[#8B949E] hover:text-[#EDEDED] hover:bg-[#1C2024]"
+                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
-              title="AST Dependency Graph"
+              title="AST Dependency Tree Graph"
             >
               <Network className="w-4 h-4" />
             </button>
@@ -222,10 +214,10 @@ function ProjectDashboardContent() {
               onClick={() => setActiveTab("overview")}
               className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                 activeTab === "overview"
-                  ? "text-[#3ECF8E] bg-[#1C2024] border border-[#282B30]"
-                  : "text-[#8B949E] hover:text-[#EDEDED] hover:bg-[#1C2024]"
+                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
-              title="Project Overview"
+              title="Project Overview & Metrics"
             >
               <Activity className="w-4 h-4" />
             </button>
@@ -234,8 +226,8 @@ function ProjectDashboardContent() {
               onClick={() => setActiveTab("locks")}
               className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                 activeTab === "locks"
-                  ? "text-[#3ECF8E] bg-[#1C2024] border border-[#282B30]"
-                  : "text-[#8B949E] hover:text-[#EDEDED] hover:bg-[#1C2024]"
+                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
               title="Lock Table Editor"
             >
@@ -246,8 +238,8 @@ function ProjectDashboardContent() {
               onClick={() => setActiveTab("logs")}
               className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                 activeTab === "logs"
-                  ? "text-[#3ECF8E] bg-[#1C2024] border border-[#282B30]"
-                  : "text-[#8B949E] hover:text-[#EDEDED] hover:bg-[#1C2024]"
+                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
               title="Realtime Logs"
             >
@@ -258,8 +250,8 @@ function ProjectDashboardContent() {
               onClick={() => setActiveTab("settings")}
               className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                 activeTab === "settings"
-                  ? "text-[#3ECF8E] bg-[#1C2024] border border-[#282B30]"
-                  : "text-[#8B949E] hover:text-[#EDEDED] hover:bg-[#1C2024]"
+                  ? "text-primary bg-sidebar-accent border border-sidebar-border"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
               title="Project Settings"
             >
@@ -271,12 +263,12 @@ function ProjectDashboardContent() {
         {/* Bottom Rail Status */}
         <div className="flex flex-col items-center gap-3 w-full">
           <div
-            className="w-2.5 h-2.5 rounded-full bg-[#3ECF8E] shadow-[0_0_8px_rgba(62,207,142,0.8)]"
+            className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm"
             title="Daemon Online"
           />
           <button
             onClick={() => router.push("/dashboard")}
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-[#8B949E] hover:text-[#EDEDED] hover:bg-[#1C2024] transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
             title="Back to All Projects"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -285,65 +277,68 @@ function ProjectDashboardContent() {
       </aside>
 
       {/* 2. MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#0F1115]">
+      <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Top Breadcrumb Bar */}
-        <header className="h-14 border-b border-[#23272B] bg-[#12161A] flex items-center justify-between px-6 shrink-0 sticky top-0 z-30">
+        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 transition-colors duration-200">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="text-xs font-mono text-[#8B949E] hover:text-[#EDEDED] transition-colors flex items-center gap-1"
+              className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Projects</span>
             </Link>
-            <span className="text-[#484F58]">/</span>
-            <span className="text-xs font-semibold text-[#EDEDED] font-mono flex items-center gap-1.5">
+            <span className="text-muted-foreground/60">/</span>
+            <span className="text-xs font-semibold text-foreground font-mono flex items-center gap-1.5">
               {project?.project_name}
             </span>
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#3ECF8E]/10 border border-[#3ECF8E]/20 text-[10px] font-mono text-[#3ECF8E]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3ECF8E] animate-pulse" />
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               <span>ACTIVE</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs font-mono text-[#8B949E]">
+          <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             <span className="hidden sm:inline">
-              Daemon: <strong className="text-[#3ECF8E] font-medium">:3001</strong>
+              Daemon: <strong className="text-primary font-medium">:3001</strong>
             </span>
             <span className="hidden sm:inline">
-              Swarm: <strong className="text-[#EDEDED] font-medium">{project?.agent_limit || 4} Agents</strong>
+              Swarm: <strong className="text-foreground font-medium">{project?.agent_limit || 4} Agents</strong>
             </span>
           </div>
         </header>
 
         {/* Project Header Banner & Sub-Tabs */}
-        <div className="border-b border-[#23272B] bg-[#17191E] px-6 py-4">
+        <div className="border-b border-border bg-card px-6 py-4 transition-colors duration-200">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#12161A] border border-[#282B30] flex items-center justify-center text-[#3ECF8E]">
+                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-primary">
                   <GitBranch className="w-4 h-4" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-[#EDEDED]">
+                  <h1 className="text-lg font-bold text-foreground">
                     {project?.project_name}
                   </h1>
-                  <span className="text-[11px] font-mono text-[#8B949E]">
+                  <span className="text-[11px] font-mono text-muted-foreground">
                     {project?.repo_name || project?.project_name} · branch:{" "}
-                    <strong className="text-[#3ECF8E]">{project?.branch || "main"}</strong>
+                    <strong className="text-primary">{project?.branch || "main"}</strong>
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Supabase-styled Horizontal Sub-Tabs */}
-            <div className="flex flex-wrap items-center gap-1 bg-[#12161A] p-1 rounded-lg border border-[#282B30] text-xs font-mono">
+            <div className="flex flex-wrap items-center gap-1 bg-muted/50 p-1 rounded-lg border border-border text-xs font-mono">
               <button
                 onClick={() => setActiveTab("swarm-graph")}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === "swarm-graph"
-                    ? "bg-[#1C2024] text-[#3ECF8E] font-semibold"
-                    : "text-[#8B949E] hover:text-[#EDEDED]"
+                    ? "bg-card text-primary font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Bot className="w-3.5 h-3.5" />
@@ -354,8 +349,8 @@ function ProjectDashboardContent() {
                 onClick={() => setActiveTab("ast-graph")}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === "ast-graph"
-                    ? "bg-[#1C2024] text-[#3ECF8E] font-semibold"
-                    : "text-[#8B949E] hover:text-[#EDEDED]"
+                    ? "bg-card text-primary font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Network className="w-3.5 h-3.5" />
@@ -366,8 +361,8 @@ function ProjectDashboardContent() {
                 onClick={() => setActiveTab("overview")}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === "overview"
-                    ? "bg-[#1C2024] text-[#3ECF8E] font-semibold"
-                    : "text-[#8B949E] hover:text-[#EDEDED]"
+                    ? "bg-card text-primary font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Activity className="w-3.5 h-3.5" />
@@ -378,8 +373,8 @@ function ProjectDashboardContent() {
                 onClick={() => setActiveTab("locks")}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === "locks"
-                    ? "bg-[#1C2024] text-[#3ECF8E] font-semibold"
-                    : "text-[#8B949E] hover:text-[#EDEDED]"
+                    ? "bg-card text-primary font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <TableIcon className="w-3.5 h-3.5" />
@@ -390,8 +385,8 @@ function ProjectDashboardContent() {
                 onClick={() => setActiveTab("logs")}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === "logs"
-                    ? "bg-[#1C2024] text-[#3ECF8E] font-semibold"
-                    : "text-[#8B949E] hover:text-[#EDEDED]"
+                    ? "bg-card text-primary font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Terminal className="w-3.5 h-3.5" />
@@ -402,8 +397,8 @@ function ProjectDashboardContent() {
                 onClick={() => setActiveTab("settings")}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === "settings"
-                    ? "bg-[#1C2024] text-[#3ECF8E] font-semibold"
-                    : "text-[#8B949E] hover:text-[#EDEDED]"
+                    ? "bg-card text-primary font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Settings className="w-3.5 h-3.5" />
@@ -418,19 +413,19 @@ function ProjectDashboardContent() {
           {/* TAB 1: AI SWARM & LOCK GRAPH (REACT FLOW) */}
           {activeTab === "swarm-graph" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-[#23272B]">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
                 <div>
-                  <h3 className="text-sm font-semibold text-[#EDEDED] font-mono flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-[#3ECF8E]" />
+                  <h3 className="text-sm font-semibold text-foreground font-mono flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-primary" />
                     <span>AI Swarm & Multi-User Collaboration Topology</span>
                   </h3>
-                  <p className="text-[11px] text-[#8B949E] mt-0.5">
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
                     Live visual bipartite graph attributing concurrent human operators and AI agents to active file locks.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-[#3ECF8E] animate-pulse" />
-                  <span className="text-[#3ECF8E]">Sub-ms Mutex Bus Active</span>
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-primary font-semibold">Sub-ms Mutex Bus Active</span>
                 </div>
               </div>
 
@@ -441,19 +436,19 @@ function ProjectDashboardContent() {
           {/* TAB 2: AST DEPENDENCY GRAPH (REACT FLOW) */}
           {activeTab === "ast-graph" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-[#23272B]">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
                 <div>
-                  <h3 className="text-sm font-semibold text-[#EDEDED] font-mono flex items-center gap-2">
-                    <Network className="w-4 h-4 text-[#3ECF8E]" />
+                  <h3 className="text-sm font-semibold text-foreground font-mono flex items-center gap-2">
+                    <Network className="w-4 h-4 text-primary" />
                     <span>AST Blast-Radius Dependency Graph</span>
                   </h3>
-                  <p className="text-[11px] text-[#8B949E] mt-0.5">
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
                     Tree-sitter module boundary graph showing which downstream contracts are bounded when an upstream file is locked.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-[#DA7756] animate-pulse" />
-                  <span className="text-[#DA7756]">Blast Radius Protection Active</span>
+                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                  <span className="text-destructive font-semibold">Blast Radius Protection Active</span>
                 </div>
               </div>
 
@@ -466,72 +461,72 @@ function ProjectDashboardContent() {
             <div className="space-y-6">
               {/* Telemetry Metric Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-                <div className="p-4 bg-[#17191E] border border-[#282B30] rounded-lg">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B949E]">
+                <div className="p-4 bg-card border border-border rounded-lg shadow-sm">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                     Active File Locks
                   </span>
-                  <div className="mt-1 text-2xl font-bold text-[#3ECF8E]">
+                  <div className="mt-1 text-2xl font-bold text-primary">
                     {locks.length}
                   </div>
-                  <p className="mt-0.5 text-[11px] text-[#8B949E]">AST mutex leases</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">AST mutex leases</p>
                 </div>
 
-                <div className="p-4 bg-[#17191E] border border-[#282B30] rounded-lg">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B949E]">
+                <div className="p-4 bg-card border border-border rounded-lg shadow-sm">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                     Connected Swarm
                   </span>
-                  <div className="mt-1 text-2xl font-bold text-[#EDEDED]">
+                  <div className="mt-1 text-2xl font-bold text-foreground">
                     {project?.agent_limit || 4} / {project?.agent_limit || 4}
                   </div>
-                  <p className="mt-0.5 text-[11px] text-[#8B949E]">Claude, Cursor, Copilot</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Claude, Cursor, Copilot</p>
                 </div>
 
-                <div className="p-4 bg-[#17191E] border border-[#282B30] rounded-lg">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B949E]">
+                <div className="p-4 bg-card border border-border rounded-lg shadow-sm">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                     AST Collision Rate
                   </span>
-                  <div className="mt-1 text-2xl font-bold text-[#3ECF8E]">
+                  <div className="mt-1 text-2xl font-bold text-primary">
                     0.00%
                   </div>
-                  <p className="mt-0.5 text-[11px] text-[#8B949E]">Zero clobbered files</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Zero clobbered files</p>
                 </div>
 
-                <div className="p-4 bg-[#17191E] border border-[#282B30] rounded-lg">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#8B949E]">
+                <div className="p-4 bg-card border border-border rounded-lg shadow-sm">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                     Sync Latency
                   </span>
-                  <div className="mt-1 text-2xl font-bold text-[#EDEDED]">
+                  <div className="mt-1 text-2xl font-bold text-foreground">
                     0.7 ms
                   </div>
-                  <p className="mt-0.5 text-[11px] text-[#8B949E]">Lamport vector clock</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Lamport vector clock</p>
                 </div>
               </div>
 
               {/* Supabase-style Connection Info Box */}
-              <div className="p-5 bg-[#17191E] border border-[#282B30] rounded-lg space-y-3">
-                <div className="flex items-center justify-between pb-3 border-b border-[#23272B]">
+              <div className="p-5 bg-card border border-border rounded-lg space-y-3 shadow-sm">
+                <div className="flex items-center justify-between pb-3 border-b border-border">
                   <div>
-                    <h3 className="text-xs font-semibold text-[#EDEDED] font-mono uppercase tracking-wider">
+                    <h3 className="text-xs font-semibold text-foreground font-mono uppercase tracking-wider">
                       Daemon Connection Details
                     </h3>
-                    <p className="text-[11px] text-[#8B949E]">
+                    <p className="text-[11px] text-muted-foreground">
                       Connect your local AI agent CLI or IDE extension to this project
                     </p>
                   </div>
-                  <span className="text-xs font-mono text-[#3ECF8E]">Port 3001</span>
+                  <span className="text-xs font-mono text-primary font-bold">Port 3001</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
-                  <div className="p-3 rounded bg-[#12161A] border border-[#23272B] space-y-1">
-                    <span className="text-[10px] text-[#8B949E] uppercase">Project Ref</span>
+                  <div className="p-3 rounded bg-muted/40 border border-border space-y-1">
+                    <span className="text-[10px] text-muted-foreground uppercase">Project Ref</span>
                     <div className="flex items-center justify-between">
-                      <span className="text-[#EDEDED]">{project?.id}</span>
+                      <span className="text-foreground">{project?.id}</span>
                       <button
                         onClick={() => handleCopy(project?.id || "", "ref")}
-                        className="text-[#8B949E] hover:text-[#3ECF8E] transition-colors cursor-pointer"
+                        className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                       >
                         {copiedKey === "ref" ? (
-                          <Check className="w-3.5 h-3.5 text-[#3ECF8E]" />
+                          <Check className="w-3.5 h-3.5 text-primary" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -539,22 +534,22 @@ function ProjectDashboardContent() {
                     </div>
                   </div>
 
-                  <div className="p-3 rounded bg-[#12161A] border border-[#23272B] space-y-1">
-                    <span className="text-[10px] text-[#8B949E] uppercase">
+                  <div className="p-3 rounded bg-muted/40 border border-border space-y-1">
+                    <span className="text-[10px] text-muted-foreground uppercase">
                       CLI Sync Command
                     </span>
                     <div className="flex items-center justify-between">
-                      <span className="text-[#3ECF8E] truncate">
+                      <span className="text-primary truncate">
                         latch connect {project?.project_name}
                       </span>
                       <button
                         onClick={() =>
                           handleCopy(`latch connect ${project?.project_name}`, "cli")
                         }
-                        className="text-[#8B949E] hover:text-[#3ECF8E] transition-colors cursor-pointer"
+                        className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                       >
                         {copiedKey === "cli" ? (
-                          <Check className="w-3.5 h-3.5 text-[#3ECF8E]" />
+                          <Check className="w-3.5 h-3.5 text-primary" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -565,14 +560,14 @@ function ProjectDashboardContent() {
               </div>
 
               {/* Active Leases Snapshot */}
-              <div className="p-5 bg-[#17191E] border border-[#282B30] rounded-lg">
-                <div className="flex items-center justify-between pb-3 border-b border-[#23272B] mb-3">
-                  <span className="text-xs font-mono uppercase tracking-wider text-[#8B949E]">
+              <div className="p-5 bg-card border border-border rounded-lg shadow-sm">
+                <div className="flex items-center justify-between pb-3 border-b border-border mb-3">
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
                     Current AST Mutex Leases ({locks.length})
                   </span>
                   <button
                     onClick={() => setActiveTab("locks")}
-                    className="text-xs font-mono text-[#3ECF8E] hover:underline cursor-pointer"
+                    className="text-xs font-mono text-primary hover:underline cursor-pointer"
                   >
                     View in table editor →
                   </button>
@@ -582,16 +577,16 @@ function ProjectDashboardContent() {
                   {locks.map((lock) => (
                     <div
                       key={lock.id}
-                      className="flex items-center justify-between p-2.5 rounded bg-[#12161A] border border-[#23272B]"
+                      className="flex items-center justify-between p-2.5 rounded bg-muted/30 border border-border"
                     >
                       <div className="flex items-center gap-2">
-                        <Lock className="w-3.5 h-3.5 text-[#3ECF8E]" />
-                        <span className="font-semibold text-[#EDEDED]">
+                        <Lock className="w-3.5 h-3.5 text-primary" />
+                        <span className="font-semibold text-foreground">
                           {lock.agent_name}
                         </span>
-                        <span className="text-[#8B949E]">({lock.file_path})</span>
+                        <span className="text-muted-foreground">({lock.file_path})</span>
                       </div>
-                      <span className="text-[#3ECF8E] text-[11px]">
+                      <span className="text-primary text-[11px] font-semibold">
                         {lock.expires_in_sec}s remaining
                       </span>
                     </div>
@@ -603,24 +598,24 @@ function ProjectDashboardContent() {
 
           {/* TAB 4: LOCKS (SUPABASE TABLE VIEW) */}
           {activeTab === "locks" && (
-            <div className="border border-[#282B30] bg-[#17191E] rounded-lg overflow-hidden">
-              <div className="p-4 border-b border-[#23272B] flex items-center justify-between">
+            <div className="border border-border bg-card rounded-lg overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-border flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-semibold text-[#EDEDED] font-mono uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-foreground font-mono uppercase tracking-wider">
                     Lock Leases Table
                   </h3>
-                  <p className="text-[11px] text-[#8B949E]">
+                  <p className="text-[11px] text-muted-foreground">
                     Active atomic file mutex reservations arbitrated by Latch daemon
                   </p>
                 </div>
-                <span className="text-xs font-mono text-[#3ECF8E]">
+                <span className="text-xs font-mono text-primary font-bold">
                   {locks.length} active leases
                 </span>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-[#12161A] text-[#8B949E] border-b border-[#23272B]">
+                  <thead className="bg-muted/50 text-muted-foreground border-b border-border">
                     <tr>
                       <th className="py-2.5 px-4">Lease ID</th>
                       <th className="py-2.5 px-4">File Path</th>
@@ -630,30 +625,30 @@ function ProjectDashboardContent() {
                       <th className="py-2.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#23272B]">
+                  <tbody className="divide-y divide-border">
                     {locks.map((lock) => (
-                      <tr key={lock.id} className="hover:bg-[#1C2024] transition-colors">
-                        <td className="py-3 px-4 text-[#8B949E]">{lock.id}</td>
-                        <td className="py-3 px-4 font-semibold text-[#EDEDED]">
+                      <tr key={lock.id} className="hover:bg-muted/40 transition-colors">
+                        <td className="py-3 px-4 text-muted-foreground">{lock.id}</td>
+                        <td className="py-3 px-4 font-semibold text-foreground">
                           {lock.file_path}
                         </td>
-                        <td className="py-3 px-4 text-[#EDEDED]">{lock.agent_name}</td>
+                        <td className="py-3 px-4 text-foreground">{lock.agent_name}</td>
                         <td className="py-3 px-4">
                           <span
                             className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
                               lock.status === "CONTESTED"
-                                ? "bg-[#DA7756]/15 text-[#DA7756] border border-[#DA7756]/30"
-                                : "bg-[#3ECF8E]/15 text-[#3ECF8E] border border-[#3ECF8E]/30"
+                                ? "bg-destructive/15 text-destructive border border-destructive/30"
+                                : "bg-primary/10 text-primary border border-primary/20"
                             }`}
                           >
                             {lock.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-[#3ECF8E]">{lock.expires_in_sec}s</td>
+                        <td className="py-3 px-4 text-primary font-semibold">{lock.expires_in_sec}s</td>
                         <td className="py-3 px-4 text-right">
                           <button
                             onClick={() => handleReleaseLock(lock.id)}
-                            className="px-2 py-1 rounded bg-[#12161A] hover:bg-[#DA7756]/20 hover:text-[#DA7756] border border-[#23272B] text-[11px] transition-colors cursor-pointer"
+                            className="px-2 py-1 rounded bg-muted hover:bg-destructive/20 hover:text-destructive border border-border text-[11px] transition-colors cursor-pointer"
                           >
                             Release
                           </button>
@@ -668,39 +663,39 @@ function ProjectDashboardContent() {
 
           {/* TAB 5: REALTIME LOGS */}
           {activeTab === "logs" && (
-            <div className="border border-[#282B30] bg-[#17191E] rounded-lg p-5 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-[#23272B]">
+            <div className="border border-border bg-card rounded-lg p-5 space-y-4 shadow-sm">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-[#3ECF8E]" />
-                  <h3 className="text-xs font-semibold text-[#EDEDED] font-mono uppercase tracking-wider">
+                  <Terminal className="w-4 h-4 text-primary" />
+                  <h3 className="text-xs font-semibold text-foreground font-mono uppercase tracking-wider">
                     Realtime Agent Stream & Telemetry
                   </h3>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-mono text-[#8B949E]">
-                  <span className="w-2 h-2 rounded-full bg-[#3ECF8E] animate-ping" />
+                <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
+                  <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
                   Listening on :3001
                 </div>
               </div>
 
               {/* Console logs */}
-              <div className="rounded-lg bg-[#12161A] border border-[#23272B] p-6 font-mono text-xs space-y-2.5">
-                <div className="text-[#3ECF8E]">
+              <div className="rounded-lg bg-muted/40 border border-border p-6 font-mono text-xs space-y-2.5">
+                <div className="text-primary font-semibold">
                   &gt; [LATCH DAEMON :3001] Connected to project: {project?.project_name}
                 </div>
-                <div className="text-[#8B949E]">
+                <div className="text-muted-foreground">
                   &gt; [MUTEX] AST lock table initialized with {project?.agent_limit || 4} agent slots.
                 </div>
-                <div className="text-[#8B949E]">
+                <div className="text-muted-foreground">
                   &gt; [HEARTBEAT] Cursor IDE heartbeat verified (pulse latency: 0.8ms).
                 </div>
-                <div className="text-[#8B949E]">
+                <div className="text-muted-foreground">
                   &gt; [HEARTBEAT] Claude Code CLI authenticated. Lease held on src/engine/lock_table.rs.
                 </div>
-                <div className="p-4 rounded border border-[#3ECF8E]/20 bg-[#3ECF8E]/5 text-[#3ECF8E] text-xs flex items-center gap-3 mt-4">
+                <div className="p-4 rounded border border-primary/20 bg-primary/5 text-primary text-xs flex items-center gap-3 mt-4">
                   <Sparkles className="w-4 h-4 shrink-0" />
                   <div>
-                    <span className="font-semibold block">Full Interactive Logs Viewer Staged</span>
-                    <span className="text-[#8B949E] text-[11px]">
+                    <span className="font-semibold block text-foreground">Full Interactive Logs Viewer Staged</span>
+                    <span className="text-muted-foreground text-[11px]">
                       Detailed agent step logs, AST diff inspector, and vector clock sync will be hooked up here in the next phase.
                     </span>
                   </div>
@@ -711,27 +706,27 @@ function ProjectDashboardContent() {
 
           {/* TAB 6: SETTINGS */}
           {activeTab === "settings" && (
-            <div className="border border-[#282B30] bg-[#17191E] rounded-lg p-6 space-y-5">
-              <h3 className="text-xs font-semibold text-[#EDEDED] font-mono uppercase tracking-wider">
+            <div className="border border-border bg-card rounded-lg p-6 space-y-5 shadow-sm">
+              <h3 className="text-xs font-semibold text-foreground font-mono uppercase tracking-wider">
                 Project Settings & Agent Quotas
               </h3>
               <div className="space-y-4 max-w-lg font-mono text-xs">
                 <div>
-                  <label className="text-[#8B949E] block mb-1">Project Name</label>
+                  <label className="text-muted-foreground block mb-1">Project Name</label>
                   <input
                     type="text"
                     readOnly
                     value={project?.project_name || ""}
-                    className="w-full px-3 py-2 rounded bg-[#12161A] border border-[#282B30] text-[#EDEDED]"
+                    className="w-full px-3 py-2 rounded bg-input border border-border text-foreground"
                   />
                 </div>
                 <div>
-                  <label className="text-[#8B949E] block mb-1">Concurrent Agent Limit</label>
+                  <label className="text-muted-foreground block mb-1">Concurrent Agent Limit</label>
                   <input
                     type="text"
                     readOnly
                     value={`${project?.agent_limit || 4} Concurrent LLM Coders`}
-                    className="w-full px-3 py-2 rounded bg-[#12161A] border border-[#282B30] text-[#3ECF8E]"
+                    className="w-full px-3 py-2 rounded bg-input border border-border text-primary font-semibold"
                   />
                 </div>
               </div>
@@ -747,7 +742,7 @@ export default function ProjectDashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#12161A] text-[#3ECF8E] font-mono text-xs">
+        <div className="min-h-screen flex items-center justify-center bg-background text-primary font-mono text-xs">
           Loading project studio…
         </div>
       }

@@ -12,21 +12,21 @@ const stats = [
 
 export function StatsMarquee() {
   return (
-    <div className="w-full border-y border-[#262C34] bg-[#12161C] py-2.5 select-none overflow-hidden">
+    <div className="w-full border-y border-border bg-card py-2.5 select-none overflow-hidden transition-colors duration-200">
       <Marquee speed={50} gradient={false} autoFill>
         <div className="flex items-center gap-10 pr-10">
           {stats.map((stat, idx) => (
             <div key={idx} className="flex items-baseline gap-2.5">
-              <span className="font-[var(--font-display)] font-bold text-lg text-[#3ECF8E]">
+              <span className="font-[var(--font-display)] font-bold text-lg text-primary">
                 {stat.value}
               </span>
-              <span className="text-xs font-medium text-[#F0F3F6]">
+              <span className="text-xs font-medium text-foreground">
                 {stat.label}
               </span>
-              <span className="text-[11px] font-mono text-[#8B949E]">
+              <span className="text-[11px] font-mono text-muted-foreground">
                 ({stat.detail})
               </span>
-              <span className="text-xs text-[#262C34] ml-6 font-mono">
+              <span className="text-xs text-border ml-6 font-mono">
                 /
               </span>
             </div>

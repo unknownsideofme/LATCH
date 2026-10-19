@@ -64,13 +64,13 @@ export function LoadingCurtain() {
       {/* Left panel */}
       <div
         ref={leftPanelRef}
-        className="w-1/2 h-full bg-[#0B0E11] border-r border-[#262C34] flex items-center justify-end pr-6"
+        className="w-1/2 h-full bg-background border-r border-border flex items-center justify-end pr-6"
       />
 
       {/* Right panel */}
       <div
         ref={rightPanelRef}
-        className="w-1/2 h-full bg-[#0B0E11] border-l border-[#262C34] flex items-center justify-start pl-6"
+        className="w-1/2 h-full bg-background border-l border-border flex items-center justify-start pl-6"
       />
 
       {/* Center wordmark */}
@@ -78,13 +78,13 @@ export function LoadingCurtain() {
         ref={logoRef}
         className="absolute inset-0 flex flex-col items-center justify-center z-10 select-none"
       >
-        <div className="w-12 h-12 rounded-lg bg-[#3ECF8E] text-black font-[var(--font-display)] font-bold text-2xl flex items-center justify-center mb-3">
+        <div className="w-12 h-12 rounded-lg bg-primary text-primary-foreground font-[var(--font-display)] font-bold text-2xl flex items-center justify-center mb-3 shadow-md">
           L
         </div>
-        <h1 className="font-[var(--font-display)] text-2xl font-bold tracking-tight text-[#F0F3F6]">
+        <h1 className="font-[var(--font-display)] text-2xl font-bold tracking-tight text-foreground">
           Latch
         </h1>
-        <p className="font-mono text-[11px] uppercase tracking-wider text-[#3ECF8E] mt-1 font-medium">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-primary mt-1 font-semibold">
           Zero-Collision AI Swarm Engine
         </p>
       </div>

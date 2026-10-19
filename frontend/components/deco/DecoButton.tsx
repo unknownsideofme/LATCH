@@ -23,16 +23,16 @@ export function DecoButton({
 
   const variantClasses = {
     solid:
-      "bg-[#3ECF8E] text-black font-semibold hover:bg-[#4EFAAE] shadow-sm transition-colors duration-150",
+      "bg-primary text-primary-foreground font-semibold hover:opacity-90 shadow-sm transition-all duration-150",
     outline:
-      "bg-transparent text-[#F0F3F6] font-medium border border-[#262C34] hover:bg-[#161B22] hover:border-[#3E4651] transition-colors duration-150",
+      "bg-transparent text-foreground font-medium border border-border hover:bg-muted/80 hover:border-ring transition-colors duration-150",
     ghost:
-      "bg-transparent text-[#8B949E] font-medium hover:text-[#F0F3F6] hover:bg-[#161B22] transition-colors duration-150",
+      "bg-transparent text-muted-foreground font-medium hover:text-foreground hover:bg-muted/60 transition-colors duration-150",
   };
 
   return (
     <button
-      className={`relative inline-flex items-center justify-center font-[var(--font-display)] rounded-md cursor-pointer disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] transition-all ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+      className={`relative inline-flex items-center justify-center font-[var(--font-display)] rounded-[var(--radius)] cursor-pointer disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] transition-all ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
       {...props}
     >
       {icon && <span className="inline-flex items-center shrink-0">{icon}</span>}

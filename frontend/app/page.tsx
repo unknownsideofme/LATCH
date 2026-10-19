@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { LoadingCurtain } from "@/components/landing/LoadingCurtain";
@@ -15,10 +17,21 @@ import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoDivider } from "@/components/deco/DecoDivider";
 import { HalftoneWordmarkFooter } from "@/components/ui/halftone-wordmark-footer";
 import { Sparkles, ShieldCheck } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 export default function Home() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted ? resolvedTheme === "dark" : true;
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B0E11] text-[#F0F3F6] relative selection:bg-[#3ECF8E] selection:text-black">
+    <div className="min-h-screen flex flex-col bg-background text-foreground relative transition-colors duration-200">
       {/* Intro transition */}
       <LoadingCurtain />
 
@@ -30,27 +43,27 @@ export default function Home() {
         <section className="px-4 sm:px-6 max-w-6xl mx-auto pt-10 md:pt-16 pb-8 text-center">
           <div className="flex flex-col items-center">
             {/* Tagline Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#161B22] border border-[#262C34] mb-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3ECF8E] animate-pulse" />
-              <span className="text-xs font-mono font-medium text-[#3ECF8E]">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-xs font-mono font-medium text-primary">
                 CROSS-AGENT COORDINATION LAYER
               </span>
-              <span className="text-xs text-[#8B949E]">·</span>
-              <span className="text-xs font-mono text-[#8B949E]">
+              <span className="text-xs text-muted-foreground">·</span>
+              <span className="text-xs font-mono text-muted-foreground">
                 ZERO OVERWRITES
               </span>
             </div>
 
             {/* Clean Hero Headline */}
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-[var(--font-display)] font-extrabold text-[#F0F3F6] tracking-tight max-w-4xl leading-[1.15]">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-[var(--font-display)] font-extrabold text-foreground tracking-tight max-w-4xl leading-[1.15]">
               Build at Machine Speed. <br className="hidden sm:inline" />
-              <span className="text-[#3ECF8E]">Without File Collisions.</span>
+              <span className="text-primary">Without File Collisions.</span>
             </h1>
 
             {/* Description */}
-            <p className="mt-4 text-sm sm:text-base md:text-lg text-[#8B949E] max-w-2xl mx-auto leading-relaxed font-[var(--font-body)]">
+            <p className="mt-4 text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed font-[var(--font-body)]">
               Git coordinates humans committing minutes apart.{" "}
-              <strong className="text-[#F0F3F6] font-medium">
+              <strong className="text-foreground font-medium">
                 Latch coordinates autonomous AI agents editing the same files in real time
               </strong>{" "}
               — exclusive write locks, dependency blast radius checks, and live causal patch sync.
@@ -67,16 +80,16 @@ export default function Home() {
                 <DecoButton
                   variant="outline"
                   size="lg"
-                  icon={<Sparkles className="w-4 h-4 text-[#3ECF8E]" />}
+                  icon={<Sparkles className="w-4 h-4 text-primary" />}
                 >
                   Get Pro Access
                 </DecoButton>
               </Link>
             </div>
 
-            <div className="mt-4 flex items-center gap-4 text-xs font-mono text-[#8B949E]">
+            <div className="mt-4 flex items-center gap-4 text-xs font-mono text-muted-foreground">
               <span className="flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#3ECF8E]" />
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
                 Zero Cloud Lock-in
               </span>
               <span>·</span>
@@ -85,7 +98,7 @@ export default function Home() {
               <span>Open Source Core</span>
             </div>
 
-            {/* 3D Perspective Layered Product Visual from Old Landing */}
+            {/* 3D Perspective Layered Product Visual */}
             <div className="mt-10 max-w-4xl mx-auto w-full text-left">
               <HeroProductVisual />
             </div>
@@ -97,16 +110,16 @@ export default function Home() {
           <StatsMarquee />
         </div>
 
-        {/* 01 The Problem vs 02 The Solution from Old Landing */}
+        {/* 01 The Problem vs 02 The Solution */}
         <ProblemSolutionSplit />
 
         {/* Live Activity Stream & Telemetry */}
         <section id="stream" className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-xs font-mono font-medium uppercase tracking-wider text-[#3ECF8E]">
+            <span className="text-xs font-mono font-medium uppercase tracking-wider text-primary">
               Live Protocol Simulation
             </span>
-            <span className="text-xs font-mono text-[#8B949E]">
+            <span className="text-xs font-mono text-muted-foreground">
               Socket: Active (0.8ms latency)
             </span>
           </div>
@@ -129,7 +142,7 @@ export default function Home() {
         {/* Divider */}
         <DecoDivider title="How It Works" />
 
-        {/* 03 How It Works Architecture Flow from Old Landing */}
+        {/* 03 How It Works Architecture Flow */}
         <ArchitectureFlow />
 
         {/* Divider */}
@@ -140,7 +153,7 @@ export default function Home() {
           <FourPillarsGrid />
         </div>
 
-        {/* Quick Start Terminal from Old Landing */}
+        {/* Quick Start Terminal */}
         <QuickStartTerminal />
 
         {/* Divider */}
@@ -152,18 +165,26 @@ export default function Home() {
         </div>
 
         {/* Interactive Halftone Wordmark Footer */}
-        <div className="mt-20">
+        <div className="mt-20 border-t border-border">
           <HalftoneWordmarkFooter
             wordmark="latch"
             label="Latch Systems"
             meta="©2026 · Machine-Speed Coordination Layer"
-            preset="night"
+            preset={isDark ? "night" : "paper"}
             crop={0}
-            palette={{
-              background: "#0B0E11",
-              ink: "#F0F3F6",
-              warm: "#3ECF8E",
-            }}
+            palette={
+              isDark
+                ? {
+                    background: "#111111",
+                    ink: "#eeeeee",
+                    warm: "#ffe0c2",
+                  }
+                : {
+                    background: "#f9f9f9",
+                    ink: "#202020",
+                    warm: "#644a40",
+                  }
+            }
             columns={[
               {
                 title: "Protocol",
