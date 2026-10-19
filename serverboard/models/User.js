@@ -1,5 +1,7 @@
 import { supabase } from "../config/supabase.js";
 
+const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
+
 export const UserModel = {
   async findById(id) {
     const { data } = await supabase.from("users").select("*").eq("id", id).maybeSingle();
@@ -7,7 +9,8 @@ export const UserModel = {
   },
 
   async findByUsername(username) {
-    const { data } = await supabase.from("users").select("*").ilike("username", username.trim()).maybeSingle();
+    const clean = username.trim().toLowerCase();
+    const { data } = await supabase.from("users").select("*").eq("username", clean).maybeSingle();
     return data;
   },
 
@@ -18,6 +21,10 @@ export const UserModel = {
 
   async register({ email, password, username, name, projectLimit = 3 }) {
     const cleanUsername = username.trim().toLowerCase();
+
+    if (!USERNAME_REGEX.test(cleanUsername)) {
+      throw new Error("Username must be between 3 and 30 alphanumeric characters or underscores");
+    }
 
     // Verify username uniqueness
     const existing = await this.findByUsername(cleanUsername);
@@ -41,7 +48,7 @@ export const UserModel = {
     };
 
     const { data: user, error: dbError } = await supabase.from("users").insert([profile]).select().single();
-    if (dbError && dbError.code !== "23505") throw dbError;
+    if (dbError) throw dbError;
 
     return { user: user || profile, session: auth.session };
   },

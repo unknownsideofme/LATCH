@@ -2,22 +2,47 @@ import { ProjectModel } from "../models/Project.js";
 import { inngest } from "../services/inngestService.js";
 import { RenderService } from "../services/renderService.js";
 
+const ALLOWED_REGIONS = new Set(["singapore", "oregon", "frankfurt", "ohio"]);
+const ALLOWED_PLANS = new Set(["free"]);
+const ALLOWED_REPO = "https://github.com/unknownsideofme/LATCH";
+const BRANCH_REGEX = /^[a-zA-Z0-9_\-\.]{1,100}$/;
+
 export const ProjectController = {
   async create(req, res, next) {
     try {
-      const { projectName, agentLimit, repo, branch, region, plan } = req.body;
-      if (!projectName) return res.status(400).json({ error: "validation_error", message: "projectName required" });
+      const { projectName, branch, region } = req.body;
+      if (!projectName || typeof projectName !== "string") {
+        return res.status(400).json({ error: "validation_error", message: "projectName is required" });
+      }
 
-      // 1. Create project row with status: 'queued'
+      // 1. Sanitize and validate project name
+      const sanitizedName = projectName
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9-]/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      if (!sanitizedName || sanitizedName.length < 2) {
+        return res.status(400).json({
+          error: "validation_error",
+          message: "projectName must contain at least 2 alphanumeric characters",
+        });
+      }
+
+      // 2. Validate region and branch against server-side allowlists
+      const selectedRegion = ALLOWED_REGIONS.has(region) ? region : "singapore";
+      const selectedBranch = branch && BRANCH_REGEX.test(branch) ? branch : "main";
+      // Plan is strictly enforced to 'free' to prevent unauthorized billing
+      const selectedPlan = "free";
+
+      // 3. Create database row (status: queued)
       const project = await ProjectModel.create({
         userId: req.user.id,
-        projectName,
-        agentLimit,
+        projectName: sanitizedName,
+        agentLimit: 5,
       });
 
-      const sanitizedName = projectName.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "");
-
-      // 2. Dispatch background event to Inngest
+      // 4. Dispatch background deployment event
       const event = await inngest.send({
         name: "project/create",
         data: {
@@ -25,15 +50,19 @@ export const ProjectController = {
           userId: req.user.id,
           payload: {
             name: sanitizedName,
-            repo: repo || "https://github.com/unknownsideofme/LATCH",
-            branch: branch || "main",
-            region: region || "singapore",
-            plan: plan || "free",
+            repo: ALLOWED_REPO,
+            branch: selectedBranch,
+            region: selectedRegion,
+            plan: selectedPlan,
           },
         },
       });
 
-      res.status(202).json({ message: "Project queued for deployment", project, eventId: event?.ids?.[0] });
+      res.status(202).json({
+        message: "Project queued for deployment",
+        project,
+        eventId: event?.ids?.[0],
+      });
     } catch (err) {
       next(err);
     }
@@ -56,8 +85,7 @@ export const ProjectController = {
   async get(req, res, next) {
     try {
       const project = await ProjectModel.findById(req.params.id);
-      if (!project) return res.status(404).json({ error: "not_found", message: "Project not found" });
-      if (project.user_id !== req.user.id) return res.status(403).json({ error: "forbidden" });
+      if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
       res.json({ project });
     } catch (err) {
       next(err);
@@ -67,8 +95,7 @@ export const ProjectController = {
   async delete(req, res, next) {
     try {
       const project = await ProjectModel.findById(req.params.id);
-      if (!project) return res.status(404).json({ error: "not_found" });
-      if (project.user_id !== req.user.id) return res.status(403).json({ error: "forbidden" });
+      if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
 
       if (project.render_id) {
         await ProjectModel.update(project.id, { status: "deleting" });
@@ -109,18 +136,26 @@ export const ProjectController = {
     }
   },
 
-  async health(req, res) {
-    const project = await ProjectModel.findById(req.params.id);
-    if (!project?.render_url) return res.json({ live: false });
-
+  async health(req, res, next) {
     try {
+      const project = await ProjectModel.findById(req.params.id);
+      if (!project || project.user_id !== req.user.id) {
+        return res.status(404).json({ error: "not_found" });
+      }
+
+      if (!project.render_url) {
+        return res.json({ live: false });
+      }
+
       const healthUrl = `${project.render_url.replace(/\/$/, "")}/api/health`;
       const response = await fetch(healthUrl, { signal: AbortSignal.timeout(4000) });
       const ok = response.ok;
-      if (ok && project.status !== "active") await ProjectModel.update(project.id, { status: "active" });
+      if (ok && project.status !== "active") {
+        await ProjectModel.update(project.id, { status: "active" });
+      }
       res.json({ live: ok, url: project.render_url });
-    } catch (err) {
-      res.json({ live: false, error: err.message, url: project.render_url });
+    } catch {
+      res.json({ live: false });
     }
   },
 };

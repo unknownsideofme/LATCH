@@ -11,16 +11,25 @@ export const ProjectModel = {
     return data;
   },
 
-  async listByUser(userId, { status, limit, offset } = {}) {
+  async listByUser(userId, { status, limit, offset, includeDeleted = false } = {}) {
     let q = supabase.from("projects").select("*").eq("user_id", userId).order("created_at", { ascending: false });
-    if (status) q = q.eq("status", status);
+    if (status) {
+      q = q.eq("status", status);
+    } else if (!includeDeleted) {
+      q = q.neq("status", "deleted");
+    }
     if (limit) q = q.range(offset || 0, (offset || 0) + limit - 1);
     const { data } = await q;
     return data || [];
   },
 
   async countByUser(userId) {
-    const { count } = await supabase.from("projects").select("*", { count: "exact", head: true }).eq("user_id", userId);
+    // Exclude terminal / deleting statuses from user quota
+    const { count } = await supabase
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .not("status", "in", '("deleted","deleting")');
     return count || 0;
   },
 

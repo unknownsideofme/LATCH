@@ -6,12 +6,22 @@ import { RenderService } from "./renderService.js";
 export const inngest = new Inngest({
   id: "serverboard",
   eventKey: config.inngest.eventKey,
-  isDev: config.inngest.isDev,
 });
 
 // Function 1: Provision Render Service and poll until live
 export const createRenderFunction = inngest.createFunction(
-  { id: "create-render-service", name: "Provision Render Service", retries: 2, triggers: [{ event: "project/create" }] },
+  {
+    id: "create-render-service",
+    name: "Provision Render Service",
+    retries: 2,
+    triggers: [{ event: "project/create" }],
+    onFailure: async ({ event }) => {
+      const projectId = event.data.event?.data?.projectId;
+      if (projectId) {
+        await ProjectModel.update(projectId, { status: "failed" }).catch(() => {});
+      }
+    },
+  },
   async ({ event, step }) => {
     const { projectId, payload } = event.data;
 
@@ -21,6 +31,11 @@ export const createRenderFunction = inngest.createFunction(
     // 2. Call Render CLI
     const render = await step.run("provision", () => RenderService.createService(payload));
     const renderId = render?.id || render?.service?.id;
+
+    if (!renderId) {
+      throw new Error("Render provisioning response missing service id");
+    }
+
     const renderUrl = render?.serviceDetails?.url || render?.url || `https://${payload.name}.onrender.com`;
 
     // 3. Save IDs and mark deploying
@@ -28,27 +43,31 @@ export const createRenderFunction = inngest.createFunction(
       ProjectModel.update(projectId, { render_id: renderId, render_url: renderUrl, status: "deploying" })
     );
 
-    // 4. Poll health endpoint until container is live
-    if (renderUrl) {
-      await step.run("poll-health", async () => {
-        const healthUrl = `${renderUrl.replace(/\/$/, "")}/api/health`;
-        for (let i = 0; i < 30; i++) {
-          await new Promise(r => setTimeout(r, 10000));
-          try {
-            const res = await fetch(healthUrl, { signal: AbortSignal.timeout(5000) });
-            if (res.ok) {
-              await ProjectModel.update(projectId, { status: "active" });
-              return { live: true, attempts: i + 1 };
-            }
-          } catch {
-            /* building/starting */
-          }
+    // 4. Poll health endpoint using step.sleep so invocations finish promptly
+    const healthUrl = `${renderUrl.replace(/\/$/, "")}/api/health`;
+    const MAX_CHECKS = 24; // 24 checks * 10s = 4 minutes max
+
+    for (let i = 0; i < MAX_CHECKS; i++) {
+      await step.sleep(`wait-health-${i}`, "10s");
+
+      const isLive = await step.run(`check-health-${i}`, async () => {
+        try {
+          const res = await fetch(healthUrl, { signal: AbortSignal.timeout(5000) });
+          return res.ok || res.status === 200;
+        } catch {
+          return false;
         }
-        return { live: false, timeout: true };
       });
+
+      if (isLive) {
+        await step.run("mark-active", () => ProjectModel.update(projectId, { status: "active" }));
+        return { renderId, renderUrl, live: true };
+      }
     }
 
-    return { renderId, renderUrl };
+    // If still not live after max checks, mark as failed
+    await step.run("mark-timeout-failed", () => ProjectModel.update(projectId, { status: "failed" }));
+    return { renderId, renderUrl, live: false };
   }
 );
 

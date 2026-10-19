@@ -3,11 +3,12 @@ import { UserModel } from "../models/User.js";
 export const AuthController = {
   async register(req, res, next) {
     try {
-      const { email, password, username, name, projectLimit } = req.body;
+      const { email, password, username, name } = req.body;
       if (!email || !password || !username) {
         return res.status(400).json({ error: "validation_error", message: "email, password, and username required" });
       }
-      const result = await UserModel.register({ email, password, username, name, projectLimit });
+      // Note: projectLimit is deliberately omitted from req.body to prevent quota inflation
+      const result = await UserModel.register({ email, password, username, name });
       res.status(201).json({ message: "Registered successfully", ...result });
     } catch (err) {
       next(err);
@@ -22,8 +23,9 @@ export const AuthController = {
       }
       const result = await UserModel.authenticate(email, password);
       res.json({ message: "Logged in successfully", ...result });
-    } catch (err) {
-      res.status(401).json({ error: "invalid_credentials", message: err.message });
+    } catch {
+      // Don't leak internal Supabase error details
+      res.status(401).json({ error: "invalid_credentials", message: "Invalid email or password" });
     }
   },
 

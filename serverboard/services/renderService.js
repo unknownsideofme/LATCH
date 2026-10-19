@@ -1,17 +1,34 @@
 import { spawn } from "node:child_process";
 
-function runCli(args) {
+function runCli(args, timeoutMs = 60_000) {
   return new Promise((resolve, reject) => {
-    const child = spawn("render", args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn("render", args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: timeoutMs,
+      killSignal: "SIGKILL",
+    });
+
     let stdout = "";
     let stderr = "";
+
     child.stdout.on("data", d => (stdout += d.toString()));
     child.stderr.on("data", d => (stderr += d.toString()));
+
     child.on("close", code => {
-      if (code === 0) resolve(stdout.trim());
-      else reject(new Error(stderr || `Render CLI failed with code ${code}`));
+      if (code === 0) {
+        resolve(stdout.trim());
+      } else {
+        reject(new Error(stderr.trim() || `Render CLI process exited with code ${code}`));
+      }
     });
-    child.on("error", reject);
+
+    child.on("error", err => {
+      if (err.name === "AbortError" || err.code === "ETIMEDOUT") {
+        reject(new Error(`Render CLI operation timed out after ${timeoutMs}ms`));
+      } else {
+        reject(err);
+      }
+    });
   });
 }
 
@@ -22,7 +39,7 @@ export const RenderService = {
       "--name", name,
       "--type", "web_service",
       "--runtime", "docker",
-      "--repo", repo || "https://github.com/unknownsideofme/LATCH",
+      "--repo", repo,
       "--branch", branch,
       "--region", region,
       "--plan", plan,

@@ -8,8 +8,8 @@ import apiRoutes from "./routes/index.js";
 
 const app = express();
 
-// Middleware
-app.use(cors({ origin: true, credentials: true }));
+// Middleware: restrict CORS to trusted origin allowlist
+app.use(cors({ origin: config.corsOrigins, credentials: true }));
 app.use(express.json());
 
 // Request logger
@@ -32,6 +32,7 @@ app.use(
     client: inngest,
     functions: inngestFunctions,
     signingKey: config.inngest.signingKey,
+    mode: config.inngest.isDev ? "dev" : "cloud",
   })
 );
 
@@ -40,7 +41,7 @@ app.use(errorHandler);
 
 // Start Server
 app.listen(config.port, () => {
-  console.log(`\n🚀 Serverboard running at: http://localhost:${config.port}`);
+  console.log(`\n🚀 Serverboard running [ENV: ${config.envType}] at: http://localhost:${config.port}`);
   console.log(`📡 Health Check:          http://localhost:${config.port}/api/health`);
   console.log(`⚡ Inngest Endpoint:       http://localhost:${config.port}/api/inngest\n`);
 });
