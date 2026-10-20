@@ -102,6 +102,14 @@ function dropMember(room, login) {
   return room;
 }
 
+function activeMemberLogins(room) {
+  const active = new Set();
+  for (const member of membersView(room)) {
+    if (member.online && member.login) active.add(String(member.login).toLowerCase());
+  }
+  return active;
+}
+
 function membersView(room) {
   const now = Date.now();
   return (room?.members || []).map((m) => ({
@@ -358,6 +366,7 @@ module.exports = {
   markLeft,
   dropMember,
   membersView,
+  activeMemberLogins,
   inviteView: (room) => require("./roomAuth").inviteView(room),
   mintRoomId,
   NGROK_HINT,

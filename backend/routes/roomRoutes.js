@@ -9,6 +9,7 @@ const {
   upsertMember,
   dropMember,
   membersView,
+  activeMemberLogins,
   inviteView,
 } = require("../lib/room");
 const {
@@ -28,6 +29,18 @@ const { dismissByKey } = require("../lib/notices");
 const { requireRoomMember, requireLocal } = require("../middleware/authMiddleware");
 const { ContextService } = require("../services/ContextService");
 const { parsePort, SEED_TIMEOUT_MS } = require("../config/constants");
+const admissionLocks = new Map();
+async function acquireAdmission(key) {
+  const previous = admissionLocks.get(key) || Promise.resolve();
+  let release;
+  const current = new Promise((resolve) => { release = resolve; });
+  admissionLocks.set(key, current);
+  await previous;
+  return () => {
+    release();
+    if (admissionLocks.get(key) === current) admissionLocks.delete(key);
+  };
+}
 
 function createRoomRoutes({ sse, roomService, lockService, patchService, workspaceService, guestClient }) {
   const router = express.Router();
@@ -177,7 +190,7 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
           type: "left",
           key: `left:${room.roomId || "room"}:${String(login).toLowerCase()}`,
           title: `@${login} left the room`,
-          body: "Removed from the shared room — they stay on the GitHub team list.",
+          body: "Removed from the shared room â€” they stay on the GitHub team list.",
           workspaceId: project?.id || null,
           payload: { login },
         },
@@ -234,11 +247,29 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
       }
     }
 
-    const token = issueMemberToken(room, user.login);
-    upsertMember(room, user, "guest");
-    const active = workspaceService && project ? workspaceService.activeAgent(project.id) : {};
-    upsertMember(room, { ...ContextService.currentUser(), ...active }, "host");
-    saveRoom(room, project?.path);
+    const releaseAdmission = await acquireAdmission(project?.path || room.roomId || "default");
+    let token;
+    try {
+      const host = { ...ContextService.currentUser(), ...(workspaceService && project ? workspaceService.activeAgent(project.id) : {}) };
+      upsertMember(room, host, "host");
+      const maxMembers = Number(project?.agent_limit) || 7;
+      room.maxMembers = Number.isInteger(maxMembers) && maxMembers >= 1 ? maxMembers : 7;
+      const existingMember = (room.members || []).some((member) => normLogin(member.login) === normLogin(user.login));
+      const activeCount = activeMemberLogins(room).size;
+      if (!existingMember && activeCount >= room.maxMembers) {
+        return res.status(409).json({
+          error: "room_member_limit_reached",
+          maxMembers: room.maxMembers,
+          activeMembers: activeCount,
+        });
+      }
+
+      token = issueMemberToken(room, user.login);
+      upsertMember(room, user, "guest");
+      saveRoom(room, project?.path);
+    } finally {
+      releaseAdmission();
+    }
     if (sse) sse.emit("presence", { workspaceId: project?.id, userId: user.login });
     console.log(`[latch-room] @${user.login} joined the room`);
     if (roomService.noticeService) {

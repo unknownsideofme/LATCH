@@ -33,7 +33,7 @@ export const ProjectModel = {
     return count || 0;
   },
 
-  async create({ userId, projectName, agentLimit = 5 }) {
+  async create({ userId, projectName, agentLimit = 7 }) {
     // Validate user's project limit
     const { data: user } = await supabase.from("users").select("project_limit").eq("id", userId).maybeSingle();
     if (user?.project_limit != null) {
@@ -49,7 +49,7 @@ export const ProjectModel = {
         user_id: userId,
         project_name: projectName.trim(),
         status: "pending",
-        agent_limit: Number(agentLimit) || 5,
+        agent_limit: Number(agentLimit) || 7,
       }])
       .select()
       .single();

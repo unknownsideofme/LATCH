@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     render_id TEXT,
     render_url TEXT,
     status TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'deploying' | 'running' | 'failed' | 'deleting'
-    agent_limit INTEGER NOT NULL DEFAULT 5,
+    agent_limit INTEGER NOT NULL DEFAULT 7,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
