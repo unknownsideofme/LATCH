@@ -126,22 +126,25 @@ export async function runProvisioningWorker(projectId, payload) {
 }
 
 export async function runTeardownWorker(projectId, renderId) {
-  try {
-    if (renderId) {
-      console.log(`[worker] 🗑 Tearing down Render service ${renderId}...`);
-      try {
-        await RenderService.deleteService(renderId);
-        console.log(`[worker] ✔ Render service ${renderId} deleted`);
-      } catch (renderErr) {
-        console.warn(`[worker] ⚠️ Render service ${renderId} not found or already deleted on Render:`, renderErr.message);
+  if (renderId) {
+    console.log(`[worker] 🗑 Tearing down Render service ${renderId}...`);
+    try {
+      await RenderService.deleteService(renderId);
+      console.log(`[worker] ✔ Render service ${renderId} deleted`);
+    } catch (renderErr) {
+      const msg = renderErr?.message || "";
+      const isNotFound = /not found|does not exist|404/i.test(msg);
+      if (!isNotFound) {
+        console.error(`[worker] ❌ Render deletion failed:`, msg);
+        throw new Error(`Failed to delete Render service: ${msg}`);
       }
+      console.warn(`[worker] ⚠️ Render service ${renderId} already removed on Render:`, msg);
     }
-    if (projectId) {
-      await ProjectModel.delete(projectId);
-      console.log(`[worker] ✔ Project ${projectId} removed from database`);
-    }
-  } catch (err) {
-    console.error(`[worker] ❌ Teardown failed:`, err.message);
-    if (projectId) await ProjectModel.delete(projectId).catch(() => {});
   }
+
+  if (projectId) {
+    await ProjectModel.delete(projectId);
+    console.log(`[worker] ✔ Project ${projectId} removed from database`);
+  }
+  return { success: true };
 }

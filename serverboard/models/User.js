@@ -1,21 +1,21 @@
-import { supabase } from "../config/supabase.js";
+import { supabaseAdmin, supabaseAuth } from "../config/supabase.js";
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
 
 export const UserModel = {
   async findById(id) {
-    const { data } = await supabase.from("users").select("*").eq("id", id).maybeSingle();
+    const { data } = await supabaseAdmin.from("users").select("*").eq("id", id).maybeSingle();
     return data;
   },
 
   async findByUsername(username) {
     const clean = username.trim().toLowerCase();
-    const { data } = await supabase.from("users").select("*").eq("username", clean).maybeSingle();
+    const { data } = await supabaseAdmin.from("users").select("*").eq("username", clean).maybeSingle();
     return data;
   },
 
   async findWithProjects(userId) {
-    const { data } = await supabase.from("users").select("*, projects(*)").eq("id", userId).maybeSingle();
+    const { data } = await supabaseAdmin.from("users").select("*, projects(*)").eq("id", userId).maybeSingle();
     return data;
   },
 
@@ -30,8 +30,8 @@ export const UserModel = {
     const existing = await this.findByUsername(cleanUsername);
     if (existing) throw new Error(`Username '${cleanUsername}' is already taken`);
 
-    // Create Supabase Auth user via admin API (auto-confirms and preserves service_role headers)
-    const { data: auth, error: authError } = await supabase.auth.admin.createUser({
+    // Create Supabase Auth user via admin API with service-role client
+    const { data: auth, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email.trim(),
       password,
       email_confirm: true,
@@ -48,17 +48,17 @@ export const UserModel = {
       project_limit: projectLimit,
     };
 
-    const { data: user, error: dbError } = await supabase.from("users").insert([profile]).select().single();
+    const { data: user, error: dbError } = await supabaseAdmin.from("users").insert([profile]).select().single();
     if (dbError) throw dbError;
 
-    // Return active session immediately upon registration
-    const loginResult = await this.authenticate(email.trim(), password).catch(() => ({ session: null }));
+    // Return active session immediately upon registration (do not swallow authentication errors)
+    const loginResult = await this.authenticate(email.trim(), password);
 
     return { user: user || profile, session: loginResult.session };
   },
 
   async authenticate(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { data, error } = await supabaseAuth.auth.signInWithPassword({ email: email.trim(), password });
     if (error) throw error;
     let profile = await this.findById(data.user.id);
     if (!profile) {
@@ -67,13 +67,16 @@ export const UserModel = {
       if (existing && existing.id !== data.user.id) {
         candidate = `${candidate.slice(0, 20)}_${data.user.id.slice(0, 6)}`;
       }
-      const { data: created } = await supabase.from("users").insert([{
+      const { data: created, error: insertError } = await supabaseAdmin.from("users").insert([{
         id: data.user.id,
         username: candidate,
         email: data.user.email,
         name: data.user.user_metadata?.name || candidate,
         project_limit: 3,
       }]).select().maybeSingle();
+      if (insertError) {
+        console.error("[auth] Failed to auto-provision user profile in authenticate:", insertError.message);
+      }
       profile = created || (await this.findById(data.user.id));
     }
     return { user: profile || data.user, session: data.session };

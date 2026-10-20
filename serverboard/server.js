@@ -41,8 +41,8 @@ app.use(
   serve({
     client: inngest,
     functions: inngestFunctions,
-    signingKey: config.isDev ? undefined : config.inngest.signingKey,
-    mode: config.isDev ? "dev" : "cloud",
+    signingKey: config.inngest.signingKey || undefined,
+    mode: config.isProd ? "cloud" : (config.inngest.signingKey ? "cloud" : "dev"),
   })
 );
 

@@ -1,22 +1,30 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "./env.js";
 
-if (!config.supabase.url || !config.supabase.key) {
-  console.warn("[supabase] Warning: SUPABASE_URL or SUPABASE_KEY missing in environment");
+if (!config.supabase.url || (!config.supabase.serviceRoleKey && !config.supabase.anonKey)) {
+  console.warn("[supabase] Warning: SUPABASE_URL or Supabase keys missing in environment");
 }
 
-export const supabase = createClient(
+// 1. Dedicated administrative client: used for privileged DB operations & auth.admin
+export const supabaseAdmin = createClient(
   config.supabase.url || "https://placeholder.supabase.co",
-  config.supabase.key || "placeholder-key",
+  config.supabase.serviceRoleKey || config.supabase.key || "placeholder-key",
   {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      headers: {
-        Authorization: `Bearer ${config.supabase.key}`,
-      },
-    },
   }
 );
+
+// 2. Dedicated user-auth client: used for user token verification and password sign-in
+export const supabaseAuth = createClient(
+  config.supabase.url || "https://placeholder.supabase.co",
+  config.supabase.anonKey || config.supabase.key || "placeholder-key",
+  {
+    auth: { persistSession: false, autoRefreshToken: false },
+  }
+);
+
+// Backward-compatible alias for existing service-role DB operations
+export const supabase = supabaseAdmin;
 
 export async function checkDbHealth() {
   const start = Date.now();

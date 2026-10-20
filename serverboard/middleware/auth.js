@@ -1,4 +1,4 @@
-import { supabase } from "../config/supabase.js";
+import { supabaseAdmin, supabaseAuth } from "../config/supabase.js";
 import { UserModel } from "../models/User.js";
 import { config } from "../config/env.js";
 
@@ -8,7 +8,7 @@ export async function requireAuth(req, res, next) {
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
 
     if (token) {
-      const { data, error } = await supabase.auth.getUser(token);
+      const { data, error } = await supabaseAuth.auth.getUser(token);
       if (!error && data?.user) {
         req.user = data.user;
         let profile = await UserModel.findById(data.user.id);
@@ -18,14 +18,26 @@ export async function requireAuth(req, res, next) {
           if (existing && existing.id !== data.user.id) {
             candidate = `${candidate.slice(0, 20)}_${data.user.id.slice(0, 6)}`;
           }
-          const { data: created } = await supabase.from("users").insert([{
+          const userEmail = data.user.email || `${candidate}@placeholder.internal`;
+          const { data: created, error: insertError } = await supabaseAdmin.from("users").insert([{
             id: data.user.id,
             username: candidate,
-            email: data.user.email,
+            email: userEmail,
             name: data.user.user_metadata?.name || candidate,
             project_limit: 3,
           }]).select().maybeSingle();
+
+          if (insertError) {
+            console.error("[auth] Profile auto-provisioning failed:", insertError.message);
+          }
+
           profile = created || (await UserModel.findById(data.user.id));
+          if (!profile) {
+            return res.status(500).json({
+              error: "profile_error",
+              message: "Failed to initialize user profile: " + (insertError?.message || "database error"),
+            });
+          }
         }
         req.userProfile = profile;
         return next();

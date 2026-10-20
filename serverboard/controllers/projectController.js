@@ -6,6 +6,10 @@ import { config } from "../config/env.js";
 const ALLOWED_REGIONS = new Set(["singapore", "oregon", "frankfurt", "ohio"]);
 const ALLOWED_PLANS = new Set(["free"]);
 const ALLOWED_REPO = "https://github.com/unknownsideofme/LATCH";
+const ALLOWED_REPOS = new Set([
+  "https://github.com/unknownsideofme/LATCH",
+  "https://github.com/unknownsideofme/LATCH.git",
+]);
 const BRANCH_REGEX = /^[a-zA-Z0-9_\-\.]{1,100}$/;
 
 export const ProjectController = {
@@ -33,18 +37,33 @@ export const ProjectController = {
         });
       }
 
-      // 2. Validate region and branch against server-side allowlists
+      // 2. Validate repository against server-side allowlist
+      const requestedRepo = repo || repo_url;
+      if (requestedRepo && !ALLOWED_REPOS.has(requestedRepo.trim())) {
+        return res.status(400).json({
+          error: "validation_error",
+          message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...ALLOWED_REPOS].join(", ")}`,
+        });
+      }
+      const selectedRepo = requestedRepo ? requestedRepo.trim() : ALLOWED_REPO;
+
+      // 3. Validate region and branch against server-side allowlists
       const selectedRegion = ALLOWED_REGIONS.has(region) ? region : "singapore";
       const selectedBranch = branch && BRANCH_REGEX.test(branch) ? branch : "main";
-      const selectedRepo = repo || repo_url || ALLOWED_REPO;
       // Plan is strictly enforced to 'free' to prevent unauthorized billing
       const selectedPlan = "free";
 
-      // 3. Create database row (status: pending)
+      // 4. Validate and clamp agent limit (1 to 5)
+      const parsedAgentLimit = parseInt(agentLimitInput, 10);
+      const selectedAgentLimit = Number.isFinite(parsedAgentLimit)
+        ? Math.min(Math.max(parsedAgentLimit, 1), 5)
+        : 5;
+
+      // 5. Create database row (status: pending)
       const project = await ProjectModel.create({
         userId: req.user.id,
         projectName: sanitizedName,
-        agentLimit: Number(agentLimitInput) || 5,
+        agentLimit: selectedAgentLimit,
       });
 
       const payload = {
@@ -55,19 +74,20 @@ export const ProjectController = {
         plan: selectedPlan,
       };
 
-      // 4. Dispatch background deployment event to Inngest
-      const event = await inngest.send({
-        name: "project/create",
-        data: {
-          projectId: project.id,
-          userId: req.user.id,
-          payload,
-        },
-      });
-
-      // 5. In local development, execute provisioning directly in background
+      // 6. In dev, local worker is the single source of provisioning (avoid double provisioning / Inngest dependency)
+      let eventId = null;
       if (config.isDev) {
         setImmediate(() => runProvisioningWorker(project.id, payload));
+      } else {
+        const event = await inngest.send({
+          name: "project/create",
+          data: {
+            projectId: project.id,
+            userId: req.user.id,
+            payload,
+          },
+        });
+        eventId = event?.ids?.[0];
       }
 
       const connectionStatus = "connecting";
@@ -82,7 +102,7 @@ export const ProjectController = {
             runtime: "docker",
           },
         },
-        eventId: event?.ids?.[0],
+        eventId,
       });
     } catch (err) {
       next(err);
@@ -97,23 +117,6 @@ export const ProjectController = {
         limit: limit ? Number(limit) : undefined,
         offset: offset ? Number(offset) : undefined,
       });
-
-      // Auto-reconcile any 'deploying' project whose Render container is already live
-      await Promise.all(
-        projects.map(async p => {
-          if (p.status === "deploying" && p.render_url) {
-            try {
-              const check = await fetch(`${p.render_url.replace(/\/$/, "")}/api/health`, {
-                signal: AbortSignal.timeout(1500),
-              });
-              if (check.ok || check.status === 200) {
-                p.status = "running";
-                await ProjectModel.update(p.id, { status: "running" });
-              }
-            } catch {}
-          }
-        })
-      );
 
       const enrichedProjects = projects.map(p => ({
         ...p,
@@ -159,8 +162,8 @@ export const ProjectController = {
           ...project,
           connection_status: connectionStatus,
           repo_details: {
-            repo_url: ALLOWED_REPO,
-            branch: "main",
+            repo_url: project.repo_url || ALLOWED_REPO,
+            branch: project.branch || "main",
             runtime: "docker",
           },
         },
@@ -176,26 +179,54 @@ export const ProjectController = {
       const project = await ProjectModel.findById(id);
       if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
 
-      const { branch, agent_limit, agentLimit, project_name, projectName, env_vars, environment_variables } = req.body;
+      const { branch, agent_limit, agentLimit, project_name, projectName } = req.body;
 
       const updates = {};
-      const newLimit = agent_limit ?? agentLimit;
-      if (newLimit !== undefined) updates.agent_limit = Number(newLimit);
-      const newName = project_name ?? projectName;
-      if (newName) updates.project_name = String(newName).trim();
+
+      const rawLimit = agent_limit !== undefined ? agent_limit : agentLimit;
+      if (rawLimit !== undefined) {
+        const parsedLimit = parseInt(rawLimit, 10);
+        if (!Number.isFinite(parsedLimit) || parsedLimit < 1 || parsedLimit > 5) {
+          return res.status(400).json({
+            error: "validation_error",
+            message: "agent_limit must be a finite integer between 1 and 5",
+          });
+        }
+        updates.agent_limit = parsedLimit;
+      }
+
+      const rawName = project_name !== undefined ? project_name : projectName;
+      if (rawName !== undefined) {
+        if (typeof rawName !== "string" || !rawName.trim()) {
+          return res.status(400).json({ error: "validation_error", message: "project_name must be a non-empty string" });
+        }
+        const sanitizedName = rawName.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "");
+        if (!sanitizedName || sanitizedName.length < 2) {
+          return res.status(400).json({
+            error: "validation_error",
+            message: "project_name must contain at least 2 alphanumeric characters",
+          });
+        }
+        updates.project_name = sanitizedName;
+      }
+
+      if (branch !== undefined) {
+        if (typeof branch !== "string" || !BRANCH_REGEX.test(branch)) {
+          return res.status(400).json({ error: "validation_error", message: "branch contains invalid characters" });
+        }
+        // If branch changed and Render service exists, update branch on Render
+        if (project.render_id) {
+          try {
+            await RenderService.updateService(project.render_id, { branch });
+          } catch (renderErr) {
+            console.warn("[project] Warning updating branch on Render:", renderErr.message);
+          }
+        }
+      }
 
       let updatedProject = project;
       if (Object.keys(updates).length > 0) {
         updatedProject = await ProjectModel.update(project.id, updates);
-      }
-
-      // If branch changed and Render service exists, update branch on Render
-      if (branch && project.render_id && BRANCH_REGEX.test(branch)) {
-        try {
-          await RenderService.updateService(project.render_id, { branch });
-        } catch (renderErr) {
-          console.warn("[project] Warning updating branch on Render:", renderErr.message);
-        }
       }
 
       const connectionStatus =
@@ -210,9 +241,8 @@ export const ProjectController = {
           ...updatedProject,
           connection_status: connectionStatus,
           settings: {
-            branch: branch || "main",
+            branch: branch || project.branch || "main",
             agent_limit: updatedProject.agent_limit,
-            env_vars: env_vars || environment_variables || {},
           },
         },
       });
@@ -229,11 +259,19 @@ export const ProjectController = {
 
       if (project.render_id) {
         await ProjectModel.update(project.id, { status: "deleting" });
-        await inngest.send({ name: "project/delete", data: { projectId: project.id, renderId: project.render_id } });
         if (config.isDev) {
-          await runTeardownWorker(project.id, project.render_id);
-          return res.json({ message: "Render service and project deleted successfully" });
+          try {
+            await runTeardownWorker(project.id, project.render_id);
+            return res.json({ message: "Render service and project deleted successfully" });
+          } catch (teardownErr) {
+            await ProjectModel.update(project.id, { status: "failed" }).catch(() => {});
+            return res.status(502).json({
+              error: "teardown_failed",
+              message: teardownErr.message || "Failed to teardown Render service",
+            });
+          }
         }
+        await inngest.send({ name: "project/delete", data: { projectId: project.id, renderId: project.render_id } });
         return res.json({ message: "Project teardown queued" });
       }
 
