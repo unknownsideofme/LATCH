@@ -13,15 +13,14 @@ Every entry is keyed by:
 <normalized workspace path>::<repo-relative posix file path>
 ```
 
-Normalization lowercases, converts backslashes to forward slashes and strips trailing
-separators. File paths additionally drop a leading `./`.
+Workspace roots are resolved through symlinks and compared case-insensitively on
+Windows. File paths are normalized to workspace-relative POSIX paths, resolved through
+existing symlinks, and rejected if they escape the canonical workspace.
 
 The lock **file** on disk is named `sha256(<normalized workspace>::<file>)[:16] + ".lock"`
 and lives in `<repo>/.latch/locks/`, falling back to a hashed subdirectory of
-`~/.latch/locks/` when the repository's own directory cannot be created. (The fail-open
-filesystem claim in `coordinator/client.js` hashes the file path alone, without the
-workspace prefix; `unpersist` removes both spellings, so a lock written either way is
-cleaned up.)
+`~/.latch/locks/` when the repository's own directory cannot be created. A neighboring
+`.fence` file preserves the last generation across release and coordinator restarts.
 
 Because the key includes the workspace path, cross-machine locking only works if both
 sides use the *same* path. Latch guarantees that by rewriting a guest's `workspaceId` to
@@ -38,6 +37,7 @@ the host for any request that carries a member token or arrives from a remote ad
 | `MIN_TTL_MS` | 5 s | Requested TTLs are clamped up to this |
 | `MAX_TTL_MS` | 300 s | Requested TTLs are clamped down to this |
 | `CLEANUP_MS` | 5 s | Sweep interval for expired locks |
+| `MAX_HOOK_KEEP_ALIVE_MS` | 300 s | Maximum background renewal window for a pre-tool lease |
 | `RECENT_TTL_MS` | 45 s | How long a released lock stays on the board |
 | `RECENT_MAX` | 200 | Released-lock ring buffer size |
 | `READ_TTL_MS` | 30 s | How long a read stays on the board |
@@ -45,6 +45,10 @@ the host for any request that carries a member token or arrives from a remote ad
 | `WAITER_TTL_MS` | 5 min | How long a refused agent stays interested in the file |
 
 A lock is alive while `now < (lastHeartbeat || claimedAt) + ttlMs`.
+Write hooks request active renewal: the local lock sweeper or Supabase adapter
+heartbeats the lease until the post-tool release or the five-minute cap. If the
+post-tool hook never runs, renewal stops at that cap and the lock expires after
+its normal TTL.
 
 ---
 
@@ -67,16 +71,23 @@ For remote members the host appends `@<login>` to the agent ID and overwrites
 `holder.login` with the authenticated login. A member therefore cannot forge another
 member's identity and cannot release their locks.
 
+Each write grant also receives a cryptographically random ownership token and a
+monotonically increasing fencing token. Renewal and release require both values; they
+are persisted privately under `~/.latch/leases` so separate pre-tool and post-tool hook
+processes can complete the same lease. Lock listings expose fencing generations but
+never expose ownership tokens.
+
 ---
 
 ## Claiming
 
-`claim({ agentId, file, files, ttl, workspaceId, holder, source, dependsOn, mode })`
+`claim({ agentId, file, files, ttl, workspaceId, holder, source, dependsOn, mode, leases })`
 
 **Batch claims.** When `files` is a non-empty array, the entries are deduplicated and
-sorted, then claimed one at a time. Sorting gives every agent the same acquisition order,
-which is what prevents two multi-file edits from deadlocking. If any file in the batch is
-refused, every lock already taken in that batch is released and the refusal is returned.
+sorted, then claimed one at a time in the coordinator's synchronous critical section.
+Sorting gives every agent the same acquisition order. If any file in the batch is refused,
+newly acquired locks are rolled back while leases the requester already held are
+preserved.
 
 **Preconditions.** A workspace path containing a separator is required — locks are always
 per-repository — as are `agentId` and a non-empty file path.
@@ -87,16 +98,20 @@ returns `{ allowed: true, reading: true }`, even while someone else holds the wr
 **Write mode**, in order:
 
 1. An existing entry that is no longer alive is unpersisted and dropped.
-2. If the same owner already holds a **write** lock, it is renewed: `claimedAt`,
-   `lastHeartbeat` and `ttlMs` are refreshed and `{ allowed: true, renewed: true }` is
-   returned.
+2. If the same owner already holds a **write** lock, it is renewed only when its ownership
+   and fencing tokens match. The lease timestamp and TTL are refreshed.
 3. If the existing entry is a **read**, it is discarded. Readers never block a writer —
    an agent that merely looked at a file has nothing to lose if someone else edits it, and
    denying the edit meant one agent browsing the repo could stall everyone.
 4. If a live write lock is held by a different owner, the claim is refused with the
    holder's label, the refusing agent is recorded as a waiter for that file, and the API
    answers **409**.
-5. Otherwise the entry is created, persisted to disk, and a `change` event is emitted.
+5. Otherwise the entry is created with a new ownership token and fencing generation,
+   persisted to disk, and a `change` event is emitted.
+
+A denial uses `status: "DENIED"` and `code: "FILE_LOCKED"` and includes the canonical
+path, owner, expiry countdown, and current fencing token. If no shared coordinator can
+adjudicate a write, the hook denies it with `COORDINATOR_UNAVAILABLE`.
 
 **Dependency warnings.** Any `dependsOn` entry currently held for writing by a different
 owner produces a `warning` string on an otherwise successful claim. This never blocks.
@@ -105,20 +120,21 @@ owner produces a `warning` string on an otherwise successful claim. This never b
 
 ## Releasing
 
-`release({ agentId, file, workspaceId })`
+`release({ agentId, file, workspaceId, ownershipToken, fencingToken })`
 
 - A **read** entry removes the caller from the reader set, and the entry itself only when
   the set empties.
-- A **write** entry held by a different owner returns
-  `{ ok: false, reason: "not_holder", holder }`.
+- A **write** entry can only be released with its current ownership and fencing tokens;
+  mismatched or stale credentials return `{ ok: false, reason: "not_holder" }`.
 - Otherwise the entry is deleted from memory and disk, remembered in the released-locks
   buffer, and a `change` event is emitted.
 
-`releaseAll(agentId, workspaceId)` releases every entry in that workspace owned by the
-agent — including reads where the agent is in the reader set. The stop hook calls this.
+`releaseAll(agentId, workspaceId, leases)` releases only entries for which the stop hook
+supplies matching credentials. The stop hook gathers these from the private local lease
+store.
 
 Locks also disappear on their own: `sweepExpired()` runs every 5 s, re-scans tracked
-workspaces so fail-open locks surface, and deletes anything past its TTL.
+workspaces so persisted locks surface, and deletes anything past its TTL.
 
 ---
 

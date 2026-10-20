@@ -3,6 +3,8 @@
 const { EventEmitter } = require("events");
 const { getSupabaseClient } = require("./client");
 
+const MAX_HOOK_KEEP_ALIVE_MS = 5 * 60_000;
+
 function leaseKey(workspaceId, file, agentId) {
   return `${workspaceId}::${file}::${agentId}`;
 }
@@ -14,13 +16,14 @@ class SupabaseLockAdapter extends EventEmitter {
     this.subscription = null;
     this.activeWorkspaceId = null;
     this.leases = new Map();
+    this.keepAliveTimers = new Map();
   }
 
   get enabled() {
     return Boolean(this.client);
   }
 
-  async claim({ workspaceId, file, agentId, sessionId = "", mode = "write", ttl = 15000, holder = {}, ownershipToken, fencingToken }) {
+  async claim({ workspaceId, file, agentId, sessionId = "", mode = "write", ttl = 15000, holder = {}, ownershipToken, fencingToken, keepAlive = false }) {
     if (!this.client) return null;
     const ttlMs = Math.max(5000, Math.min(300000, Number(ttl) || 15000));
     const params = {
@@ -44,17 +47,51 @@ class SupabaseLockAdapter extends EventEmitter {
         return null;
       }
       if (res.data?.allowed && res.data.ownershipToken && res.data.fencingToken != null) {
-        this.leases.set(leaseKey(workspaceId, file, agentId), {
+        const key = leaseKey(workspaceId, file, agentId);
+        const lease = {
           sessionId,
           ownershipToken: res.data.ownershipToken,
           fencingToken: Number(res.data.fencingToken),
-        });
+        };
+        this.leases.set(key, lease);
+        if (keepAlive && mode !== "read") this.startKeepAlive(key, { workspaceId, file, agentId, ...lease }, ttlMs);
       }
       return res.data;
     } catch (err) {
       console.warn(`[latch-supabase] claim exception: ${err.message || err}`);
       return null;
     }
+  }
+
+  startKeepAlive(key, lease, ttl) {
+    this.stopKeepAlive(key);
+    const stopAt = Date.now() + MAX_HOOK_KEEP_ALIVE_MS;
+    const intervalMs = Math.max(1000, Math.floor(ttl / 3));
+    const active = { stopAt, timer: null, running: false, ownershipToken: lease.ownershipToken, fencingToken: lease.fencingToken };
+    active.timer = setInterval(async () => {
+      if (Date.now() >= active.stopAt) {
+        this.stopKeepAlive(key, lease);
+        return;
+      }
+      if (active.running) return;
+      active.running = true;
+      try {
+        const result = await this.heartbeat({ ...lease, ttl });
+        if (result?.ok === false) this.stopKeepAlive(key, lease);
+      } finally {
+        active.running = false;
+      }
+    }, intervalMs);
+    if (active.timer.unref) active.timer.unref();
+    this.keepAliveTimers.set(key, active);
+  }
+
+  stopKeepAlive(key, lease) {
+    const active = this.keepAliveTimers.get(key);
+    if (!active) return;
+    if (lease && (active.ownershipToken !== lease.ownershipToken || active.fencingToken !== lease.fencingToken)) return;
+    clearInterval(active.timer);
+    this.keepAliveTimers.delete(key);
   }
 
   leaseFor(workspaceId, file, agentId, sessionId, ownershipToken, fencingToken) {
@@ -87,7 +124,12 @@ class SupabaseLockAdapter extends EventEmitter {
         console.warn(`[latch-supabase] release RPC error: ${res.error.message}`);
         return null;
       }
-      this.leases.delete(leaseKey(workspaceId, file, agentId));
+      const key = leaseKey(workspaceId, file, agentId);
+      const current = this.leases.get(key);
+      if (current?.ownershipToken === lease.ownershipToken && current.fencingToken === lease.fencingToken) {
+        this.leases.delete(key);
+        this.stopKeepAlive(key, lease);
+      }
       return res.data;
     } catch (err) {
       console.warn(`[latch-supabase] release exception: ${err.message || err}`);

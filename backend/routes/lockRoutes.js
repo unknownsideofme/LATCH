@@ -104,21 +104,13 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
         warnings.push(blocked.reason || blocked.holder || String(blocked));
       }
     }
-    const result = lockTable.claim(scoped);
+    const result = await lockService.runLockRpc(
+      "claim",
+      scoped,
+      httpLockSession(req),
+      (p) => workspaceService?.ensureWorkspace(p)
+    );
     if (warnings.length && result.allowed) result.warning = result.warning || warnings[0];
-    if (!result.allowed) {
-      const project =
-        ContextService.projectForPath(scoped.workspaceId, (p) => workspaceService?.ensureWorkspace(p)) ||
-        ContextService.currentProject();
-      if (project?.id) {
-        roomService.bumpCollision(project.id, "claim_blocked", {
-          file: scoped.file,
-          agentId: scoped.agentId,
-          holder: result.holder,
-          reason: result.reason,
-        });
-      }
-    }
     res.status(result.allowed ? 200 : 409).json(result);
   });
 
@@ -130,7 +122,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
         return res.json({ ...(await roomService.roomControl.rpc("release", body)), source: "host" });
       } catch {
         const queued = roomService.roomControl.enqueue("release", body);
-        const local = lockService.runLockRpc(
+        const local = await lockService.runLockRpc(
           "release",
           body,
           httpLockSession(req),
@@ -139,7 +131,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
         return res.json({ ...local, source: "local_fallback", degraded: true, queued });
       }
     }
-    res.json(lockService.runLockRpc("release", body, httpLockSession(req), (p) => workspaceService?.ensureWorkspace(p)));
+    res.json(await lockService.runLockRpc("release", body, httpLockSession(req), (p) => workspaceService?.ensureWorkspace(p)));
   });
 
   router.post("/api/coord/heartbeat", requireRoomMember, async (req, res) => {
@@ -149,7 +141,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
       try {
         return res.json({ ...(await roomService.roomControl.rpc("heartbeat", body, 400)), source: "host" });
       } catch {
-        const local = lockService.runLockRpc(
+        const local = await lockService.runLockRpc(
           "heartbeat",
           body,
           httpLockSession(req),
@@ -158,12 +150,12 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
         return res.json({ ...local, source: "local_fallback", degraded: true });
       }
     }
-    res.json(lockService.runLockRpc("heartbeat", body, httpLockSession(req), (p) => workspaceService?.ensureWorkspace(p)));
+    res.json(await lockService.runLockRpc("heartbeat", body, httpLockSession(req), (p) => workspaceService?.ensureWorkspace(p)));
   });
 
-  router.post("/api/coord/release-all", requireRoomMember, (req, res) => {
+  router.post("/api/coord/release-all", requireRoomMember, async (req, res) => {
     const body = roomScopedBody(req, req.body || {}, () => ContextService.currentProject());
-    res.json(lockService.runLockRpc("release-all", body, httpLockSession(req), (p) => workspaceService?.ensureWorkspace(p)));
+    res.json(await lockService.runLockRpc("release-all", body, httpLockSession(req), (p) => workspaceService?.ensureWorkspace(p)));
   });
 
   router.post("/api/coord/read", requireRoomMember, async (req, res) => {
@@ -220,7 +212,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
   });
 
   router.post("/api/release-all", (req, res) => {
-    res.json(lockTable.releaseAll(req.body?.agentId));
+    res.json(lockTable.releaseAll(req.body?.agentId, req.body?.workspaceId, req.body?.leases));
   });
 
   return router;

@@ -30,6 +30,17 @@ CREATE INDEX IF NOT EXISTS idx_relay_locks_workspace ON public.relay_locks(works
 CREATE INDEX IF NOT EXISTS idx_relay_locks_expires ON public.relay_locks(expires_at);
 CREATE INDEX IF NOT EXISTS idx_relay_locks_fencing ON public.relay_locks(workspace_id, file_path, fencing_token);
 
+CREATE TABLE IF NOT EXISTS public.relay_lock_fences (
+    id TEXT PRIMARY KEY,
+    fencing_token BIGINT NOT NULL
+);
+
+INSERT INTO public.relay_lock_fences (id, fencing_token)
+SELECT id, fencing_token FROM public.relay_locks
+WHERE true
+ON CONFLICT (id) DO UPDATE
+SET fencing_token = GREATEST(public.relay_lock_fences.fencing_token, EXCLUDED.fencing_token);
+
 CREATE TABLE IF NOT EXISTS public.latch_patches (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL,
@@ -64,11 +75,13 @@ AS $$
 DECLARE
     v_lock_id TEXT := lower(trim(p_workspace_id)) || '::' || lower(trim(p_file_path));
     v_now TIMESTAMPTZ := now();
-    v_expires_at TIMESTAMPTZ := v_now + (p_ttl_ms || ' milliseconds')::interval;
+    v_ttl_ms INTEGER := LEAST(300000, GREATEST(5000, COALESCE(p_ttl_ms, 15000)));
+    v_expires_at TIMESTAMPTZ := v_now + (LEAST(300000, GREATEST(5000, COALESCE(p_ttl_ms, 15000))) || ' milliseconds')::interval;
     v_existing public.relay_locks%ROWTYPE;
     v_token UUID;
     v_fence BIGINT;
 BEGIN
+    PERFORM pg_advisory_xact_lock(hashtextextended(v_lock_id, 0));
     SELECT * INTO v_existing FROM public.relay_locks WHERE id = v_lock_id FOR UPDATE;
 
     IF FOUND AND v_existing.expires_at > v_now THEN
@@ -78,27 +91,41 @@ BEGIN
            AND v_existing.ownership_token = p_ownership_token
            AND (p_fencing_token IS NULL OR v_existing.fencing_token = p_fencing_token) THEN
             UPDATE public.relay_locks
-            SET expires_at = v_expires_at, last_renewed_at = v_now, ttl_ms = p_ttl_ms, holder = p_holder
+           SET expires_at = v_expires_at, last_renewed_at = v_now, ttl_ms = v_ttl_ms, holder = p_holder
             WHERE id = v_lock_id;
             RETURN jsonb_build_object('allowed', true, 'renewed', true, 'file', p_file_path,
                 'agentId', p_agent_id, 'sessionId', p_session_id,
                 'ownershipToken', v_existing.ownership_token, 'fencingToken', v_existing.fencing_token,
-                'expiresAt', v_expires_at, 'ttlMs', p_ttl_ms);
+                'expiresAt', v_expires_at, 'ttlMs', v_ttl_ms);
         END IF;
-        RETURN jsonb_build_object('allowed', false, 'code', 'FILE_LOCKED', 'file', p_file_path,
+        RETURN jsonb_build_object('allowed', false, 'status', 'DENIED', 'code', 'FILE_LOCKED',
+            'file', p_file_path, 'canonicalPath', p_file_path,
+            'owner', jsonb_build_object('agentId', v_existing.agent_id, 'sessionId', v_existing.session_id),
             'agentId', p_agent_id, 'holder', v_existing.holder, 'heldBy', v_existing.agent_id,
+            'expiresInMs', GREATEST(0, (EXTRACT(EPOCH FROM (v_existing.expires_at - v_now)) * 1000)::BIGINT),
             'fencingToken', v_existing.fencing_token, 'expiresAt', v_existing.expires_at,
-            'retryable', true, 'reason', 'held_by_other');
+            'retryable', true, 'reason', 'held_by_other',
+            'message', 'FILE_LOCKED: ' || p_file_path || ' is locked by ' || v_existing.agent_id || '.');
     END IF;
 
-    v_fence := CASE WHEN FOUND THEN v_existing.fencing_token + 1 ELSE 1 END;
-    v_token := COALESCE(p_ownership_token, gen_random_uuid());
+    SELECT fencing_token INTO v_fence
+    FROM public.relay_lock_fences
+    WHERE id = v_lock_id
+    FOR UPDATE;
+    IF FOUND THEN
+        v_fence := GREATEST(v_fence, COALESCE(v_existing.fencing_token, 0)) + 1;
+        UPDATE public.relay_lock_fences SET fencing_token = v_fence WHERE id = v_lock_id;
+    ELSE
+        v_fence := COALESCE(v_existing.fencing_token, 0) + 1;
+        INSERT INTO public.relay_lock_fences (id, fencing_token) VALUES (v_lock_id, v_fence);
+    END IF;
+    v_token := gen_random_uuid();
     INSERT INTO public.relay_locks (
         id, workspace_id, file_path, agent_id, session_id, ownership_token, fencing_token,
         mode, holder, claimed_at, last_renewed_at, expires_at, ttl_ms
     ) VALUES (
         v_lock_id, p_workspace_id, p_file_path, p_agent_id, p_session_id, v_token, v_fence,
-        p_mode, p_holder, v_now, v_now, v_expires_at, p_ttl_ms
+        p_mode, p_holder, v_now, v_now, v_expires_at, v_ttl_ms
     )
     ON CONFLICT (id) DO UPDATE SET
         agent_id = EXCLUDED.agent_id, session_id = EXCLUDED.session_id,
@@ -108,7 +135,7 @@ BEGIN
 
     RETURN jsonb_build_object('allowed', true, 'file', p_file_path, 'agentId', p_agent_id,
         'sessionId', p_session_id, 'ownershipToken', v_token, 'fencingToken', v_fence,
-        'holder', p_holder, 'expiresAt', v_expires_at, 'ttlMs', p_ttl_ms);
+        'holder', p_holder, 'expiresAt', v_expires_at, 'ttlMs', v_ttl_ms);
 END;
 $$;
 
@@ -122,11 +149,12 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_now TIMESTAMPTZ := now();
-    v_expires_at TIMESTAMPTZ := v_now + (p_ttl_ms || ' milliseconds')::interval;
+    v_ttl_ms INTEGER := LEAST(300000, GREATEST(5000, COALESCE(p_ttl_ms, 15000)));
+    v_expires_at TIMESTAMPTZ := v_now + (LEAST(300000, GREATEST(5000, COALESCE(p_ttl_ms, 15000))) || ' milliseconds')::interval;
     v_updated INTEGER;
 BEGIN
     UPDATE public.relay_locks
-    SET expires_at = v_expires_at, last_renewed_at = v_now, ttl_ms = p_ttl_ms
+    SET expires_at = v_expires_at, last_renewed_at = v_now, ttl_ms = v_ttl_ms
     WHERE id = lower(trim(p_workspace_id)) || '::' || lower(trim(p_file_path))
       AND agent_id = p_agent_id AND session_id = p_session_id
       AND ownership_token = p_ownership_token AND fencing_token = p_fencing_token
@@ -160,11 +188,9 @@ RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
-DECLARE v_deleted INTEGER;
 BEGIN
-    DELETE FROM public.relay_locks WHERE agent_id = p_agent_id AND session_id = p_session_id;
-    GET DIAGNOSTICS v_deleted = ROW_COUNT;
-    RETURN jsonb_build_object('ok', true, 'released', v_deleted);
+    -- Agent/session identity alone cannot authorize releasing active leases.
+    RETURN jsonb_build_object('ok', false, 'released', 0, 'reason', 'lease_credentials_required');
 END;
 $$;
 
