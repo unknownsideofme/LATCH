@@ -43,6 +43,8 @@ test("backend e2e: multi-agent coordinator contention and handover workflow", as
     agentId: "alpha:host1:s1",
     file,
     workspaceId: ws,
+    ownershipToken: claimAlpha.lock.ownershipToken,
+    fencingToken: claimAlpha.lock.fencingToken,
   });
   assert.equal(hb.ok, true);
   assert.equal(hb.renewed, 1);
@@ -52,6 +54,8 @@ test("backend e2e: multi-agent coordinator contention and handover workflow", as
     agentId: "alpha:host1:s1",
     file,
     workspaceId: ws,
+    ownershipToken: claimAlpha.lock.ownershipToken,
+    fencingToken: claimAlpha.lock.fencingToken,
   });
   assert.equal(releaseAlpha.ok, true);
   assert.equal(releaseAlpha.released, true);

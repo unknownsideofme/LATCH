@@ -380,17 +380,23 @@ async function runPreTool(declaredMode) {
       dependsOn: deps,
       files: files.length > 1 ? files : undefined,
       mode: payload.mode === "read" ? "read" : "write",
+      keepAlive: payload.mode !== "read",
       holder: { label: modeLabel(mode), host: os.hostname(), login: currentLogin() },
     });
     debugHook(mode, "pre:claim", { workspace, files, agentId, via: result.via || null, allowed: result.allowed });
-    if (result.allowed === false) {
-      respond(mode, false, result.reason || `Locked by ${result.holder}. Pick a different file.`);
+    if (result.allowed !== true) {
+      respond(mode, false, result.reason || `Latch could not verify a lease for ${files[0]}. Pick a different file.`);
       return;
     }
-    client().heartbeat(workspace, agentId, files[0]).catch(() => undefined);
+    for (const file of files) {
+      client().heartbeat(workspace, agentId, file).catch(() => undefined);
+    }
     respond(mode, true);
-  } catch {
-    respond(mode, true);
+  } catch (err) {
+    const reason = "Latch could not verify a file lease, so this write was denied.";
+    debugHook(mode, "pre:lock-error", { message: err?.message || String(err) });
+    process.stderr.write(`[latch] LOCK_VERIFICATION_FAILED: ${err?.message || String(err)}\n`);
+    respond(mode, false, reason);
   }
 }
 

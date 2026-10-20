@@ -99,7 +99,7 @@ function createCoordinator({ workspacePath, preferredPort } = {}) {
   });
 
   app.post("/release-all", (req, res) => {
-    res.json(lockTable.releaseAll(req.body?.agentId, req.body?.workspaceId));
+    res.json(lockTable.releaseAll(req.body?.agentId, req.body?.workspaceId, req.body?.leases));
   });
 
   app.get("/status", (_req, res) => {

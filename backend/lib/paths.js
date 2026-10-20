@@ -51,6 +51,53 @@ function nativeWorkspaceRoot(workspacePath) {
   return path.resolve(trimmed);
 }
 
+function canonicalWorkspaceRoot(workspacePath) {
+  const root = nativeWorkspaceRoot(workspacePath);
+  if (!root) return null;
+  try {
+    return fs.realpathSync.native(root);
+  } catch {
+    return root;
+  }
+}
+
+function canonicalWorkspaceFile(workspacePath, filePath) {
+  const root = canonicalWorkspaceRoot(workspacePath);
+  if (!root || typeof filePath !== "string" || !filePath.trim()) return null;
+  const supplied = filePath.trim().replace(/\\/g, "/");
+  if (supplied.startsWith("/") || /^[a-zA-Z]:\//.test(supplied)) return null;
+
+  const normalized = path.posix.normalize(supplied);
+  if (normalized === "." || normalized === ".." || normalized.startsWith("../")) return null;
+  let candidate = path.resolve(root, ...normalized.split("/"));
+  const withinRoot = (target) => {
+    const relative = path.relative(root, target);
+    const comparable = process.platform === "win32" ? relative.toLowerCase() : relative;
+    return comparable !== ".." && !comparable.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+  };
+  if (!withinRoot(candidate)) return null;
+
+  const missing = [];
+  while (true) {
+    try {
+      const realParent = fs.realpathSync.native(candidate);
+      candidate = path.resolve(realParent, ...missing.reverse());
+      break;
+    } catch (err) {
+      if (err.code !== "ENOENT" && err.code !== "ENOTDIR") return null;
+      const parent = path.dirname(candidate);
+      if (parent === candidate) return null;
+      missing.push(path.basename(candidate));
+      candidate = parent;
+    }
+  }
+  if (!withinRoot(candidate)) return null;
+  const relative = path.relative(root, candidate);
+  if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
+  const posix = relative.split(path.sep).join("/");
+  return process.platform === "win32" ? posix.toLowerCase() : posix;
+}
+
 function workspaceLatchDir(root) {
   const latchDir = path.join(root, ".latch");
   const relayDir = path.join(root, ".relay");
@@ -98,4 +145,6 @@ module.exports = {
   sessionPath,
   coordinatorStatePath,
   locksDirFor,
+  canonicalWorkspaceRoot,
+  canonicalWorkspaceFile,
 };
