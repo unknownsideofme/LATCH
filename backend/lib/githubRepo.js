@@ -5,15 +5,17 @@ const { spawn } = require("child_process");
 const CACHE_MS = 60_000;
 const cache = new Map(); // "owner/repo" -> { at, data }
 
-function runGh(args) {
+function runGh(args, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     const child = spawn("gh", args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true, shell: false });
     let out = "";
     let err = "";
     child.stdout.on("data", (c) => (out += c));
     child.stderr.on("data", (c) => (err += c));
-    child.on("error", () => reject(new Error("gh_not_installed")));
+    const timeout = setTimeout(() => { child.kill(); reject(new Error("gh_timeout")); }, timeoutMs);
+    child.on("error", () => { clearTimeout(timeout); reject(new Error("gh_not_installed")); });
     child.on("exit", (code) => {
+      clearTimeout(timeout);
       if (code === 0) resolve(out.trim());
       else reject(new Error(err.trim() || `gh exited ${code}`));
     });
@@ -58,6 +60,7 @@ async function fetchCollaboratorsRaw(owner, repo) {
     try {
       const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contributors`, {
         headers: { "User-Agent": "latch-it" },
+        signal: AbortSignal.timeout(5000),
       });
       if (!res.ok) throw new Error(`http_${res.status}`);
       const list = await res.json();

@@ -25,7 +25,7 @@ function invitedLogins(room) {
     .filter(Boolean);
 }
 
-function ghApi(pathname, { method = "GET", body } = {}) {
+function ghApi(pathname, { method = "GET", body, timeoutMs = 10000 } = {}) {
   const args = ["api", pathname, "-H", "Accept: application/vnd.github+json"];
   if (method && method !== "GET") args.push("-X", method);
   if (body !== undefined) args.push("--input", "-");
@@ -35,8 +35,10 @@ function ghApi(pathname, { method = "GET", body } = {}) {
     let err = "";
     child.stdout.on("data", (c) => (out += c));
     child.stderr.on("data", (c) => (err += c));
-    child.on("error", () => reject(new Error("gh_not_installed")));
+    const timeout = setTimeout(() => { child.kill(); reject(new Error("gh_timeout")); }, timeoutMs);
+    child.on("error", () => { clearTimeout(timeout); reject(new Error("gh_not_installed")); });
     child.on("exit", (code) => {
+      clearTimeout(timeout);
       if (code !== 0) return reject(new Error(err.trim() || `gh exited ${code}`));
       const text = out.trim();
       if (!text) return resolve({});

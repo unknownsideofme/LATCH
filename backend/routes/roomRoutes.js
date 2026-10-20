@@ -214,32 +214,20 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
 
   router.post("/api/room/redeem", async (req, res) => {
     const project = ContextService.currentProject();
-    const releaseAdmission = await acquireAdmission(project?.path || "default");
-    try {
     let room = loadRoom(project?.path);
     if (!room?.url || room.role !== "host") return res.status(409).json({ error: "not_hosting" });
     const user = req.body?.user;
     if (!user?.login) return res.status(400).json({ error: "user_required" });
+    const initialRoomNonce = room.nonce;
+    let collaboratorCheck = null;
 
     if (!room.open) {
       const code = req.body?.code;
       const proofGistId = req.body?.proofGistId;
-      const check = await ContextService.collaboratorCheck(project, user.login);
+      collaboratorCheck = await ContextService.collaboratorCheck(project, user.login);
 
-      if (code) {
-        const redeemed = redeemInvite(room, code, user.login);
-        if (!redeemed.ok && !check.allowed) {
-          return res.status(403).json({
-            error: redeemed.reason,
-            invitedLogin: redeemed.invitedLogin,
-            hint:
-              redeemed.reason === "invite_wrong_user"
-                ? `That invite was issued to @${redeemed.invitedLogin}.`
-                : "Ask the host to invite you from the Team tab.",
-          });
-        }
-        if (redeemed.ok && !redeemed.rejoin) markAccepted(redeemed.invite, user.login);
-      } else if (!check.allowed) {
+      if (!code && !collaboratorCheck.allowed) {
+
         if (!proofGistId || !room.roomId || !room.nonce) {
           return res.status(403).json({
             error: "invite_required",
@@ -261,7 +249,29 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
       }
     }
 
+    const releaseAdmission = await acquireAdmission(project?.path || "default");
+    try {
+      room = loadRoom(project?.path);
+      if (!room?.url || room.role !== "host") return res.status(409).json({ error: "not_hosting" });
+      if (!room.open && req.body?.proofGistId && room.nonce !== initialRoomNonce && !req.body?.code) {
+        return res.status(403).json({ error: "proof_stale" });
+      }
     let token;
+      if (!room.open && req.body?.code) {
+        const redeemed = redeemInvite(room, req.body.code, user.login);
+        if (!redeemed.ok && !collaboratorCheck.allowed) {
+          return res.status(403).json({
+            error: redeemed.reason,
+            invitedLogin: redeemed.invitedLogin,
+            hint:
+              redeemed.reason === "invite_wrong_user"
+                ? `That invite was issued to @${redeemed.invitedLogin}.`
+                : "Ask the host to invite you from the Team tab.",
+          });
+        }
+        if (redeemed.ok && !redeemed.rejoin) markAccepted(redeemed.invite, user.login);
+      }
+
       const host = { ...ContextService.currentUser(), ...(workspaceService && project ? workspaceService.activeAgent(project.id) : {}) };
       upsertMember(room, host, "host");
       const maxMembers = roomMaxMembers(room, project);
