@@ -317,9 +317,10 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
   });
 
   router.post("/api/room/bye", requireRoomMember, async (req, res) => {
-    const releaseAdmission = await acquireAdmission(req.body?.hostProjectId || "default");
+    const { project } = hostRoomFor(req.body?.hostProjectId);
+    const releaseAdmission = await acquireAdmission(project?.path || "default");
     try {
-    const { project, room } = hostRoomFor(req.body?.hostProjectId);
+    const room = loadRoom(project?.path);
     if (!room?.url || !req.body?.login) return res.json({ ok: true });
     saveRoom(dropMember(room, req.body.login), project?.path);
     if (sse) sse.emit("presence", { workspaceId: project?.id, userId: req.body.login, left: true });
