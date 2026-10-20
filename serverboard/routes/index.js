@@ -18,8 +18,13 @@ api.get("/health", async (_req, res) => {
   });
 });
 
-api.use("/auth", authRoutes);
+// Version 1 (v1) API routes
+api.use("/v1/projects", projectRoutes);
+api.use("/v1/auth", authRoutes);
+
+// Backwards-compatible aliases
 api.use("/projects", projectRoutes);
+api.use("/auth", authRoutes);
 api.use("/webhooks", webhookRoutes);
 
 export default api;

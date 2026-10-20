@@ -13,15 +13,19 @@ export async function requireAuth(req, res, next) {
         req.user = data.user;
         let profile = await UserModel.findById(data.user.id);
         if (!profile) {
-          const username = data.user.user_metadata?.username || `user_${data.user.id.slice(0, 8)}`;
+          let candidate = (data.user.user_metadata?.username || `user_${data.user.id.slice(0, 8)}`).toLowerCase().replace(/[^a-z0-9_]/g, "_");
+          const existing = await UserModel.findByUsername(candidate);
+          if (existing && existing.id !== data.user.id) {
+            candidate = `${candidate.slice(0, 20)}_${data.user.id.slice(0, 6)}`;
+          }
           const { data: created } = await supabase.from("users").insert([{
             id: data.user.id,
-            username,
+            username: candidate,
             email: data.user.email,
-            name: data.user.user_metadata?.name || username,
+            name: data.user.user_metadata?.name || candidate,
             project_limit: 3,
           }]).select().maybeSingle();
-          profile = created;
+          profile = created || (await UserModel.findById(data.user.id));
         }
         req.userProfile = profile;
         return next();

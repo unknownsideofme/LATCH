@@ -77,7 +77,7 @@ export const deleteRenderFunction = inngest.createFunction(
   async ({ event, step }) => {
     const { projectId, renderId } = event.data;
     if (renderId) await step.run("delete-render", () => RenderService.deleteService(renderId));
-    if (projectId) await step.run("mark-deleted", () => ProjectModel.update(projectId, { status: "deleted" }));
+    if (projectId) await step.run("delete-db-project", () => ProjectModel.delete(projectId));
     return { success: true };
   }
 );
@@ -103,9 +103,9 @@ export async function runProvisioningWorker(projectId, payload) {
     await ProjectModel.update(projectId, { render_id: renderId, render_url: renderUrl, status: "deploying" });
     console.log(`[worker] ✔ Render service created: ${renderId} (${renderUrl})`);
 
-    // Poll health endpoint in background
+    // Poll health endpoint in background (36 checks * 10s = 6 minutes for Docker build)
     const healthUrl = `${renderUrl.replace(/\/$/, "")}/api/health`;
-    const MAX_CHECKS = 24;
+    const MAX_CHECKS = 36;
     for (let i = 0; i < MAX_CHECKS; i++) {
       await new Promise(r => setTimeout(r, 10000));
       try {
@@ -127,11 +127,21 @@ export async function runProvisioningWorker(projectId, payload) {
 
 export async function runTeardownWorker(projectId, renderId) {
   try {
-    console.log(`[worker] 🗑 Tearing down Render service ${renderId}...`);
-    if (renderId) await RenderService.deleteService(renderId);
-    if (projectId) await ProjectModel.update(projectId, { status: "deleted" });
-    console.log(`[worker] ✔ Project ${projectId} marked deleted`);
+    if (renderId) {
+      console.log(`[worker] 🗑 Tearing down Render service ${renderId}...`);
+      try {
+        await RenderService.deleteService(renderId);
+        console.log(`[worker] ✔ Render service ${renderId} deleted`);
+      } catch (renderErr) {
+        console.warn(`[worker] ⚠️ Render service ${renderId} not found or already deleted on Render:`, renderErr.message);
+      }
+    }
+    if (projectId) {
+      await ProjectModel.delete(projectId);
+      console.log(`[worker] ✔ Project ${projectId} removed from database`);
+    }
   } catch (err) {
     console.error(`[worker] ❌ Teardown failed:`, err.message);
+    if (projectId) await ProjectModel.delete(projectId).catch(() => {});
   }
 }

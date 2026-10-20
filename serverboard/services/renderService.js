@@ -67,4 +67,19 @@ export const RenderService = {
     const output = await runCli(["deploys", "list", serviceId, "-o", "json"]);
     return JSON.parse(output);
   },
+
+  async updateService(serviceId, { branch, name, plan } = {}) {
+    const args = ["services", "update", serviceId];
+    if (branch) args.push("--branch", branch);
+    if (name) args.push("--name", name);
+    if (plan) args.push("--plan", plan);
+    args.push("--confirm", "-o", "json");
+    const output = await runCli(args);
+    try {
+      return JSON.parse(output);
+    } catch {
+      return { success: true, raw: output };
+    }
+  },
 };
+
