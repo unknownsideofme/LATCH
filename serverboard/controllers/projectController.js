@@ -214,14 +214,17 @@ export const ProjectController = {
         if (typeof branch !== "string" || !BRANCH_REGEX.test(branch)) {
           return res.status(400).json({ error: "validation_error", message: "branch contains invalid characters" });
         }
-        // If branch changed and Render service exists, update branch on Render
         if (project.render_id) {
           try {
             await RenderService.updateService(project.render_id, { branch });
-          } catch (renderErr) {
-            console.warn("[project] Warning updating branch on Render:", renderErr.message);
+          } catch (err) {
+            return res.status(502).json({
+              error: "upstream_update_failed",
+              message: "Failed to update branch on deployment service",
+            });
           }
         }
+        updates.branch = branch;
       }
 
       let updatedProject = project;
