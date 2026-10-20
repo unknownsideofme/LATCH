@@ -106,8 +106,15 @@ class LockService {
         ? body.dependsOn.filter((f) => typeof f === "string").slice(0, MAX_FILES_PER_CLAIM)
         : undefined,
       holder: body?.holder && typeof body.holder === "object" ? body.holder : null,
+      sessionId: typeof body?.sessionId === "string" ? body.sessionId.slice(0, 200) : undefined,
+      ownershipToken: typeof body?.ownershipToken === "string" ? body.ownershipToken : undefined,
+      fencingToken: Number.isInteger(body?.fencingToken) ? body.fencingToken : undefined,
     };
     if (!clean.agentId) return null;
+    if (!clean.sessionId) {
+      const parts = clean.agentId.split(":");
+      clean.sessionId = parts.length > 2 ? parts.slice(2).join(":") : "";
+    }
     if (session?.remote) {
       const login = session.login || "guest";
       clean.agentId = `${clean.agentId}@${login}`;
@@ -128,6 +135,9 @@ class LockService {
           workspaceId: scoped.workspaceId,
           file: scoped.file,
           agentId: scoped.agentId,
+          sessionId: scoped.sessionId,
+          ownershipToken: scoped.ownershipToken,
+          fencingToken: scoped.fencingToken,
           mode: scoped.mode,
           ttl: scoped.ttl,
           holder: scoped.holder,
@@ -143,12 +153,18 @@ class LockService {
           workspaceId: scoped.workspaceId,
           file: scoped.file,
           agentId: scoped.agentId,
+          sessionId: scoped.sessionId,
+          ownershipToken: scoped.ownershipToken,
+          fencingToken: scoped.fencingToken,
         });
       } else if (op === "heartbeat") {
         await this.supabaseLockAdapter.heartbeat({
           workspaceId: scoped.workspaceId,
           file: scoped.file,
           agentId: scoped.agentId,
+          sessionId: scoped.sessionId,
+          ownershipToken: scoped.ownershipToken,
+          fencingToken: scoped.fencingToken,
           ttl: scoped.ttl,
         });
       }
@@ -183,6 +199,9 @@ class LockService {
         });
       }
       return { ok: true, files };
+    }
+    if (op === "release-all" && this.supabaseLockAdapter?.enabled) {
+      await this.supabaseLockAdapter.releaseAll(scoped.agentId, scoped.workspaceId, scoped.sessionId);
     }
     return this.lockTable.releaseAll(scoped.agentId, scoped.workspaceId);
   }

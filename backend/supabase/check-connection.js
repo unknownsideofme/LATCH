@@ -13,13 +13,13 @@ async function checkConnection() {
   console.log(`   - Supabase Key:  ${config.key ? config.key.slice(0, 15) + "..." : "\x1b[31m[NOT FOUND]\x1b[0m"}`);
 
   if (!isSupabaseConfigured()) {
-    console.error("\n\x1b[31m✖ Supabase is not configured. Please check your .env file.\x1b[0m\n");
+    console.error("\n\x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ Supabase is not configured. Please check your .env file.\x1b[0m\n");
     process.exit(1);
   }
 
   const client = getSupabaseClient();
   if (!client) {
-    console.error("\n\x1b[31m✖ Failed to initialize Supabase client instance.\x1b[0m\n");
+    console.error("\n\x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ Failed to initialize Supabase client instance.\x1b[0m\n");
     process.exit(1);
   }
 
@@ -28,15 +28,15 @@ async function checkConnection() {
   // Test 1: relay_locks
   try {
     const start = Date.now();
-    const { data, error } = await client.from("latch_locks").select("id").limit(1);
+    const { data, error } = await client.from("relay_locks").select("id").limit(1);
     const latency = Date.now() - start;
     if (error) {
-      console.log(`   - latch_locks:   \x1b[31m✖ FAILED (${error.message})\x1b[0m`);
+      console.log(`   - relay_locks:   \x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ FAILED (${error.message})\x1b[0m`);
     } else {
-      console.log(`   - latch_locks:   \x1b[32m✔ CONNECTED\x1b[0m (${latency}ms, ${data.length} sample row)`);
+      console.log(`   - relay_locks:   \x1b[32mÃƒÂ¢Ã…â€œÃ¢â‚¬Â CONNECTED\x1b[0m (${latency}ms, ${data.length} sample row)`);
     }
   } catch (err) {
-    console.log(`   - latch_locks:   \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
+    console.log(`   - relay_locks:   \x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ ERROR: ${err.message}\x1b[0m`);
   }
 
   // Test 2: relay_patches
@@ -45,12 +45,12 @@ async function checkConnection() {
     const { data, error } = await client.from("latch_patches").select("id").limit(1);
     const latency = Date.now() - start;
     if (error) {
-      console.log(`   - latch_patches: \x1b[31m✖ FAILED (${error.message})\x1b[0m`);
+      console.log(`   - latch_patches: \x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ FAILED (${error.message})\x1b[0m`);
     } else {
-      console.log(`   - latch_patches: \x1b[32m✔ CONNECTED\x1b[0m (${latency}ms, ${data.length} sample row)`);
+      console.log(`   - latch_patches: \x1b[32mÃƒÂ¢Ã…â€œÃ¢â‚¬Â CONNECTED\x1b[0m (${latency}ms, ${data.length} sample row)`);
     }
   } catch (err) {
-    console.log(`   - latch_patches: \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
+    console.log(`   - latch_patches: \x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ ERROR: ${err.message}\x1b[0m`);
   }
 
   console.log("\n3. Testing Stored Procedures (RPCs):");
@@ -59,26 +59,30 @@ async function checkConnection() {
   const testLockId = "health-check-test.txt";
   const testWs = "health-check-ws";
   const testAgent = "health-check-agent";
+  const testSession = "health-check-session";
+  let testLease = null;
 
   try {
     const { data: claimData, error: claimErr } = await client.rpc("latch_claim_lock", {
       p_workspace_id: testWs,
       p_file_path: testLockId,
       p_agent_id: testAgent,
+      p_session_id: testSession,
       p_mode: "write",
       p_ttl_ms: 5000,
       p_holder: { label: "Health Check" },
     });
 
     if (claimErr) {
-      console.log(`   - latch_claim_lock:   \x1b[31m✖ FAILED (${claimErr.message})\x1b[0m`);
+      console.log(`   - latch_claim_lock:   \x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ FAILED (${claimErr.message})\x1b[0m`);
     } else if (claimData && claimData.allowed) {
-      console.log(`   - latch_claim_lock:   \x1b[32m✔ SUCCESS\x1b[0m (acquired distributed test lock)`);
+      testLease = claimData;
+      console.log(`   - latch_claim_lock:   \x1b[32mÃƒÂ¢Ã…â€œÃ¢â‚¬Â SUCCESS\x1b[0m (acquired distributed test lock)`);
     } else {
-      console.log(`   - latch_claim_lock:   \x1b[33m⚠ WARNING\x1b[0m (returned: ${JSON.stringify(claimData)})`);
+      console.log(`   - latch_claim_lock:   \x1b[33mÃƒÂ¢Ã…Â¡Ã‚Â  WARNING\x1b[0m (returned: ${JSON.stringify(claimData)})`);
     }
   } catch (err) {
-    console.log(`   - latch_claim_lock:   \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
+    console.log(`   - latch_claim_lock:   \x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ ERROR: ${err.message}\x1b[0m`);
   }
 
   // Test 4: relay_release_lock RPC
@@ -87,24 +91,27 @@ async function checkConnection() {
       p_workspace_id: testWs,
       p_file_path: testLockId,
       p_agent_id: testAgent,
+      p_session_id: testSession,
+      p_ownership_token: testLease?.ownershipToken,
+      p_fencing_token: testLease?.fencingToken,
     });
 
     if (relErr) {
-      console.log(`   - latch_release_lock: \x1b[31m✖ FAILED (${relErr.message})\x1b[0m`);
+      console.log(`   - latch_release_lock: \x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ FAILED (${relErr.message})\x1b[0m`);
     } else {
-      console.log(`   - latch_release_lock: \x1b[32m✔ SUCCESS\x1b[0m (released distributed test lock)`);
+      console.log(`   - latch_release_lock: \x1b[32mÃƒÂ¢Ã…â€œÃ¢â‚¬Â SUCCESS\x1b[0m (released distributed test lock)`);
     }
   } catch (err) {
-    console.log(`   - latch_release_lock: \x1b[31m✖ ERROR: ${err.message}\x1b[0m`);
+    console.log(`   - latch_release_lock: \x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ ERROR: ${err.message}\x1b[0m`);
   }
 
   console.log("\n=======================================================");
-  console.log("       \x1b[32m✔ Supabase is online and fully connected!\x1b[0m       ");
+  console.log("       \x1b[32mÃƒÂ¢Ã…â€œÃ¢â‚¬Â Supabase is online and fully connected!\x1b[0m       ");
   console.log("=======================================================\n");
   process.exit(0);
 }
 
 checkConnection().catch((err) => {
-  console.error("\n\x1b[31m✖ Fatal error during Supabase health check:\x1b[0m", err);
+  console.error("\n\x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ Fatal error during Supabase health check:\x1b[0m", err);
   process.exit(1);
 });

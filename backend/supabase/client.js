@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
+const WebSocket = require("ws");
 const { homeLatchDir } = require("../lib/paths");
 
 let cachedClient = null;
@@ -73,6 +74,7 @@ function getSupabaseClient() {
     cachedClient = createClient(url, key, {
       auth: { persistSession: false },
       realtime: {
+        transport: WebSocket,
         params: {
           eventsPerSecond: 20,
         },
