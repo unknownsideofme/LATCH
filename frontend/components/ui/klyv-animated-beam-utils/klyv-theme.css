@@ -1,0 +1,21 @@
+@keyframes beam-dash {
+  to {
+    stroke-dashoffset: var(--beam-travel);
+  }
+}
+
+:root {
+  --color-line-strong: rgba(255, 255, 255, 0.15);
+  --color-accent-strong: #3ECF8E;
+  --radius-card: 16px;
+  --color-surface: #12161C;
+  --color-line: #262C34;
+  --color-canvas: #0B0E11;
+  --color-ink: #F0F3F6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe-only {
+    animation: none !important;
+  }
+}
