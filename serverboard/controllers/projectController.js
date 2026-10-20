@@ -39,6 +39,12 @@ export const ProjectController = {
 
       // 2. Validate repository against server-side allowlist
       const requestedRepo = repo || repo_url;
+      if (requestedRepo && typeof requestedRepo !== "string") {
+        return res.status(400).json({
+          error: "validation_error",
+          message: "Repository must be a string",
+        });
+      }
       if (requestedRepo && !ALLOWED_REPOS.has(requestedRepo.trim())) {
         return res.status(400).json({
           error: "validation_error",
