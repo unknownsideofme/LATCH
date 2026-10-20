@@ -355,6 +355,34 @@ test("LockTable: refuses a claim when it cannot persist the fencing token", () =
   }
 });
 
+test("LockTable: hook leases heartbeat until their bounded keep-alive expires", () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-bounded-keepalive-"));
+  try {
+    const table = new LockTable();
+    const claimed = table.claim({
+      agentId: "agent:host:s1",
+      file: "a.ts",
+      workspaceId: ws,
+      ttl: 15000,
+      keepAlive: true,
+    });
+    const entry = table.getLock("a.ts", ws);
+    const beforeSweep = Date.now();
+    entry.lastHeartbeat = beforeSweep - 6000;
+    table.sweepExpired();
+    assert.equal(table.getLock("a.ts", ws), entry);
+    assert.ok(entry.lastHeartbeat >= beforeSweep);
+
+    entry.lastHeartbeat = Date.now() - 16000;
+    entry.keepAliveUntil = Date.now() - 1;
+    table.sweepExpired();
+    assert.equal(table.getLock("a.ts", ws), null);
+    assert.ok(claimed.allowed);
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
 test("LockTable: failed batch preserves an existing lease owned by the requester", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-batch-existing-"));
   try {

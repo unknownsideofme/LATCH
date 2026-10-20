@@ -9,6 +9,7 @@ const DEFAULT_TTL_MS = 15_000;
 const MIN_TTL_MS = 5_000;
 const MAX_TTL_MS = 300_000;
 const CLEANUP_MS = 5_000;
+const MAX_HOOK_KEEP_ALIVE_MS = 5 * 60_000;
 
 function clampTtl(ttlMs) {
   const n = Number(ttlMs);
@@ -437,7 +438,7 @@ class LockTable extends EventEmitter {
     return { ok: true, lock: this.publicEntry(next) };
   }
 
-  claim({ agentId, file, ttl, workspaceId, holder, source, dependsOn, files, mode, ownershipToken, fencingToken, leases, authoritativeLease }) {
+  claim({ agentId, file, ttl, workspaceId, holder, source, dependsOn, files, mode, ownershipToken, fencingToken, leases, authoritativeLease, keepAlive = false }) {
     const ws = workspaceRoot(workspaceId) || workspaceId;
     if (authoritativeLease) {
       ownershipToken = authoritativeLease.ownershipToken;
@@ -464,6 +465,7 @@ class LockTable extends EventEmitter {
           source,
           dependsOn,
           mode,
+          keepAlive,
           ownershipToken: lease?.ownershipToken,
           fencingToken: lease?.fencingToken,
           authoritativeLease,
@@ -547,6 +549,7 @@ class LockTable extends EventEmitter {
         existing.claimedAt = now;
         existing.lastHeartbeat = now;
         existing.ttlMs = ttlMs;
+        existing.keepAliveUntil = keepAlive ? now + MAX_HOOK_KEEP_ALIVE_MS : 0;
         existing.workspaceId = ws;
         this.persist(existing);
         this.emit("change", { type: "renew", entry: existing });
@@ -591,6 +594,7 @@ class LockTable extends EventEmitter {
       escalated: false,
       ownershipToken: authoritativeLease?.ownershipToken || crypto.randomUUID(),
       fencingToken: nextFence,
+      keepAliveUntil: keepAlive ? now + MAX_HOOK_KEEP_ALIVE_MS : 0,
     };
     this.locks.set(key, entry);
     this.persist(entry);
@@ -785,6 +789,13 @@ class LockTable extends EventEmitter {
         this.unpersist(entry.filePath, entry.workspaceId);
         this.remember(entry);
         changed = true;
+      } else if (entry.keepAliveUntil > now) {
+        entry.lastHeartbeat = now;
+        this.persist(entry);
+        changed = true;
+      } else if (entry.keepAliveUntil) {
+        entry.keepAliveUntil = 0;
+        this.persist(entry);
       }
     }
     if (changed) this.emit("change");

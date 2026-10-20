@@ -380,6 +380,7 @@ async function runPreTool(declaredMode) {
       dependsOn: deps,
       files: files.length > 1 ? files : undefined,
       mode: payload.mode === "read" ? "read" : "write",
+      keepAlive: payload.mode !== "read",
       holder: { label: modeLabel(mode), host: os.hostname(), login: currentLogin() },
     });
     debugHook(mode, "pre:claim", { workspace, files, agentId, via: result.via || null, allowed: result.allowed });

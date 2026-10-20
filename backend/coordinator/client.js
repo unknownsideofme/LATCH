@@ -269,6 +269,7 @@ async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {})
     dependsOn: opts.dependsOn,
     files: opts.files,
     mode: opts.mode,
+    keepAlive: opts.keepAlive === true,
     holder: opts.holder || null,
     leases: files.map((item) => {
       const lease = readLease(workspacePath, agentId, item);

@@ -10,6 +10,7 @@ const { WorkspaceService } = require("../../../backend/services/WorkspaceService
 const { PatchService } = require("../../../backend/services/PatchService");
 const { LockService } = require("../../../backend/services/LockService");
 const { LockTable } = require("../../../backend/coordinator/lockTable");
+const { SupabaseLockAdapter } = require("../../../backend/supabase/SupabaseLockAdapter");
 const { parsePort, DEFAULT_PORT } = require("../../../backend/config/constants");
 
 test("ContextService: current user resolution fallback", () => {
@@ -97,12 +98,14 @@ test("WorkspaceService: initialization and workspace resolution", () => {
 test("LockService: Supabase batch claims sort, issue per-file leases, and roll back failures", async () => {
   const workspaceId = fs.mkdtempSync(path.join(os.tmpdir(), "latch-lock-service-"));
   const claimCalls = [];
+  const claimArgs = [];
   const releaseCalls = [];
   const fences = new Map();
   let shouldDeny = false;
   const supabaseLockAdapter = {
     enabled: true,
     async claim(args) {
+      claimArgs.push(args);
       claimCalls.push(args.file);
       if (shouldDeny && args.file === "b.ts") return { allowed: false, code: "FILE_LOCKED" };
       const fencingToken = (fences.get(args.file) || 0) + 1;
@@ -134,12 +137,17 @@ test("LockService: Supabase batch claims sort, issue per-file leases, and roll b
       agentId: "agent:host:s1",
       workspaceId,
       files: ["b.ts", "a.ts"],
+      keepAlive: true,
     });
     assert.equal(success.allowed, true);
     assert.deepEqual(success.batch, ["a.ts", "b.ts"]);
     assert.equal(success.locks.length, 2);
     assert.notEqual(success.locks[0].ownershipToken, success.locks[1].ownershipToken);
     assert.deepEqual(claimCalls, ["a.ts", "b.ts"]);
+    assert.deepEqual(claimArgs.map(({ file, keepAlive }) => ({ file, keepAlive })), [
+      { file: "a.ts", keepAlive: true },
+      { file: "b.ts", keepAlive: true },
+    ]);
 
     lockTable.releaseAll("agent:host:s1", workspaceId, success.locks.map((lock) => ({
       file: lock.filePath,
@@ -159,5 +167,47 @@ test("LockService: Supabase batch claims sort, issue per-file leases, and roll b
     assert.equal(lockTable.getLock("a.ts", workspaceId), null);
   } finally {
     fs.rmSync(workspaceId, { recursive: true, force: true });
+  }
+});
+
+test("SupabaseLockAdapter: bounded keep-alive renews active hook leases and stops on release", async () => {
+  const adapter = new SupabaseLockAdapter();
+  const rpcCalls = [];
+  adapter.client = {
+    async rpc(name) {
+      rpcCalls.push(name);
+      if (name === "latch_claim_lock") {
+        return { data: { allowed: true, ownershipToken: "lease-token", fencingToken: 4 }, error: null };
+      }
+      if (name === "latch_heartbeat_lock") return { data: { ok: true }, error: null };
+      if (name === "latch_release_lock") return { data: { ok: true, released: true }, error: null };
+      return { data: null, error: null };
+    },
+  };
+
+  const lease = {
+    workspaceId: "workspace",
+    file: "a.ts",
+    agentId: "agent:host:s1",
+    sessionId: "s1",
+    ttl: 5000,
+    keepAlive: true,
+  };
+  try {
+    const claimed = await adapter.claim(lease);
+    assert.equal(claimed.allowed, true);
+    assert.equal(adapter.keepAliveTimers.size, 1);
+    await new Promise((resolve) => setTimeout(resolve, 1750));
+    assert.ok(rpcCalls.includes("latch_heartbeat_lock"));
+
+    const released = await adapter.release({
+      ...lease,
+      ownershipToken: "lease-token",
+      fencingToken: 4,
+    });
+    assert.equal(released.released, true);
+    assert.equal(adapter.keepAliveTimers.size, 0);
+  } finally {
+    for (const [key, active] of adapter.keepAliveTimers) adapter.stopKeepAlive(key);
   }
 });

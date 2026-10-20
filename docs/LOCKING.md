@@ -37,6 +37,7 @@ the host for any request that carries a member token or arrives from a remote ad
 | `MIN_TTL_MS` | 5 s | Requested TTLs are clamped up to this |
 | `MAX_TTL_MS` | 300 s | Requested TTLs are clamped down to this |
 | `CLEANUP_MS` | 5 s | Sweep interval for expired locks |
+| `MAX_HOOK_KEEP_ALIVE_MS` | 300 s | Maximum background renewal window for a pre-tool lease |
 | `RECENT_TTL_MS` | 45 s | How long a released lock stays on the board |
 | `RECENT_MAX` | 200 | Released-lock ring buffer size |
 | `READ_TTL_MS` | 30 s | How long a read stays on the board |
@@ -44,6 +45,10 @@ the host for any request that carries a member token or arrives from a remote ad
 | `WAITER_TTL_MS` | 5 min | How long a refused agent stays interested in the file |
 
 A lock is alive while `now < (lastHeartbeat || claimedAt) + ttlMs`.
+Write hooks request active renewal: the local lock sweeper or Supabase adapter
+heartbeats the lease until the post-tool release or the five-minute cap. If the
+post-tool hook never runs, renewal stops at that cap and the lock expires after
+its normal TTL.
 
 ---
 

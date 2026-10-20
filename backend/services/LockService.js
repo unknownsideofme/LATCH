@@ -113,6 +113,7 @@ class LockService {
       workspaceId: typeof body?.workspaceId === "string" ? body.workspaceId : undefined,
       ttl: Number(body?.ttl) || undefined,
       mode: body?.mode === "read" ? "read" : "write",
+      keepAlive: body?.keepAlive === true,
       files: Array.isArray(body?.files)
         ? body.files.filter((f) => typeof f === "string").slice(0, MAX_FILES_PER_CLAIM)
         : undefined,
@@ -190,6 +191,7 @@ class LockService {
           ownershipToken: savedLease?.ownershipToken || scoped.ownershipToken,
           fencingToken: savedLease?.fencingToken ?? scoped.fencingToken,
           mode: scoped.mode,
+          keepAlive: scoped.keepAlive,
           ttl: scoped.ttl,
           holder: scoped.holder,
         });
