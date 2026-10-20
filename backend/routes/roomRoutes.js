@@ -190,7 +190,7 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
           type: "left",
           key: `left:${room.roomId || "room"}:${String(login).toLowerCase()}`,
           title: `@${login} left the room`,
-          body: "Removed from the shared room â€” they stay on the GitHub team list.",
+          body: "Removed from the shared room — they stay on the GitHub team list.",
           workspaceId: project?.id || null,
           payload: { login },
         },
