@@ -7,11 +7,12 @@ RUN apk add --no-cache libc6-compat curl unzip
 # Install Render CLI (required for background provisioning and teardown tasks)
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then RENDER_ARCH="linux_amd64"; else RENDER_ARCH="linux_arm64"; fi \
-    && curl -fsSL -o /tmp/render.zip "https://github.com/render-oss/cli/releases/download/v2.30.0/cli_2.30.0_${RENDER_ARCH}.zip" \
-    && unzip -q /tmp/render.zip -d /tmp \
-    && mv /tmp/render /usr/local/bin/render \
+    && mkdir -p /tmp/render-install \
+    && curl -fsSL -o /tmp/render-install/render.zip "https://github.com/render-oss/cli/releases/download/v2.30.0/cli_2.30.0_${RENDER_ARCH}.zip" \
+    && unzip -q /tmp/render-install/render.zip -d /tmp/render-install \
+    && mv /tmp/render-install/cli_v* /usr/local/bin/render \
     && chmod +x /usr/local/bin/render \
-    && rm -rf /tmp/render*
+    && rm -rf /tmp/render-install
 
 WORKDIR /app
 
