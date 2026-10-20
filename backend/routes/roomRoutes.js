@@ -10,6 +10,7 @@ const {
   dropMember,
   membersView,
   activeMemberLogins,
+  roomMaxMembers,
   inviteView,
 } = require("../lib/room");
 const {
@@ -115,26 +116,32 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
     res.status(result.ok ? 200 : 503).json(result);
   });
 
-  router.post("/api/room/hello", requireRoomMember, (req, res) => {
-    const { project, room } = hostRoomFor(req.body?.hostProjectId);
-    if (!room?.url) return res.status(409).json({ error: "no_room" });
-    const user = req.body?.user;
-    if (!user?.login) return res.status(400).json({ error: "user_required" });
-    const next = upsertMember(room, user, req.body?.role === "host" ? "host" : "guest");
-    const active = workspaceService && project ? workspaceService.activeAgent(project.id) : {};
-    upsertMember(next, { ...ContextService.currentUser(), ...active }, "host");
-    saveRoom(next, project?.path);
-    if (sse) sse.emit("presence", { workspaceId: project?.id, userId: user.login });
-    res.json({
-      ok: true,
-      members: membersView(next),
-      hostProjectId: room.hostProjectId || project?.id || null,
-      hostWorkspacePath: room.hostWorkspacePath || project?.path || null,
-      hostLogin: ContextService.currentUser().login,
-      project: project
-        ? { id: project.id, name: project.name, pathName: require("path").basename(project.path), remoteUrl: project.remoteUrl }
-        : null,
-    });
+  router.post("/api/room/hello", requireRoomMember, async (req, res) => {
+    const { project } = hostRoomFor(req.body?.hostProjectId);
+    const releaseAdmission = await acquireAdmission(project?.path || req.body?.hostProjectId || "default");
+    try {
+      const room = loadRoom(project?.path);
+      if (!room?.url) return res.status(409).json({ error: "no_room" });
+      const user = req.body?.user;
+      if (!user?.login) return res.status(400).json({ error: "user_required" });
+      const next = upsertMember(room, user, req.body?.role === "host" ? "host" : "guest");
+      const active = workspaceService && project ? workspaceService.activeAgent(project.id) : {};
+      upsertMember(next, { ...ContextService.currentUser(), ...active }, "host");
+      saveRoom(next, project?.path);
+      if (sse) sse.emit("presence", { workspaceId: project?.id, userId: user.login });
+      res.json({
+        ok: true,
+        members: membersView(next),
+        hostProjectId: room.hostProjectId || project?.id || null,
+        hostWorkspacePath: room.hostWorkspacePath || project?.path || null,
+        hostLogin: ContextService.currentUser().login,
+        project: project
+          ? { id: project.id, name: project.name, pathName: require("path").basename(project.path), remoteUrl: project.remoteUrl }
+          : null,
+      });
+    } finally {
+      releaseAdmission();
+    }
   });
 
   router.post("/api/room/invite", requireLocal, async (req, res) => {
@@ -175,8 +182,10 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
     res.json({ ok: true, invites: inviteView(room) });
   });
 
-  router.post("/api/room/kick", requireLocal, (req, res) => {
+  router.post("/api/room/kick", requireLocal, async (req, res) => {
     const project = ContextService.currentProject();
+    const releaseAdmission = await acquireAdmission(project?.path || "default");
+    try {
     const room = loadRoom(project?.path);
     if (!room?.url) return res.status(409).json({ error: "not_hosting" });
     const login = normLogin(req.body?.login);
@@ -198,11 +207,16 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
       );
     }
     res.json({ ok: true, members: membersView(loadRoom(project?.path)), invites: inviteView(room) });
+    } finally {
+      releaseAdmission();
+    }
   });
 
   router.post("/api/room/redeem", async (req, res) => {
     const project = ContextService.currentProject();
-    const room = loadRoom(project?.path);
+    const releaseAdmission = await acquireAdmission(project?.path || "default");
+    try {
+    let room = loadRoom(project?.path);
     if (!room?.url || room.role !== "host") return res.status(409).json({ error: "not_hosting" });
     const user = req.body?.user;
     if (!user?.login) return res.status(400).json({ error: "user_required" });
@@ -247,12 +261,10 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
       }
     }
 
-    const releaseAdmission = await acquireAdmission(project?.path || room.roomId || "default");
     let token;
-    try {
       const host = { ...ContextService.currentUser(), ...(workspaceService && project ? workspaceService.activeAgent(project.id) : {}) };
       upsertMember(room, host, "host");
-      const maxMembers = Number(project?.agent_limit) || 7;
+      const maxMembers = roomMaxMembers(room, project);
       room.maxMembers = Number.isInteger(maxMembers) && maxMembers >= 1 ? maxMembers : 7;
       const existingMember = (room.members || []).some((member) => normLogin(member.login) === normLogin(user.login));
       const activeCount = activeMemberLogins(room).size;
@@ -267,9 +279,6 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
       token = issueMemberToken(room, user.login);
       upsertMember(room, user, "guest");
       saveRoom(room, project?.path);
-    } finally {
-      releaseAdmission();
-    }
     if (sse) sse.emit("presence", { workspaceId: project?.id, userId: user.login });
     console.log(`[latch-room] @${user.login} joined the room`);
     if (roomService.noticeService) {
@@ -297,6 +306,9 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
         ? { id: project.id, name: project.name, pathName: require("path").basename(project.path), remoteUrl: project.remoteUrl }
         : null,
     });
+    } finally {
+      releaseAdmission();
+    }
   });
 
   router.get("/api/room/members", requireRoomMember, (req, res) => {
@@ -304,7 +316,9 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
     res.json({ members: membersView(room) });
   });
 
-  router.post("/api/room/bye", requireRoomMember, (req, res) => {
+  router.post("/api/room/bye", requireRoomMember, async (req, res) => {
+    const releaseAdmission = await acquireAdmission(req.body?.hostProjectId || "default");
+    try {
     const { project, room } = hostRoomFor(req.body?.hostProjectId);
     if (!room?.url || !req.body?.login) return res.json({ ok: true });
     saveRoom(dropMember(room, req.body.login), project?.path);
@@ -322,6 +336,9 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
       );
     }
     res.json({ ok: true });
+    } finally {
+      releaseAdmission();
+    }
   });
 
   router.get("/api/room/state", requireRoomMember, (req, res) => {

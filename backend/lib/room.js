@@ -102,6 +102,14 @@ function dropMember(room, login) {
   return room;
 }
 
+function roomMaxMembers(room, project) {
+  const stored = Number(room?.maxMembers);
+  const configured = Number(project?.agent_limit);
+  if (Number.isInteger(stored) && stored >= 1) return stored;
+  if (Number.isInteger(configured) && configured >= 1) return configured;
+  return 7;
+}
+
 function activeMemberLogins(room) {
   const active = new Set();
   for (const member of membersView(room)) {
@@ -214,7 +222,7 @@ function spawnNgrok(port) {
   if (ngrokAlive()) return ngrokChild;
   if (lastSpawnAt && Date.now() - lastSpawnAt < 20_000) return ngrokChild;
   try {
-    // Never shell:true on Windows — that opens a visible cmd even with
+    // Never shell:true on Windows â€” that opens a visible cmd even with
     // windowsHide. Spawn ngrok.exe directly, hide the console, detach so it
     // outlives accidental parent death, and unref so the API can exit.
     const child = spawn("ngrok", ["http", String(port), "--log=stdout"], {
@@ -293,7 +301,7 @@ async function ensureTunnelOnce(port) {
       return listed;
     }
     // Inspector flap after sleep is normal. Do not kill the only tunnel
-    // because a public probe was slow — that is what kept ngrok dying.
+    // because a public probe was slow â€” that is what kept ngrok dying.
     inspectorMisses += 1;
     if (inspectorMisses < 3) return null;
     inspectorMisses = 0;
@@ -367,6 +375,7 @@ module.exports = {
   dropMember,
   membersView,
   activeMemberLogins,
+  roomMaxMembers,
   inviteView: (room) => require("./roomAuth").inviteView(room),
   mintRoomId,
   NGROK_HINT,
