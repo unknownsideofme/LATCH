@@ -58,7 +58,7 @@ local API on 127.0.0.1:3001
    └── guest        → WebSocket RPC to host /ws/control → host's LockTable
 ```
 
-The fallback chain, in order, with a 3 s total budget:
+The coordinator lookup chain, in order:
 
 1. **Local API** (`/api/coord/claim`, ~800 ms budget). Loopback; a guest's request is
    forwarded from here over the control socket.
@@ -66,9 +66,8 @@ The fallback chain, in order, with a 3 s total budget:
    room has not been marked down. A failed room call starts a 30 s cooldown so a sleeping
    host does not cost every hook three full timeouts.
 3. **Coordinator port** (`POST /claim`) read from `coordinator-state.json`.
-4. **Filesystem claim** — write `<locks>/<sha256(file)[:16]>.lock` with the `wx` flag.
-   This arbitrates correctly between agents even with no server running.
-5. **Fail open** — allow the tool and log `COORDINATOR_UNAVAILABLE`.
+4. **Fail closed** — deny the write with `COORDINATOR_UNAVAILABLE`. A local-only grant
+   could race a lease held by a guest or host on another machine.
 
 A host never routes its own hooks out through its tunnel and back; the host *is* the
 coordinator.
@@ -89,8 +88,8 @@ board while its locks arbitrate perfectly. This is exactly the case `latch docto
 written to name.
 
 The lock table also re-scans its workspace's `.latch/locks` directory (gated on the
-directory's mtime, and at most once a second) so that locks written by fail-open hooks in
-other processes still surface on the board.
+directory's mtime, and at most once a second) so persisted leases remain visible after a
+coordinator restart.
 
 ---
 
@@ -107,10 +106,13 @@ An agent in a joined room is about to run `Edit` on `src/auth.ts`.
    registers itself.
 4. **Dependencies are computed** for each file from the tree-sitter import graph.
 5. **The claim goes out** with a 15 s TTL, the dependency list, the full file list for a
-   multi-file edit, and a holder object (`label`, `host`, `login`).
+   multi-file edit, and a holder object (`label`, `host`, `login`). A grant returns a
+   private ownership token and a per-file fencing token; the hook stores the credentials
+   in the user's `~/.latch/leases` directory for its post-tool counterpart.
 6. **The host's lock table decides.** A live write lock held by a different owner refuses
-   the claim (HTTP 409) and records the refusing agent as a *waiter*. A stale lock is
-   swept. A read lock is displaced. The same owner renews.
+   the claim (HTTP 409) with a structured `FILE_LOCKED` response and records the refusing
+   agent as a *waiter*. A stale lock is swept. A read lock is displaced. The same owner
+   can renew only with the current ownership and fencing tokens.
 7. **Soft blocks are evaluated.** If an upstream import, or another file in the same
    strongly-connected component, is held by someone else, the claim still succeeds but
    carries a `warning`.
@@ -118,7 +120,8 @@ An agent in a joined room is about to run `Edit` on `src/auth.ts`.
    `{decision}`, Copilot's flat `{permissionDecision}`, or the `hookSpecificOutput`
    envelope for Claude Code and Codex. On deny it also writes the reason to stderr and
    sets exit code 2.
-9. **The agent writes the file** (or picks a different task).
+9. **The agent writes the file** (or picks a different task). A failed lock verification
+   or unavailable coordinator denies the write rather than silently proceeding.
 10. **Post-tool hook fires.** It posts `/api/flush-file`, which computes a patch and fans
     it out to peers over `/ws/patches`, then releases the lock.
 11. **The released lock lingers** on the board for 45 s so a 100 ms claim-release cycle is

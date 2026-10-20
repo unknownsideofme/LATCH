@@ -1,10 +1,15 @@
 const fs = require("fs");
 const http = require("http");
+const crypto = require("crypto");
 const path = require("path");
-const { coordinatorStatePath } = require("../lib/paths");
+const {
+  coordinatorStatePath,
+  homeLatchDir,
+  canonicalWorkspaceFile,
+  canonicalWorkspaceRoot,
+} = require("../lib/paths");
 const { loadRoom } = require("../lib/room");
 
-const TOTAL_BUDGET_MS = 3000;
 const HTTP_TIMEOUT_MS = 2000;
 
 function readState(workspacePath) {
@@ -152,39 +157,84 @@ function getJson(port, pathname, timeoutMs) {
   });
 }
 
-function lockfilePath(workspacePath, file) {
-  const crypto = require("crypto");
-  const { locksDirFor } = require("../lib/paths");
-  const hash = crypto.createHash("sha256").update(file).digest("hex").slice(0, 16);
-  return path.join(locksDirFor(workspacePath), `${hash}.lock`);
+function leaseDirectory(workspacePath, agentId) {
+  const root = canonicalWorkspaceRoot(workspacePath) || path.resolve(workspacePath);
+  const workspaceKey = process.platform === "win32" ? root.toLowerCase() : root;
+  const ownerKey = `${workspaceKey}::${agentId}`;
+  const ownerHash = crypto.createHash("sha256").update(ownerKey).digest("hex");
+  const dir = path.join(homeLatchDir(), "leases", ownerHash);
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  return dir;
 }
 
-function filesystemClaim(workspacePath, agentId, file, ttlMs) {
-  const lockPath = lockfilePath(workspacePath, file);
-  const now = Date.now();
+function leasePath(workspacePath, agentId, file) {
+  const canonicalFile = canonicalWorkspaceFile(workspacePath, file);
+  if (!canonicalFile) return null;
+  const hash = crypto.createHash("sha256").update(canonicalFile).digest("hex");
+  return path.join(leaseDirectory(workspacePath, agentId), `${hash}.json`);
+}
+
+function readLease(workspacePath, agentId, file) {
+  const target = leasePath(workspacePath, agentId, file);
+  if (!target) return null;
   try {
-    fs.writeFileSync(
-      lockPath,
-      JSON.stringify({ filePath: file, agentId, claimedAt: now, ttlMs, source: "filesystem", workspaceId: workspacePath }),
-      { flag: "wx" }
-    );
-    return { allowed: true, source: "filesystem" };
+    const lease = JSON.parse(fs.readFileSync(target, "utf8"));
+    const root = canonicalWorkspaceRoot(workspacePath) || path.resolve(workspacePath);
+    const workspaceKey = process.platform === "win32" ? root.toLowerCase() : root;
+    return lease.workspaceKey === workspaceKey && lease.agentId === agentId &&
+      lease.filePath === canonicalWorkspaceFile(workspacePath, file) ? lease : null;
   } catch {
+    return null;
+  }
+}
+
+function saveLease(workspacePath, agentId, file, lease) {
+  if (!lease?.ownershipToken || !Number.isSafeInteger(Number(lease.fencingToken))) return;
+  const target = leasePath(workspacePath, agentId, file);
+  if (!target) return;
+  const temp = `${target}.${process.pid}.${crypto.randomBytes(6).toString("hex")}.tmp`;
+  const root = canonicalWorkspaceRoot(workspacePath) || path.resolve(workspacePath);
+  const workspaceKey = process.platform === "win32" ? root.toLowerCase() : root;
+  fs.writeFileSync(
+    temp,
+    JSON.stringify({
+      workspaceKey,
+      agentId,
+      filePath: canonicalWorkspaceFile(workspacePath, file),
+      sessionId: lease.sessionId || "",
+      ownershipToken: lease.ownershipToken,
+      fencingToken: Number(lease.fencingToken),
+    }),
+    { mode: 0o600 }
+  );
+  fs.renameSync(temp, target);
+}
+
+function removeLease(workspacePath, agentId, file) {
+  const target = leasePath(workspacePath, agentId, file);
+  if (!target) return;
+  try {
+    fs.unlinkSync(target);
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+}
+
+function readLeases(workspacePath, agentId) {
+  const dir = leaseDirectory(workspacePath, agentId);
+  const leases = [];
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith(".json")) continue;
     try {
-      const existing = JSON.parse(fs.readFileSync(lockPath, "utf8"));
-      const { sameOwner } = require("./lockTable");
-      if (sameOwner(existing.agentId, agentId) || now >= existing.claimedAt + (existing.ttlMs || 15000)) {
-        fs.writeFileSync(
-          lockPath,
-          JSON.stringify({ filePath: file, agentId, claimedAt: now, ttlMs, source: "filesystem", workspaceId: workspacePath })
-        );
-        return { allowed: true, source: "filesystem" };
-      }
-      return { allowed: false, holder: existing.agentId, source: "filesystem" };
+      const lease = JSON.parse(fs.readFileSync(path.join(dir, name), "utf8"));
+      const root = canonicalWorkspaceRoot(workspacePath) || path.resolve(workspacePath);
+      const workspaceKey = process.platform === "win32" ? root.toLowerCase() : root;
+      if (lease.workspaceKey === workspaceKey && lease.agentId === agentId) leases.push(lease);
     } catch {
-      return { allowed: true, source: "fail-open" };
+      /* an incomplete local credential is not a usable lease */
     }
   }
+  return leases;
 }
 
 async function postRemote(url, pathname, body, timeoutMs, token) {
@@ -210,6 +260,7 @@ async function postRemote(url, pathname, body, timeoutMs, token) {
 async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {}) {
   const started = Date.now();
   const room = loadRoom(workspacePath);
+  const files = Array.isArray(opts.files) && opts.files.length ? opts.files : [file];
   const payload = {
     agentId,
     file,
@@ -219,6 +270,10 @@ async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {})
     files: opts.files,
     mode: opts.mode,
     holder: opts.holder || null,
+    leases: files.map((item) => {
+      const lease = readLease(workspacePath, agentId, item);
+      return lease ? { ...lease, file: lease.filePath } : null;
+    }).filter(Boolean),
   };
   // Local API owns the control-plane socket. Guests must not wait on ngrok HTTP
   // while chat snapshots are in flight — claims hop loopback, then a tiny WS.
@@ -233,23 +288,28 @@ async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {})
     const remaining = Math.max(80, 800 - (Date.now() - started));
     const { body } = await postJson(apiPort(workspacePath), "/api/coord/claim", roomPayload(room, workspacePath, payload), remaining);
     if (body?.degraded) degraded = { ...body, source: body.source || "local_fallback" };
-    else if (body && typeof body.allowed === "boolean") return { ...body, source: body.source || "control" };
+    else if (body && typeof body.allowed === "boolean") {
+      if (body.allowed) persistClaimLeases(workspacePath, agentId, body);
+      return { ...body, source: body.source || "control" };
+    }
   } catch {
     /* coordinator / remote fallback */
   }
   if (roomUsable(room)) {
     try {
       const { body } = await postRemote(room.url, "/api/coord/claim", roomPayload(room, workspacePath, payload), HTTP_TIMEOUT_MS, room.memberToken);
-      return { ...body, source: body.source || "room" };
+      if (typeof body.allowed === "boolean") {
+        if (body.allowed) persistClaimLeases(workspacePath, agentId, body);
+        return { ...body, source: body.source || "room" };
+      }
+      throw new Error("The room returned an invalid lock response.");
     } catch {
       markRoomDown(room);
     }
   }
-  // Every rung below this point is local to *this* machine: the coordinator
-  // process, the lock directory on this disk, and finally fail-open. None of
-  // them can adjudicate a lock that belongs to the room, so once we know we are
-  // a guest whose host is unreachable, consulting them would only launder an
-  // unanswered question into a confident yes. Refuse with the reason instead.
+  // Once the shared coordinator cannot answer, a local grant could overlap a
+  // lock owned by another machine. Refuse rather than convert an unknown state
+  // into a successful claim.
   if (degraded) {
     console.warn("[latch] HOST_UNREACHABLE — claim refused rather than granted locally");
     return degraded;
@@ -259,44 +319,66 @@ async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {})
     try {
       const remaining = Math.max(50, HTTP_TIMEOUT_MS - (Date.now() - started));
       const { body } = await postJson(port, "/claim", payload, remaining);
-      return { ...body, source: body.source || "coordinator" };
+      if (typeof body.allowed === "boolean") {
+        if (body.allowed) persistClaimLeases(workspacePath, agentId, body);
+        return { ...body, source: body.source || "coordinator" };
+      }
+      throw new Error("The coordinator returned an invalid lock response.");
     } catch {
       /* fall through */
     }
   }
-  const remaining = TOTAL_BUDGET_MS - (Date.now() - started);
-  if (remaining > 0) {
-    try {
-      return filesystemClaim(workspacePath, agentId, file, ttlMs);
-    } catch {
-      /* fail open */
-    }
+  console.warn("[latch] COORDINATOR_UNAVAILABLE — write claim refused");
+  return {
+    allowed: false,
+    degraded: true,
+    source: "unavailable",
+    code: "COORDINATOR_UNAVAILABLE",
+    reason: "The shared coordinator could not verify this file lease.",
+  };
+}
+
+function persistClaimLeases(workspacePath, agentId, result) {
+  const locks = Array.isArray(result.locks) ? result.locks : result.lock ? [result.lock] : [result];
+  for (const lock of locks) {
+    const file = lock.filePath || lock.file || result.filePath || result.file;
+    if (!file) continue;
+    saveLease(workspacePath, agentId, file, lock);
   }
-  console.warn("[latch] COORDINATOR_UNAVAILABLE — fail-open");
-  return { allowed: true, source: "fail-open" };
 }
 
 async function releaseFile(workspacePath, agentId, file) {
   const room = loadRoom(workspacePath);
-  const payload = { agentId, file, workspaceId: workspacePath };
+  const lease = readLease(workspacePath, agentId, file);
+  const payload = {
+    agentId,
+    file,
+    workspaceId: workspacePath,
+    ownershipToken: lease?.ownershipToken,
+    fencingToken: lease?.fencingToken,
+  };
   try {
     const { body } = await postJson(apiPort(workspacePath), "/api/coord/release", roomPayload(room, workspacePath, payload), 600);
     // A degraded release is already queued for replay by the daemon, but the
     // tunnel may still be up even when the control socket is not — try it, and
     // let the replay be a harmless no-op if this succeeds.
-    if (body && !body.degraded) return body;
+    if (body && !body.degraded) {
+      if (body.released || body.released === false) removeLease(workspacePath, agentId, file);
+      return body;
+    }
   } catch {
     /* fallback */
   }
   if (roomUsable(room)) {
     try {
       const { body } = await postRemote(room.url, "/api/coord/release", roomPayload(room, workspacePath, payload), HTTP_TIMEOUT_MS, room.memberToken);
+      if (body.released || body.released === false) removeLease(workspacePath, agentId, file);
       return body;
     } catch {
       markRoomDown(room);
     }
   }
-  return { ok: true };
+  return { ok: false, degraded: true, reason: "coordinator_unavailable" };
 }
 
 async function status(workspacePath) {
@@ -311,11 +393,21 @@ async function status(workspacePath) {
 
 async function releaseAll(workspacePath, agentId) {
   const room = loadRoom(workspacePath);
-  const payload = { agentId, workspaceId: workspacePath };
+  const leases = readLeases(workspacePath, agentId).map((lease) => ({
+    file: lease.filePath,
+    ownershipToken: lease.ownershipToken,
+    fencingToken: lease.fencingToken,
+  }));
+  const payload = { agentId, workspaceId: workspacePath, leases };
+  const finish = (body) => {
+    const released = Array.isArray(body?.released) ? body.released : [];
+    for (const file of released) removeLease(workspacePath, agentId, file);
+    return body;
+  };
   if (roomUsable(room)) {
     try {
       const { body } = await postRemote(room.url, "/api/coord/release-all", roomPayload(room, workspacePath, payload), HTTP_TIMEOUT_MS, room.memberToken);
-      return body;
+      return finish(body);
     } catch {
       markRoomDown(room);
       /* local fallback */
@@ -325,14 +417,14 @@ async function releaseAll(workspacePath, agentId) {
   if (port) {
     try {
       const { body } = await postJson(port, "/release-all", payload, HTTP_TIMEOUT_MS);
-      return body;
+      return finish(body);
     } catch {
       /* ignore */
     }
   }
   try {
     const { body } = await postJson(apiPort(workspacePath), "/api/coord/release-all", payload, HTTP_TIMEOUT_MS);
-    return body;
+    return finish(body);
   } catch {
     /* ignore */
   }
@@ -341,7 +433,14 @@ async function releaseAll(workspacePath, agentId) {
 
 async function heartbeat(workspacePath, agentId, file) {
   const room = loadRoom(workspacePath);
-  const payload = { agentId, file, workspaceId: workspacePath };
+  const lease = readLease(workspacePath, agentId, file);
+  const payload = {
+    agentId,
+    file,
+    workspaceId: workspacePath,
+    ownershipToken: lease?.ownershipToken,
+    fencingToken: lease?.fencingToken,
+  };
   try {
     const { body } = await postJson(apiPort(workspacePath), "/api/coord/heartbeat", roomPayload(room, workspacePath, payload), 400);
     if (body) return body;
@@ -356,7 +455,7 @@ async function heartbeat(workspacePath, agentId, file) {
       markRoomDown(room);
     }
   }
-  return { ok: false };
+  return { ok: false, reason: "coordinator_unavailable" };
 }
 
 module.exports = { claimFile, releaseFile, releaseAll, status, readPort, heartbeat };

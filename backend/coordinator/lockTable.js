@@ -2,7 +2,7 @@ const { EventEmitter } = require("events");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { locksDirFor } = require("../lib/paths");
+const { locksDirFor, canonicalWorkspaceRoot, canonicalWorkspaceFile } = require("../lib/paths");
 const { normalizeWorkspaceRoot } = require("../lib/transcripts/util");
 
 const DEFAULT_TTL_MS = 15_000;
@@ -17,10 +17,12 @@ function clampTtl(ttlMs) {
 }
 
 function normalizeFile(filePath) {
-  return String(filePath || "")
+  const value = String(filePath || "")
     .replace(/\\/g, "/")
-    .replace(/^\.?\//, "")
     .trim();
+  if (!value || value.startsWith("/") || /^[a-zA-Z]:\//.test(value)) return "";
+  const normalized = path.posix.normalize(value).replace(/^\.?\//, "");
+  return normalized === "." || normalized === ".." || normalized.startsWith("../") ? "" : normalized;
 }
 
 function normWorkspace(value) {
@@ -33,7 +35,7 @@ function normWorkspace(value) {
 function workspaceRoot(value) {
   if (!value || typeof value !== "string") return null;
   if (!/[\\/]/.test(value)) return null;
-  return normalizeWorkspaceRoot(value) || path.resolve(value);
+  return canonicalWorkspaceRoot(normalizeWorkspaceRoot(value) || path.resolve(value));
 }
 
 function lockKey(workspaceId, filePath) {
@@ -130,6 +132,7 @@ class LockTable extends EventEmitter {
     this.defaultWorkspace = opts.workspacePath || null;
     this._timer = null;
     this._loaded = new Map();
+    this.fencingTokens = new Map();
   }
 
   startCleanup() {
@@ -157,10 +160,69 @@ class LockTable extends EventEmitter {
       const dir = this.dirFor(entry.workspaceId);
       if (!dir) return;
       const serial = { ...entry, readers: [...(entry.readers || [])] };
-      fs.writeFileSync(path.join(dir, `${lockHash(entry.filePath, entry.workspaceId)}.lock`), JSON.stringify(serial, null, 2));
+      fs.writeFileSync(
+        path.join(dir, `${lockHash(entry.filePath, entry.workspaceId)}.lock`),
+        JSON.stringify(serial, null, 2),
+        { mode: 0o600 }
+      );
     } catch {
       /* in-memory lock still counts; a missing drive must not drop the claim */
     }
+  }
+
+  nextFencingToken(workspaceId, filePath, requested) {
+    const key = lockKey(workspaceId, filePath);
+    let previous = this.fencingTokens.get(key) || 0;
+    let dir;
+    try {
+      dir = this.dirFor(workspaceId);
+      if (!dir) return null;
+      const raw = fs.readFileSync(path.join(dir, `${lockHash(filePath, workspaceId)}.fence`), "utf8").trim();
+      if (!/^\d+$/.test(raw)) return null;
+      const diskValue = Number(raw);
+      if (!Number.isSafeInteger(diskValue)) return null;
+      previous = Math.max(previous, diskValue);
+    } catch (err) {
+      if (err.code !== "ENOENT") return null;
+    }
+    if (requested !== undefined && requested !== null) {
+      if (!Number.isSafeInteger(requested) || requested < 1 || requested < previous) return null;
+      previous = requested - 1;
+    }
+    const next = previous + 1;
+    const fencePath = path.join(dir, `${lockHash(filePath, workspaceId)}.fence`);
+    const tempPath = `${fencePath}.${process.pid}.${crypto.randomBytes(6).toString("hex")}.tmp`;
+    try {
+      fs.writeFileSync(tempPath, String(next), { mode: 0o600 });
+      fs.renameSync(tempPath, fencePath);
+    } catch (err) {
+      try {
+        fs.unlinkSync(tempPath);
+      } catch {
+        /* the temporary file may not have been created */
+      }
+      return null;
+    }
+    this.fencingTokens.set(key, next);
+    return next;
+  }
+
+  denial(existing, filePath, now, message) {
+    const expiresAt = (existing.lastHeartbeat || existing.claimedAt) + existing.ttlMs;
+    const sessionId = String(existing.agentId || "").split(":").slice(2).join(":");
+    return {
+      allowed: false,
+      status: "DENIED",
+      code: "FILE_LOCKED",
+      canonicalPath: filePath,
+      owner: { agentId: existing.agentId, sessionId },
+      holder: existing.agentId,
+      expiresInMs: Math.max(0, expiresAt - now),
+      retryable: true,
+      fencingToken: existing.fencingToken || 0,
+      reason: message,
+      message,
+    };
   }
 
   unpersist(filePath, workspaceId) {
@@ -179,8 +241,14 @@ class LockTable extends EventEmitter {
     if (!entry?.filePath || !alive(entry)) return;
     entry.workspaceId = workspaceRoot(entry.workspaceId) || entry.workspaceId || fallbackWorkspace || this.defaultWorkspace;
     if (!entry.workspaceId) return;
+    entry.filePath = canonicalWorkspaceFile(entry.workspaceId, entry.filePath);
+    if (!entry.filePath) return;
     entry.readers = new Set(entry.readers || []);
-    this.locks.set(lockKey(entry.workspaceId, entry.filePath), entry);
+    const key = lockKey(entry.workspaceId, entry.filePath);
+    if (Number.isSafeInteger(entry.fencingToken)) {
+      this.fencingTokens.set(key, Math.max(this.fencingTokens.get(key) || 0, entry.fencingToken));
+    }
+    this.locks.set(key, entry);
   }
 
   /**
@@ -257,13 +325,14 @@ class LockTable extends EventEmitter {
 
   getLock(file, workspaceId) {
     const ws = workspaceRoot(workspaceId) || workspaceId;
-    if (!ws) return null;
+    const canonicalFile = canonicalWorkspaceFile(ws, file);
+    if (!ws || !canonicalFile) return null;
     this.loadWorkspace(ws);
-    return this.locks.get(lockKey(ws, file)) || null;
+    return this.locks.get(lockKey(ws, canonicalFile)) || null;
   }
 
-  publicEntry(entry) {
-    return {
+  publicEntry(entry, includeLease = false) {
+    const result = {
       filePath: entry.filePath,
       agentId: entry.agentId,
       mode: entry.mode || "write",
@@ -276,7 +345,10 @@ class LockTable extends EventEmitter {
       holder: entry.holder || null,
       readers: [...(entry.readers || [])],
       escalated: Boolean(entry.escalated),
+      fencingToken: entry.fencingToken || 0,
     };
+    if (includeLease) result.ownershipToken = entry.ownershipToken;
+    return result;
   }
 
   status(filter) {
@@ -304,37 +376,48 @@ class LockTable extends EventEmitter {
     return out.sort((a, b) => (b.releasedAt || b.claimedAt) - (a.releasedAt || a.claimedAt));
   }
 
-  heartbeat({ agentId, file, workspaceId }) {
+  heartbeat({ agentId, file, workspaceId, ownershipToken, fencingToken, ttl, leases = [] }) {
     const now = Date.now();
     const ws = workspaceRoot(workspaceId);
+    const canonicalFile = file ? canonicalWorkspaceFile(ws, file) : null;
+    if (file && !canonicalFile) return { ok: false, renewed: 0, reason: "invalid_path" };
+    const leaseFor = new Map((Array.isArray(leases) ? leases : []).map((lease) => [
+      canonicalWorkspaceFile(ws, lease.file),
+      lease,
+    ]));
     let n = 0;
     for (const entry of this.locks.values()) {
       if (ws && !sameWorkspace(entry.workspaceId, ws)) continue;
       if (!ws) continue;
-      const matchFile = !file || normalizeFile(file) === entry.filePath;
-      const matchAgent =
-        sameOwner(entry.agentId, agentId) ||
-        (entry.readers && [...entry.readers].some((r) => sameOwner(r, agentId)));
-      if (matchFile && matchAgent) {
+      const matchFile = !file || canonicalFile === entry.filePath;
+      const lease = leaseFor.get(entry.filePath);
+      const token = lease?.ownershipToken || ownershipToken;
+      const fence = lease?.fencingToken ?? fencingToken;
+      if (matchFile && sameOwner(entry.agentId, agentId) && token === entry.ownershipToken &&
+          fence === entry.fencingToken && alive(entry, now)) {
         entry.lastHeartbeat = now;
+        entry.ttlMs = clampTtl(ttl || entry.ttlMs);
         this.persist(entry);
         n += 1;
       }
     }
     if (n) this.emit("change", { type: "heartbeat", agentId, workspaceId: ws });
-    return { ok: true, renewed: n };
+    return n ? { ok: true, renewed: n } : { ok: false, renewed: 0, reason: "lease_required" };
   }
 
   escalateRegister(entry) {
-    const filePath = normalizeFile(entry.filePath);
     const ws = workspaceRoot(entry.workspaceId) || entry.workspaceId;
     if (!ws) return { ok: false, reason: "workspace_required" };
+    const filePath = canonicalWorkspaceFile(ws, entry.filePath);
+    if (!filePath) return { ok: false, reason: "invalid_path" };
     const key = lockKey(ws, filePath);
     const existing = this.locks.get(key);
     if (existing && alive(existing) && !sameOwner(existing.agentId, entry.agentId)) {
       return { ok: false, winner: existing.agentId };
     }
     const now = Date.now();
+    const fencingToken = existing?.fencingToken || this.nextFencingToken(ws, filePath, entry.fencingToken);
+    if (fencingToken === null) return { ok: false, reason: "stale_fencing_token" };
     const next = {
       ...entry,
       filePath,
@@ -345,6 +428,8 @@ class LockTable extends EventEmitter {
       ttlMs: clampTtl(entry.ttlMs),
       escalated: true,
       source: "escalated",
+      ownershipToken: existing?.ownershipToken || entry.ownershipToken || crypto.randomUUID(),
+      fencingToken,
     };
     this.locks.set(key, next);
     this.persist(next);
@@ -352,30 +437,62 @@ class LockTable extends EventEmitter {
     return { ok: true, lock: this.publicEntry(next) };
   }
 
-  claim({ agentId, file, ttl, workspaceId, holder, source, dependsOn, files, mode }) {
+  claim({ agentId, file, ttl, workspaceId, holder, source, dependsOn, files, mode, ownershipToken, fencingToken, leases, authoritativeLease }) {
     const ws = workspaceRoot(workspaceId) || workspaceId;
+    if (authoritativeLease) {
+      ownershipToken = authoritativeLease.ownershipToken;
+      fencingToken = authoritativeLease.fencingToken;
+    }
     if (!ws || !/[\\/]/.test(String(ws))) {
       return { allowed: false, reason: "workspace path is required so locks stay per repository" };
     }
     this.loadWorkspace(ws);
 
-    const batch = Array.isArray(files) && files.length ? files.map(normalizeFile).filter(Boolean) : null;
+    const batch = Array.isArray(files) && files.length ? files.map((item) => canonicalWorkspaceFile(ws, item)) : null;
     if (batch) {
+      if (batch.some((item) => !item)) return { allowed: false, code: "INVALID_PATH", reason: "file path is outside the workspace" };
       const sorted = [...new Set(batch)].sort();
       const held = [];
       for (const f of sorted) {
-        const result = this.claim({ agentId, file: f, ttl, workspaceId: ws, holder, source, dependsOn, mode });
+        const lease = (leases || []).find((item) => canonicalWorkspaceFile(ws, item.file) === f);
+        const result = this.claim({
+          agentId,
+          file: f,
+          ttl,
+          workspaceId: ws,
+          holder,
+          source,
+          dependsOn,
+          mode,
+          ownershipToken: lease?.ownershipToken,
+          fencingToken: lease?.fencingToken,
+          authoritativeLease,
+        });
         if (!result.allowed) {
-          for (const h of held) this.release({ agentId, file: h, workspaceId: ws });
+          for (const acquired of held) {
+            if (acquired.lock && !acquired.renewed) {
+              this.release({
+                agentId,
+                file: acquired.lock.filePath,
+                workspaceId: ws,
+                ownershipToken: acquired.lock.ownershipToken,
+                fencingToken: acquired.lock.fencingToken,
+              });
+            }
+          }
           return result;
         }
-        held.push(f);
+        held.push({ lock: result.lock, renewed: result.renewed });
       }
-      return { allowed: true, batch: sorted };
+      return { allowed: true, batch: sorted, locks: held.map((item) => item.lock).filter(Boolean) };
     }
 
-    const filePath = normalizeFile(file);
+    const filePath = canonicalWorkspaceFile(ws, file);
+    if (!filePath) return { allowed: false, code: "INVALID_PATH", reason: "file path is outside the workspace" };
     if (!filePath || !agentId) return { allowed: false, reason: "agentId and file are required" };
+    const matchingLease = (leases || []).find((item) => canonicalWorkspaceFile(ws, item.file) === filePath);
+    ownershipToken = ownershipToken || matchingLease?.ownershipToken;
+    fencingToken = fencingToken ?? matchingLease?.fencingToken;
     const ttlMs = clampTtl(ttl);
     const now = Date.now();
     const lockMode = mode === "read" ? "read" : "write";
@@ -408,13 +525,32 @@ class LockTable extends EventEmitter {
 
     if (existing) {
       if (sameOwner(existing.agentId, agentId) && existing.mode === "write") {
+        if (existing.ownershipToken && (
+          ownershipToken !== existing.ownershipToken ||
+          fencingToken !== existing.fencingToken
+        )) {
+          return this.denial(existing, filePath, now, "Lease ownership token and fencing token are required to renew this lock.");
+        }
+        if (existing.ownershipToken && !alive(existing, now)) {
+          return this.denial(existing, filePath, now, "The lock lease has expired.");
+        }
+        if (!existing.ownershipToken) {
+          const nextToken = this.nextFencingToken(
+            ws,
+            filePath,
+            authoritativeLease?.fencingToken
+          );
+          if (nextToken === null) return { allowed: false, reason: "could not allocate fencing token" };
+          existing.ownershipToken = authoritativeLease?.ownershipToken || crypto.randomUUID();
+          existing.fencingToken = nextToken;
+        }
         existing.claimedAt = now;
         existing.lastHeartbeat = now;
         existing.ttlMs = ttlMs;
         existing.workspaceId = ws;
         this.persist(existing);
         this.emit("change", { type: "renew", entry: existing });
-        return { allowed: true, renewed: true, warning, lock: this.publicEntry(existing) };
+        return { allowed: true, renewed: true, warning, lock: this.publicEntry(existing, true) };
       }
       // Readers never block a writer. Reading a file is not a claim on it: an
       // agent that merely looked at a file has nothing to lose if someone else
@@ -429,14 +565,18 @@ class LockTable extends EventEmitter {
         // This agent wanted the file and could not have it, so it is the one
         // that most needs the resulting patch the moment the holder is done.
         this.noteWaiter({ agentId, filePath, workspaceId: ws, holder });
-        return {
-          allowed: false,
-          holder: existing.agentId,
-          reason: `File \`${filePath}\` is locked by ${existing.holder?.label || existing.agentId}. Pick a different task.`,
-        };
+        return this.denial(
+          existing,
+          filePath,
+          now,
+          `File \`${filePath}\` is locked by ${existing.holder?.label || existing.agentId}. Pick a different task.`
+        );
       }
     }
 
+    const requestedFence = authoritativeLease ? authoritativeLease.fencingToken : undefined;
+    const nextFence = this.nextFencingToken(ws, filePath, requestedFence);
+    if (nextFence === null) return { allowed: false, code: "STALE_FENCING_TOKEN", reason: "fencing token is stale" };
     const entry = {
       filePath,
       agentId,
@@ -449,17 +589,20 @@ class LockTable extends EventEmitter {
       source: source || "coordinator",
       readers: lockMode === "read" ? new Set([agentId]) : new Set(),
       escalated: false,
+      ownershipToken: authoritativeLease?.ownershipToken || crypto.randomUUID(),
+      fencingToken: nextFence,
     };
     this.locks.set(key, entry);
     this.persist(entry);
     this.emit("change", { type: "claim", entry });
-    return { allowed: true, warning, lock: this.publicEntry(entry) };
+    return { allowed: true, warning, lock: this.publicEntry(entry, true) };
   }
 
-  release({ agentId, file, workspaceId }) {
+  release({ agentId, file, workspaceId, ownershipToken, fencingToken }) {
     const ws = workspaceRoot(workspaceId) || workspaceId;
     if (!ws) return { ok: false, reason: "workspace_required" };
-    const filePath = normalizeFile(file);
+    const filePath = canonicalWorkspaceFile(ws, file);
+    if (!filePath) return { ok: false, reason: "invalid_path" };
     const key = lockKey(ws, filePath);
     const existing = this.locks.get(key);
     if (!existing) return { ok: true, released: false };
@@ -475,7 +618,8 @@ class LockTable extends EventEmitter {
       this.emit("change", { type: "release", entry: existing });
       return { ok: true, released: true };
     }
-    if (!sameOwner(existing.agentId, agentId)) {
+    if (!sameOwner(existing.agentId, agentId) || !existing.ownershipToken ||
+        ownershipToken !== existing.ownershipToken || fencingToken !== existing.fencingToken) {
       return { ok: false, reason: "not_holder", holder: existing.agentId };
     }
     this.locks.delete(key);
@@ -592,15 +736,26 @@ class LockTable extends EventEmitter {
     return out;
   }
 
-  releaseAll(agentId, workspaceId) {
+  releaseAll(agentId, workspaceId, leases = []) {
     const ws = workspaceRoot(workspaceId) || workspaceId;
+    const leaseFor = new Map((Array.isArray(leases) ? leases : []).map((lease) => [
+      canonicalWorkspaceFile(ws, lease.file),
+      lease,
+    ]));
     const released = [];
     for (const [key, entry] of [...this.locks]) {
       if (ws && !sameWorkspace(entry.workspaceId, ws)) continue;
       if (!ws) continue;
-      if (sameOwner(entry.agentId, agentId) || (entry.readers && [...entry.readers].some((r) => sameOwner(r, agentId)))) {
-        this.release({ agentId, file: entry.filePath, workspaceId: entry.workspaceId });
-        released.push(entry.filePath);
+      if (sameOwner(entry.agentId, agentId)) {
+        const lease = leaseFor.get(entry.filePath);
+        const result = this.release({
+          agentId,
+          file: entry.filePath,
+          workspaceId: entry.workspaceId,
+          ownershipToken: lease?.ownershipToken,
+          fencingToken: lease?.fencingToken,
+        });
+        if (result.released) released.push(entry.filePath);
       }
     }
     return { released };

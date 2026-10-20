@@ -102,6 +102,8 @@ test("backend e2e: full HTTP API lifecycle and endpoints", async () => {
         agentId: "test-agent:host:sess1",
         file: "src/server.ts",
         workspaceId: "/test/ws",
+        ownershipToken: claimData.lock.ownershipToken,
+        fencingToken: claimData.lock.fencingToken,
       }),
     });
     assert.equal(releaseRes.status, 200);

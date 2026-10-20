@@ -7,6 +7,7 @@ const { filterKeys, sameOwner } = require("../coordinator/lockTable");
 const { normalizeCompare } = require("../lib/transcripts/util");
 const { LOCK_OPS, MAX_FILES_PER_CLAIM } = require("../config/constants");
 const { ContextService } = require("./ContextService");
+const { canonicalWorkspaceFile } = require("../lib/paths");
 
 class LockService {
   constructor({ lockTable, roomLocks, sse, wssControlRef, onBumpCollision, supabaseLockAdapter }) {
@@ -92,6 +93,19 @@ class LockService {
     return { ...body, workspaceId: shared.path, peerWorkspacePath: body?.workspaceId || null };
   }
 
+  recordClaimDenied(scoped, result, ensureWorkspaceFn) {
+    const project = ContextService.projectForPath(scoped.workspaceId, ensureWorkspaceFn) || ContextService.currentProject();
+    if (project?.id && typeof this.onBumpCollision === "function") {
+      this.onBumpCollision(project.id, "claim_blocked", {
+        file: scoped.file,
+        agentId: scoped.agentId,
+        holder: result.holder,
+        reason: result.reason,
+        via: "room_rpc",
+      });
+    }
+  }
+
   sanitizeLockBody(body, session) {
     const clean = {
       agentId: String(body?.agentId || "").slice(0, 200),
@@ -109,6 +123,13 @@ class LockService {
       sessionId: typeof body?.sessionId === "string" ? body.sessionId.slice(0, 200) : undefined,
       ownershipToken: typeof body?.ownershipToken === "string" ? body.ownershipToken : undefined,
       fencingToken: Number.isInteger(body?.fencingToken) ? body.fencingToken : undefined,
+      leases: Array.isArray(body?.leases)
+        ? body.leases.filter((lease) => lease && typeof lease.file === "string").slice(0, MAX_FILES_PER_CLAIM).map((lease) => ({
+            file: lease.file.slice(0, 1024),
+            ownershipToken: typeof lease.ownershipToken === "string" ? lease.ownershipToken : undefined,
+            fencingToken: Number.isSafeInteger(lease.fencingToken) ? lease.fencingToken : undefined,
+          }))
+        : [],
     };
     if (!clean.agentId) return null;
     if (!clean.sessionId) {
@@ -129,61 +150,149 @@ class LockService {
     if (!clean) return { error: "agent_required" };
     const scoped = this.peerScoped(clean, session);
 
-    if (this.supabaseLockAdapter?.enabled) {
-      if (op === "claim") {
-        const sbResult = await this.supabaseLockAdapter.claim({
+    if (this.supabaseLockAdapter?.enabled && op === "claim") {
+      const rawFiles = Array.isArray(scoped.files) && scoped.files.length ? scoped.files : [scoped.file];
+      const files = [...new Set(rawFiles.map((file) => canonicalWorkspaceFile(scoped.workspaceId, file)))].sort();
+      if (files.some((file) => !file)) {
+        return { allowed: false, code: "INVALID_PATH", reason: "file path is outside the workspace" };
+      }
+      const acquired = [];
+      const rollback = async () => {
+        for (const item of acquired.reverse()) {
+          if (!item.dbResult.renewed) {
+            await this.supabaseLockAdapter.release({
+              workspaceId: scoped.workspaceId,
+              file: item.file,
+              agentId: scoped.agentId,
+              sessionId: scoped.sessionId,
+              ownershipToken: item.dbResult.ownershipToken,
+              fencingToken: Number(item.dbResult.fencingToken),
+            });
+          }
+          if (!item.localResult.renewed) {
+            this.lockTable.release({
+              agentId: scoped.agentId,
+              file: item.file,
+              workspaceId: scoped.workspaceId,
+              ownershipToken: item.dbResult.ownershipToken,
+              fencingToken: Number(item.dbResult.fencingToken),
+            });
+          }
+        }
+      };
+      for (const file of files) {
+        const savedLease = scoped.leases.find((lease) => canonicalWorkspaceFile(scoped.workspaceId, lease.file) === file);
+        const dbResult = await this.supabaseLockAdapter.claim({
           workspaceId: scoped.workspaceId,
-          file: scoped.file,
+          file,
           agentId: scoped.agentId,
           sessionId: scoped.sessionId,
-          ownershipToken: scoped.ownershipToken,
-          fencingToken: scoped.fencingToken,
+          ownershipToken: savedLease?.ownershipToken || scoped.ownershipToken,
+          fencingToken: savedLease?.fencingToken ?? scoped.fencingToken,
           mode: scoped.mode,
           ttl: scoped.ttl,
           holder: scoped.holder,
         });
-        if (sbResult) {
-          if (sbResult.allowed) {
-            this.lockTable.claim(scoped);
-          }
-          return sbResult;
+        if (!dbResult) {
+          await rollback();
+          return {
+            allowed: false,
+            degraded: true,
+            code: "COORDINATOR_UNAVAILABLE",
+            reason: "The shared lock service could not verify this lease.",
+          };
         }
-      } else if (op === "release") {
-        await this.supabaseLockAdapter.release({
-          workspaceId: scoped.workspaceId,
-          file: scoped.file,
-          agentId: scoped.agentId,
-          sessionId: scoped.sessionId,
-          ownershipToken: scoped.ownershipToken,
-          fencingToken: scoped.fencingToken,
+        if (!dbResult.allowed) {
+          await rollback();
+          this.recordClaimDenied({ ...scoped, file }, dbResult, ensureWorkspaceFn);
+          return dbResult;
+        }
+        if (!dbResult.ownershipToken || !Number.isSafeInteger(Number(dbResult.fencingToken))) {
+          await rollback();
+          return {
+            allowed: false,
+            degraded: true,
+            code: "LEASE_CREDENTIALS_MISSING",
+            reason: "The shared lock service granted a lease without usable credentials.",
+          };
+        }
+        const localResult = this.lockTable.claim({
+          ...scoped,
+          file,
+          files: undefined,
+          leases: [],
+          authoritativeLease: {
+            ownershipToken: dbResult.ownershipToken,
+            fencingToken: Number(dbResult.fencingToken),
+          },
         });
-      } else if (op === "heartbeat") {
-        await this.supabaseLockAdapter.heartbeat({
-          workspaceId: scoped.workspaceId,
-          file: scoped.file,
-          agentId: scoped.agentId,
-          sessionId: scoped.sessionId,
-          ownershipToken: scoped.ownershipToken,
-          fencingToken: scoped.fencingToken,
-          ttl: scoped.ttl,
-        });
+        if (!localResult.allowed) {
+          if (!dbResult.renewed) {
+            await this.supabaseLockAdapter.release({
+              workspaceId: scoped.workspaceId,
+              file,
+              agentId: scoped.agentId,
+              sessionId: scoped.sessionId,
+              ownershipToken: dbResult.ownershipToken,
+              fencingToken: Number(dbResult.fencingToken),
+            });
+          }
+          await rollback();
+          this.recordClaimDenied({ ...scoped, file }, localResult, ensureWorkspaceFn);
+          return localResult;
+        }
+        acquired.push({ file, dbResult, localResult });
       }
+      if (files.length === 1) return { ...acquired[0].dbResult, source: "supabase" };
+      return {
+        allowed: true,
+        batch: files,
+        locks: acquired.map(({ file, dbResult }) => ({
+          ...dbResult,
+          filePath: file,
+          workspaceId: scoped.workspaceId,
+        })),
+        source: "supabase",
+      };
+    }
+
+    if (this.supabaseLockAdapter?.enabled && op === "release") {
+      const result = await this.supabaseLockAdapter.release({
+        workspaceId: scoped.workspaceId,
+        file: scoped.file,
+        agentId: scoped.agentId,
+        sessionId: scoped.sessionId,
+        ownershipToken: scoped.ownershipToken,
+        fencingToken: scoped.fencingToken,
+      });
+      if (!result) return { ok: false, degraded: true, reason: "shared_lock_service_unavailable" };
+      const local = this.lockTable.release(scoped);
+      return { ...result, localReleased: local.released };
+    }
+    if (this.supabaseLockAdapter?.enabled && op === "heartbeat") {
+      const result = await this.supabaseLockAdapter.heartbeat({
+        workspaceId: scoped.workspaceId,
+        file: scoped.file,
+        agentId: scoped.agentId,
+        sessionId: scoped.sessionId,
+        ownershipToken: scoped.ownershipToken,
+        fencingToken: scoped.fencingToken,
+        ttl: scoped.ttl,
+      });
+      if (!result) return { ok: false, degraded: true, reason: "shared_lock_service_unavailable" };
+      if (result.ok) this.lockTable.heartbeat(scoped);
+      return result;
+    }
+    if (this.supabaseLockAdapter?.enabled && op === "release-all") {
+      const result = await this.supabaseLockAdapter.releaseAll(scoped.agentId, scoped.workspaceId, scoped.sessionId);
+      if (!result) return { ok: false, degraded: true, released: [] };
+      const local = this.lockTable.releaseAll(scoped.agentId, scoped.workspaceId, scoped.leases);
+      return { ...result, localReleased: local.released };
     }
 
     if (op === "claim") {
       const result = this.lockTable.claim(scoped);
-      if (!result.allowed) {
-        const project = ContextService.projectForPath(scoped.workspaceId, ensureWorkspaceFn) || ContextService.currentProject();
-        if (project?.id && typeof this.onBumpCollision === "function") {
-          this.onBumpCollision(project.id, "claim_blocked", {
-            file: scoped.file,
-            agentId: scoped.agentId,
-            holder: result.holder,
-            reason: result.reason,
-            via: "room_rpc",
-          });
-        }
-      }
+      if (!result.allowed) this.recordClaimDenied(scoped, result, ensureWorkspaceFn);
       return result;
     }
     if (op === "release") return this.lockTable.release(scoped);
@@ -200,10 +309,7 @@ class LockService {
       }
       return { ok: true, files };
     }
-    if (op === "release-all" && this.supabaseLockAdapter?.enabled) {
-      await this.supabaseLockAdapter.releaseAll(scoped.agentId, scoped.workspaceId, scoped.sessionId);
-    }
-    return this.lockTable.releaseAll(scoped.agentId, scoped.workspaceId);
+    return this.lockTable.releaseAll(scoped.agentId, scoped.workspaceId, scoped.leases);
   }
 }
 

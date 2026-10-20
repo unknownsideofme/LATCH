@@ -238,7 +238,15 @@ class PatchService {
       return;
     }
     const held = publish.held;
-    if (held) this.lockTable.heartbeat({ agentId: held.agentId, file: rel, workspaceId: project.path });
+    if (held) {
+      this.lockTable.heartbeat({
+        agentId: held.agentId,
+        file: rel,
+        workspaceId: project.path,
+        ownershipToken: held.ownershipToken,
+        fencingToken: held.fencingToken,
+      });
+    }
     if (publish.defer) {
       this.deferredEdits.set(`${project.id}:${rel}`, { project, rel, agentId: held?.agentId || null, at: now });
       if (typeof this.onBumpCollision === "function") {

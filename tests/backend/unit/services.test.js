@@ -1,10 +1,15 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const { ContextService } = require("../../../backend/services/ContextService");
 const { NoticeService } = require("../../../backend/services/NoticeService");
 const { WorkspaceService } = require("../../../backend/services/WorkspaceService");
 const { PatchService } = require("../../../backend/services/PatchService");
+const { LockService } = require("../../../backend/services/LockService");
+const { LockTable } = require("../../../backend/coordinator/lockTable");
 const { parsePort, DEFAULT_PORT } = require("../../../backend/config/constants");
 
 test("ContextService: current user resolution fallback", () => {
@@ -87,4 +92,72 @@ test("WorkspaceService: initialization and workspace resolution", () => {
   const wsService = new WorkspaceService({ sse: { emit: () => {} } });
   assert.ok(wsService);
   assert.equal(typeof wsService.ensureWorkspace, "function");
+});
+
+test("LockService: Supabase batch claims sort, issue per-file leases, and roll back failures", async () => {
+  const workspaceId = fs.mkdtempSync(path.join(os.tmpdir(), "latch-lock-service-"));
+  const claimCalls = [];
+  const releaseCalls = [];
+  const fences = new Map();
+  let shouldDeny = false;
+  const supabaseLockAdapter = {
+    enabled: true,
+    async claim(args) {
+      claimCalls.push(args.file);
+      if (shouldDeny && args.file === "b.ts") return { allowed: false, code: "FILE_LOCKED" };
+      const fencingToken = (fences.get(args.file) || 0) + 1;
+      fences.set(args.file, fencingToken);
+      return {
+        allowed: true,
+        file: args.file,
+        sessionId: args.sessionId,
+        ownershipToken: `token-${args.file}`,
+        fencingToken,
+      };
+    },
+    async release(args) {
+      releaseCalls.push(args.file);
+      return { ok: true, released: true };
+    },
+  };
+  const lockTable = new LockTable();
+  const service = new LockService({
+    lockTable,
+    roomLocks: null,
+    sse: null,
+    wssControlRef: null,
+    supabaseLockAdapter,
+  });
+
+  try {
+    const success = await service.runLockRpc("claim", {
+      agentId: "agent:host:s1",
+      workspaceId,
+      files: ["b.ts", "a.ts"],
+    });
+    assert.equal(success.allowed, true);
+    assert.deepEqual(success.batch, ["a.ts", "b.ts"]);
+    assert.equal(success.locks.length, 2);
+    assert.notEqual(success.locks[0].ownershipToken, success.locks[1].ownershipToken);
+    assert.deepEqual(claimCalls, ["a.ts", "b.ts"]);
+
+    lockTable.releaseAll("agent:host:s1", workspaceId, success.locks.map((lock) => ({
+      file: lock.filePath,
+      ownershipToken: lock.ownershipToken,
+      fencingToken: lock.fencingToken,
+    })));
+    claimCalls.length = 0;
+    releaseCalls.length = 0;
+    shouldDeny = true;
+    const denied = await service.runLockRpc("claim", {
+      agentId: "agent:host:s2",
+      workspaceId,
+      files: ["a.ts", "b.ts"],
+    });
+    assert.equal(denied.allowed, false);
+    assert.deepEqual(releaseCalls, ["a.ts"]);
+    assert.equal(lockTable.getLock("a.ts", workspaceId), null);
+  } finally {
+    fs.rmSync(workspaceId, { recursive: true, force: true });
+  }
 });

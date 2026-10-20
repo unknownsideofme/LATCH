@@ -14,12 +14,14 @@ const {
   workspaceRoot,
   filterKeys,
 } = require("../../../backend/coordinator/lockTable");
+const { canonicalWorkspaceFile } = require("../../../backend/lib/paths");
 
 test("lockTable helper: normalizeFile handles slashes, prefixes, whitespace", () => {
   assert.equal(normalizeFile("src\\index.js"), "src/index.js");
   assert.equal(normalizeFile("./src/index.js"), "src/index.js");
   assert.equal(normalizeFile("  app/model.ts  "), "app/model.ts");
   assert.equal(normalizeFile(null), "");
+  assert.equal(normalizeFile("../../outside.txt"), "");
 });
 
 test("lockTable helper: normWorkspace lowercases and trims trailing slashes", () => {
@@ -102,6 +104,11 @@ test("LockTable: claim write lock and prevent cross-agent collisions", () => {
     ttl: 10000,
   });
   assert.equal(claim2.allowed, false);
+  assert.equal(claim2.status, "DENIED");
+  assert.equal(claim2.code, "FILE_LOCKED");
+  assert.equal(claim2.canonicalPath, "src/app.ts");
+  assert.ok(claim2.owner.agentId);
+  assert.ok(claim2.expiresInMs > 0);
   assert.ok(claim2.reason);
   assert.ok(claim2.reason.includes("locked"));
 
@@ -110,6 +117,8 @@ test("LockTable: claim write lock and prevent cross-agent collisions", () => {
     agentId: "claude:host1:sess1",
     file: "src/app.ts",
     workspaceId: ws,
+    ownershipToken: claim1.lock.ownershipToken,
+    fencingToken: claim1.lock.fencingToken,
   });
   assert.equal(renew.allowed, true);
   assert.equal(renew.renewed, true);
@@ -128,6 +137,8 @@ test("LockTable: claim write lock and prevent cross-agent collisions", () => {
     agentId: "claude:host1:sess1",
     file: "src/app.ts",
     workspaceId: ws,
+    ownershipToken: renew.lock.ownershipToken,
+    fencingToken: renew.lock.fencingToken,
   });
   assert.equal(releaseGood.ok, true);
   assert.equal(releaseGood.released, true);
@@ -139,6 +150,15 @@ test("LockTable: claim write lock and prevent cross-agent collisions", () => {
     workspaceId: ws,
   });
   assert.equal(claim3.allowed, true);
+  assert.ok(claim3.lock.fencingToken > claim1.lock.fencingToken);
+  assert.equal(table.release({
+    agentId: "claude:host1:sess1",
+    file: "src/app.ts",
+    workspaceId: ws,
+    ownershipToken: claim1.lock.ownershipToken,
+    fencingToken: claim1.lock.fencingToken,
+  }).ok, false);
+  assert.equal(table.getLock("src/app.ts", ws).agentId, "cursor:host1:sess2");
  } finally {
  fs.rmSync(ws, { recursive: true, force: true });
  }
@@ -205,27 +225,185 @@ test("LockTable: batch claim holds all or none", () => {
  }
 });
 
+test("LockTable: simultaneous claims grant a file to exactly one owner", async () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-race-ws-"));
+  try {
+    const table = new LockTable();
+    const results = await Promise.all([
+      Promise.resolve().then(() => table.claim({ agentId: "agent:a:s1", file: "same.ts", workspaceId: ws })),
+      Promise.resolve().then(() => table.claim({ agentId: "agent:b:s2", file: "same.ts", workspaceId: ws })),
+    ]);
+    assert.equal(results.filter((result) => result.allowed).length, 1);
+    assert.equal(results.filter((result) => result.code === "FILE_LOCKED").length, 1);
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
 test("LockTable: heartbeat and releaseAll", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-test-ws-hb-"));
  try {
   const table = new LockTable();
 
-  table.claim({ agentId: "agent1:host1:s1", file: "x.ts", workspaceId: ws });
-  table.claim({ agentId: "agent1:host1:s1", file: "y.ts", workspaceId: ws });
+  const x = table.claim({ agentId: "agent1:host1:s1", file: "x.ts", workspaceId: ws });
+  const y = table.claim({ agentId: "agent1:host1:s1", file: "y.ts", workspaceId: ws });
 
-  const hb = table.heartbeat({ agentId: "agent1:host1:s1", workspaceId: ws });
+  const hb = table.heartbeat({
+    agentId: "agent1:host1:s1",
+    workspaceId: ws,
+    ownershipToken: x.lock.ownershipToken,
+    fencingToken: x.lock.fencingToken,
+  });
   assert.equal(hb.ok, true);
-  assert.equal(hb.renewed, 2);
+  assert.equal(hb.renewed, 1);
 
   const list = table.list(ws).filter((l) => !l.released);
   assert.equal(list.length, 2);
 
-  const relAll = table.releaseAll("agent1:host1:s1", ws);
+  const relAll = table.releaseAll("agent1:host1:s1", ws, [
+    { file: "x.ts", ownershipToken: x.lock.ownershipToken, fencingToken: x.lock.fencingToken },
+    { file: "y.ts", ownershipToken: y.lock.ownershipToken, fencingToken: y.lock.fencingToken },
+  ]);
   assert.equal(relAll.released.length, 2);
   assert.equal(table.locks.size, 0);
  } finally {
  fs.rmSync(ws, { recursive: true, force: true });
  }
+});
+
+test("LockTable: stale credentials cannot renew or release and fencing survives restart", () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-fenced-lock-"));
+  try {
+    const table = new LockTable();
+    const first = table.claim({ agentId: "agent:host:s1", file: "src/a.ts", workspaceId: ws });
+    assert.equal(first.lock.fencingToken, 1);
+    assert.equal("ownershipToken" in table.publicEntry(table.getLock("src/a.ts", ws)), false);
+    assert.equal(table.heartbeat({
+      agentId: "agent:host:s1",
+      file: "src/a.ts",
+      workspaceId: ws,
+      ownershipToken: "wrong",
+      fencingToken: first.lock.fencingToken,
+    }).ok, false);
+    assert.equal(table.release({
+      agentId: "agent:host:s1",
+      file: "src/a.ts",
+      workspaceId: ws,
+      ownershipToken: "wrong",
+      fencingToken: first.lock.fencingToken,
+    }).ok, false);
+    assert.equal(table.release({
+      agentId: "agent:host:s1",
+      file: "src/a.ts",
+      workspaceId: ws,
+      ownershipToken: first.lock.ownershipToken,
+      fencingToken: first.lock.fencingToken,
+    }).released, true);
+
+    const restarted = new LockTable();
+    const second = restarted.claim({ agentId: "agent:host:s2", file: "src/a.ts", workspaceId: ws });
+    assert.equal(second.lock.fencingToken, 2);
+
+    const seeded = table.claim({ agentId: "agent:host:s1", file: "src/b.ts", workspaceId: ws });
+    table.release({
+      agentId: "agent:host:s1",
+      file: "src/b.ts",
+      workspaceId: ws,
+      ownershipToken: seeded.lock.ownershipToken,
+      fencingToken: seeded.lock.fencingToken,
+    });
+    const mirror = new LockTable();
+    const mirrored = mirror.claim({
+      agentId: "agent:host:s1",
+      file: "src/b.ts",
+      workspaceId: ws,
+      authoritativeLease: { ownershipToken: "shared-token", fencingToken: seeded.lock.fencingToken },
+    });
+    assert.equal(mirrored.allowed, true);
+    assert.equal(mirrored.lock.fencingToken, seeded.lock.fencingToken);
+    mirror.release({
+      agentId: "agent:host:s1",
+      file: "src/b.ts",
+      workspaceId: ws,
+      ownershipToken: "shared-token",
+      fencingToken: seeded.lock.fencingToken,
+    });
+    const stale = mirror.claim({
+      agentId: "agent:host:s2",
+      file: "src/b.ts",
+      workspaceId: ws,
+      authoritativeLease: { ownershipToken: "stale-token", fencingToken: seeded.lock.fencingToken - 1 },
+    });
+    assert.equal(stale.allowed, false);
+    assert.equal(stale.code, "STALE_FENCING_TOKEN");
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
+test("LockTable: refuses a claim when it cannot persist the fencing token", () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-fence-write-failure-"));
+  try {
+    const table = new LockTable();
+    table.dirFor = () => null;
+    const result = table.claim({ agentId: "agent:host:s1", file: "a.ts", workspaceId: ws });
+    assert.equal(result.allowed, false);
+    assert.equal(result.code, "STALE_FENCING_TOKEN");
+    assert.equal(table.getLock("a.ts", ws), null);
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
+test("LockTable: failed batch preserves an existing lease owned by the requester", () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-batch-existing-"));
+  try {
+    const table = new LockTable();
+    const existing = table.claim({ agentId: "agent:host:s1", file: "a.ts", workspaceId: ws });
+    table.claim({ agentId: "other:host:s2", file: "b.ts", workspaceId: ws });
+
+    const result = table.claim({
+      agentId: "agent:host:s1",
+      files: ["a.ts", "b.ts"],
+      workspaceId: ws,
+      leases: [{ file: "a.ts", ownershipToken: existing.lock.ownershipToken, fencingToken: existing.lock.fencingToken }],
+    });
+    assert.equal(result.allowed, false);
+    assert.equal(table.getLock("a.ts", ws).ownershipToken, existing.lock.ownershipToken);
+    assert.equal(table.heartbeat({
+      agentId: "agent:host:s1",
+      file: "a.ts",
+      workspaceId: ws,
+      ownershipToken: existing.lock.ownershipToken,
+      fencingToken: existing.lock.fencingToken,
+    }).ok, true);
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
+test("paths: canonicalWorkspaceFile rejects escapes and resolves in-workspace symlinks", () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-canonical-path-"));
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "latch-canonical-outside-"));
+  try {
+    fs.mkdirSync(path.join(ws, "src"));
+    fs.writeFileSync(path.join(ws, "src", "file.js"), "");
+    fs.writeFileSync(path.join(outside, "secret.js"), "");
+    assert.equal(canonicalWorkspaceFile(ws, "src/../src/file.js"), "src/file.js");
+    assert.equal(canonicalWorkspaceFile(ws, "../../outside.js"), null);
+    assert.equal(canonicalWorkspaceFile(ws, path.join(ws, "src", "file.js")), null);
+    try {
+      fs.symlinkSync(path.join(ws, "src"), path.join(ws, "alias"), process.platform === "win32" ? "junction" : "dir");
+      fs.symlinkSync(outside, path.join(ws, "escape"), process.platform === "win32" ? "junction" : "dir");
+      assert.equal(canonicalWorkspaceFile(ws, "alias/file.js"), "src/file.js");
+      assert.equal(canonicalWorkspaceFile(ws, "escape/secret.js"), null);
+    } catch (err) {
+      if (!["EPERM", "EACCES", "UNKNOWN"].includes(err.code)) throw err;
+    }
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
+  }
 });
 
 test("LockTable: waiters recording when claim is denied", () => {

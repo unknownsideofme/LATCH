@@ -48,7 +48,7 @@ function createControlServer({ server, lockService, ensureWorkspaceFn }) {
     let windowStart = Date.now();
     let inWindow = 0;
 
-    socket.on("message", (raw) => {
+    socket.on("message", async (raw) => {
       try {
         if (raw.length > MAX_FRAME_BYTES) {
           socket.close(4413, "frame_too_large");
@@ -92,7 +92,7 @@ function createControlServer({ server, lockService, ensureWorkspaceFn }) {
           sendSocket(socket, {
             type: "rpc-ok",
             id: msg.id,
-            result: lockService.runLockRpc(msg.op, msg.body, session, ensureWorkspaceFn),
+            result: await lockService.runLockRpc(msg.op, msg.body, session, ensureWorkspaceFn),
           });
         } catch (err) {
           sendSocket(socket, { type: "rpc-err", id: msg.id, error: err.message || "rpc_failed" });
