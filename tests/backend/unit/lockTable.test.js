@@ -410,6 +410,31 @@ test("LockTable: failed batch preserves an existing lease owned by the requester
   }
 });
 
+test("LockTable: batch claims match existing leases by canonical file path", () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-batch-canonical-lease-"));
+  try {
+    const table = new LockTable();
+    const existing = table.claim({ agentId: "agent:host:s1", file: "src/a.ts", workspaceId: ws });
+
+    const batch = table.claim({
+      agentId: "agent:host:s1",
+      files: ["src/./a.ts", "src/b.ts"],
+      workspaceId: ws,
+      leases: [{
+        file: "src\\a.ts",
+        ownershipToken: existing.lock.ownershipToken,
+        fencingToken: existing.lock.fencingToken,
+      }],
+    });
+
+    assert.equal(batch.allowed, true);
+    assert.equal(batch.locks.find((lock) => lock.filePath === "src/a.ts").ownershipToken, existing.lock.ownershipToken);
+    assert.equal(batch.locks.find((lock) => lock.filePath === "src/a.ts").fencingToken, existing.lock.fencingToken);
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
 test("paths: canonicalWorkspaceFile rejects escapes and resolves in-workspace symlinks", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-canonical-path-"));
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), "latch-canonical-outside-"));

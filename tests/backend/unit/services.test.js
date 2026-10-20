@@ -170,6 +170,39 @@ test("LockService: Supabase batch claims sort, issue per-file leases, and roll b
   }
 });
 
+test("LockService: release-all forwards saved lease credentials to local locks", async () => {
+  const workspaceId = fs.mkdtempSync(path.join(os.tmpdir(), "latch-release-all-"));
+  try {
+    const lockTable = new LockTable();
+    const claim = lockTable.claim({
+      agentId: "agent:host:s1",
+      file: "src/a.ts",
+      workspaceId,
+    });
+    const service = new LockService({
+      lockTable,
+      roomLocks: null,
+      sse: null,
+      wssControlRef: null,
+    });
+
+    const result = await service.runLockRpc("release-all", {
+      agentId: "agent:host:s1",
+      workspaceId,
+      leases: [{
+        file: "src/a.ts",
+        ownershipToken: claim.lock.ownershipToken,
+        fencingToken: claim.lock.fencingToken,
+      }],
+    });
+
+    assert.deepEqual(result.released, ["src/a.ts"]);
+    assert.equal(lockTable.getLock("src/a.ts", workspaceId), null);
+  } finally {
+    fs.rmSync(workspaceId, { recursive: true, force: true });
+  }
+});
+
 test("SupabaseLockAdapter: bounded keep-alive renews active hook leases and stops on release", async () => {
   const adapter = new SupabaseLockAdapter();
   const rpcCalls = [];
