@@ -1,17 +1,9 @@
 
 
 [mcp_servers.latch]
-command = "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node"
-args = ["/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"]
-
-[mcp_servers.latch.env]
-LATCH_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
+command = "node"
+args = ["backend/mcp/server.js"]
 
 [mcp_servers.relay]
-command = "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node"
-args = ["/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"]
-
-[mcp_servers.relay.env]
-LATCH_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
-RELAY_WORKSPACE_PATH = "/Users/debanjan/Desktop/CodeBook/relayBrain"
+command = "node"
+args = ["backend/mcp/server.js"]
