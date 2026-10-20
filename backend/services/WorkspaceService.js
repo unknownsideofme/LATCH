@@ -32,6 +32,10 @@ class WorkspaceService {
         saveRegistry(reg);
       }
     }
+    if (project && (!Number.isInteger(Number(project.agent_limit)) || project.agent_limit < 1)) {
+      project.agent_limit = 7;
+      saveRegistry(reg);
+    }
     if (!project) {
       project = {
         id: id("proj"),
@@ -40,6 +44,7 @@ class WorkspaceService {
         color: "#34d399",
         path: resolved,
         remoteUrl: null,
+        agent_limit: 7,
         apiKey: "rl_" + crypto.randomBytes(12).toString("hex"),
         createdAt: Date.now(),
         lastSyncAt: Date.now(),

@@ -76,6 +76,11 @@ function seedIfEmpty() {
   dropDemoUsers();
   const current = loadRegistry();
   if (current.projects?.length) {
+    let changed = false;
+    for (const p of current.projects) {
+      if (!Number.isInteger(Number(p.agent_limit)) || p.agent_limit < 1) { p.agent_limit = 7; changed = true; }
+    }
+    if (changed) saveRegistry(current);
     for (const p of current.projects) {
       const mem = loadMemory(p.id);
       if (looksLikeDemo(mem) || mem.ir) saveMemory(p.id, emptyMemory());
@@ -90,6 +95,7 @@ function seedIfEmpty() {
     color: "#f59e0b",
     path: cwd,
     remoteUrl: null,
+    agent_limit: 7,
     apiKey: "rl_" + crypto.randomBytes(12).toString("hex"),
     createdAt: Date.now(),
     lastSyncAt: Date.now(),

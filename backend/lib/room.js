@@ -103,10 +103,11 @@ function dropMember(room, login) {
 }
 
 function roomMaxMembers(room, project) {
-  const stored = Number(room?.maxMembers);
   const configured = Number(project?.agent_limit);
-  if (Number.isInteger(stored) && stored >= 1) return stored;
+  const stored = Number(room?.maxMembers);
+  // Future: replace local registry copy with authoritative project settings source.
   if (Number.isInteger(configured) && configured >= 1) return configured;
+  if (Number.isInteger(stored) && stored >= 1) return stored;
   return 7;
 }
 
