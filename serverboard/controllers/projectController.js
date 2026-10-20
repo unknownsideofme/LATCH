@@ -38,20 +38,27 @@ export const ProjectController = {
       }
 
       // 2. Validate repository against server-side allowlist
-      const requestedRepo = repo || repo_url;
-      if (requestedRepo && typeof requestedRepo !== "string") {
+      if (
+        (repo !== undefined && repo !== null && typeof repo !== "string") ||
+        (repo_url !== undefined && repo_url !== null && typeof repo_url !== "string")
+      ) {
         return res.status(400).json({
           error: "validation_error",
           message: "Repository must be a string",
         });
       }
-      if (requestedRepo && !ALLOWED_REPOS.has(requestedRepo.trim())) {
+
+      const repoStr = typeof repo === "string" ? repo.trim() : "";
+      const repoUrlStr = typeof repo_url === "string" ? repo_url.trim() : "";
+      const requestedRepo = repoStr || repoUrlStr;
+
+      if (requestedRepo && !ALLOWED_REPOS.has(requestedRepo)) {
         return res.status(400).json({
           error: "validation_error",
           message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...ALLOWED_REPOS].join(", ")}`,
         });
       }
-      const selectedRepo = requestedRepo ? requestedRepo.trim() : ALLOWED_REPO;
+      const selectedRepo = requestedRepo || ALLOWED_REPO;
 
       // 3. Validate region and branch against server-side allowlists
       const selectedRegion = ALLOWED_REGIONS.has(region) ? region : "singapore";
