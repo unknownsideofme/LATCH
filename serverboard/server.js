@@ -22,6 +22,16 @@ app.use((req, _res, next) => {
 // Health check redirect
 app.get("/health", (_req, res) => res.redirect("/api/health"));
 
+// URL normalization (handles /api/v1/projects:id and /api/projects:id -> /.../)
+app.use((req, _res, next) => {
+  if (req.url.startsWith("/api/v1/projects:")) {
+    req.url = req.url.replace("/api/v1/projects:", "/api/v1/projects/");
+  } else if (req.url.startsWith("/api/projects:")) {
+    req.url = req.url.replace("/api/projects:", "/api/projects/");
+  }
+  next();
+});
+
 // Mount Master API Router
 app.use("/api", apiRoutes);
 
@@ -31,8 +41,8 @@ app.use(
   serve({
     client: inngest,
     functions: inngestFunctions,
-    signingKey: config.inngest.signingKey,
-    mode: config.inngest.isDev ? "dev" : "cloud",
+    signingKey: config.inngest.signingKey || undefined,
+    mode: config.isProd ? "cloud" : (config.inngest.signingKey ? "cloud" : "dev"),
   })
 );
 

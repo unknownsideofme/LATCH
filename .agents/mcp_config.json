@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "latch": {
+      "command": "node",
+      "args": [
+        "backend/mcp/server.js"
+      ]
+    },
+    "relay": {
+      "command": "node",
+      "args": [
+        "backend/mcp/server.js"
+      ]
+    }
+  }
+}

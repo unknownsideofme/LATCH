@@ -61,7 +61,7 @@ export const WebhookController = {
       let status = null;
       const deployStatus = deploy?.status?.toLowerCase();
 
-      if (type === "deploy_succeeded" || deployStatus === "live") status = "active";
+      if (type === "deploy_succeeded" || deployStatus === "live") status = "running";
       else if (type === "deploy_failed" || deployStatus === "build_failed" || deployStatus === "update_failed") status = "failed";
       else if (type === "deploy_started" || deployStatus === "build_in_progress" || deployStatus === "update_in_progress") status = "deploying";
       else if (deployStatus === "canceled") status = "canceled";

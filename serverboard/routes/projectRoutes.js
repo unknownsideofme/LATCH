@@ -9,6 +9,7 @@ router.use(requireAuth);
 router.post("/", ProjectController.create);
 router.get("/", ProjectController.list);
 router.get("/:id", ProjectController.get);
+router.patch("/:id", ProjectController.patch);
 router.delete("/:id", ProjectController.delete);
 router.get("/:id/logs", ProjectController.logs);
 router.get("/:id/deploys", ProjectController.deploys);

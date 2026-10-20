@@ -23,8 +23,8 @@ export const AuthController = {
       }
       const result = await UserModel.authenticate(email, password);
       res.json({ message: "Logged in successfully", ...result });
-    } catch {
-      // Don't leak internal Supabase error details
+    } catch (err) {
+      console.error("[auth] Login failed:", err.message);
       res.status(401).json({ error: "invalid_credentials", message: "Invalid email or password" });
     }
   },
