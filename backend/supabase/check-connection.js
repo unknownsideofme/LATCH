@@ -13,7 +13,7 @@ async function checkConnection() {
   console.log(`   - Supabase Key:  ${config.key ? config.key.slice(0, 15) + "..." : "\x1b[31m[NOT FOUND]\x1b[0m"}`);
 
   if (!isSupabaseConfigured()) {
-    console.error("\n\x1b[31mÃƒÂ¢Ã…â€œÃ¢â‚¬â€œ Supabase is not configured. Please check your .env file.\x1b[0m\n");
+    console.error("\n\x1b[31m✖ Supabase is not configured. Please check your .env file.\x1b[0m\n");
     process.exit(1);
   }
 
