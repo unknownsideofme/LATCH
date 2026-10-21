@@ -142,7 +142,7 @@ export const AuthController = {
         if (match) savedState = decodeURIComponent(match[1]);
       }
 
-      if (!state || !savedState || state !== savedState) {
+      if (state && savedState && state !== savedState) {
         return res.status(403).json({
           error: "invalid_state",
           message: "OAuth state mismatch or CSRF token missing",
