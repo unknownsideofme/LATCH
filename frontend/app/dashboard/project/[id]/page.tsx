@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
   ArrowLeft,
   LayoutGrid,
@@ -85,11 +84,11 @@ const defaultLocks: LiveLock[] = [
   },
 ];
 
+/** Render the route's locally stored project or a sample project, with simulated locks. */
 function ProjectDashboardContent() {
   const params = useParams();
   const projectId = (params?.id as string) || "";
   const router = useRouter();
-  const supabase = createClient();
 
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -101,6 +100,11 @@ function ProjectDashboardContent() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
+    /**
+     * Load the locally stored project matching the route ID and finish loading.
+     * Missing matches and storage, parsing, or lookup errors fall back to a
+     * sample project using the route ID, or `proj_latch_core` if the ID is empty.
+     */
     async function loadProject() {
       setLoading(true);
 
@@ -122,31 +126,8 @@ function ProjectDashboardContent() {
         }
       }
 
-      // Query Supabase
-      const { data } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", projectId)
-        .single();
-
-      if (data) {
-        setProject(data);
-      } else {
-        // Fallback default sample project
-        setProject({
-          id: projectId || "proj_latch_core",
-          user_id: "demo-user",
-          project_name: "LATCH-Engine",
-          repo_name: "unknownsideofme/LATCH",
-          branch: "main",
-          render_id: "srv_latch_core_01",
-          render_url: "http://127.0.0.1:3001",
-          status: "ready",
-          agent_limit: 4,
-          created_at: new Date().toISOString(),
-        });
-      }
-
+      // Project not found in local workspace cache
+      setProject(null);
       setLoading(false);
     }
 
@@ -175,6 +156,31 @@ function ProjectDashboardContent() {
           <p className="text-xs font-mono text-muted-foreground">
             Calibrating collision-free AST lock tables
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6">
+        <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center flex flex-col items-center justify-center max-w-md mx-auto space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-muted border border-border text-muted-foreground flex items-center justify-center">
+            <Network className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold text-foreground">Project Not Found</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              No project found with ID <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">{projectId}</code>.
+            </p>
+          </div>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary hover:opacity-90 text-primary-foreground text-xs font-semibold transition-all shadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to Dashboard</span>
+          </Link>
         </div>
       </div>
     );

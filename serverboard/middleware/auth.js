@@ -4,8 +4,15 @@ import { config } from "../config/env.js";
 
 export async function requireAuth(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+    const authHeader = req.headers?.authorization;
+    let token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+
+    if (!token && req.cookies?.token) {
+      token = req.cookies.token;
+    } else if (!token && req.headers?.cookie) {
+      const match = req.headers.cookie.match(/(?:^|;\s*)token=([^;]+)/);
+      if (match) token = decodeURIComponent(match[1]);
+    }
 
     if (token) {
       const { data, error } = await supabaseAuth.auth.getUser(token);

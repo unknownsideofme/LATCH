@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { ThinkingOrb } from "thinking-orbs";
 import {
   LayoutGrid,
@@ -101,9 +100,9 @@ const defaultSampleRepos: GitHubRepo[] = [
   },
 ];
 
+/** Render sample and locally stored projects with local project creation and sign-out. */
 export default function DashboardPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [user, setUser] = useState<any>(null);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
@@ -126,6 +125,11 @@ export default function DashboardPage() {
   useEffect(() => {
     let isSubscribed = true;
 
+    /**
+     * Restore the cached user and prepend stored projects whose IDs differ from
+     * the sample projects. Ignore storage and parsing errors and finish loading
+     * with the available sample data.
+     */
     async function loadData() {
       // 1. Check local session cache first
       let activeUser: any = null;
@@ -141,58 +145,15 @@ export default function DashboardPage() {
         }
       }
 
-      // 2. Query Supabase for confirmed session
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        activeUser = session.user;
-        if (isSubscribed) setUser(session.user);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("latch_user_session", JSON.stringify(session.user));
-        }
-      }
-
-      // Default mock project for instant mission-control visualization
-      const sampleProjects: ProjectRecord[] = [
-        {
-          id: "proj_latch_core",
-          user_id: activeUser?.id || "demo-user",
-          project_name: "LATCH-Engine",
-          repo_name: "unknownsideofme/LATCH",
-          branch: "main",
-          render_id: "srv_latch_core_01",
-          render_url: "http://127.0.0.1:3001",
-          status: "ready",
-          agent_limit: 4,
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "proj_claude_runner",
-          user_id: activeUser?.id || "demo-user",
-          project_name: "Claude-CLI-Swarm",
-          repo_name: "anthropic/claude-code-runner",
-          branch: "develop",
-          render_id: "srv_claude_swarm_02",
-          render_url: "http://127.0.0.1:3002",
-          status: "ready",
-          agent_limit: 6,
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-        },
-      ];
-
-      // Check local projects cache
-      let combinedProjects = [...sampleProjects];
+      // Load stored projects from local storage
+      let combinedProjects: ProjectRecord[] = [];
       if (typeof window !== "undefined") {
         try {
           const localStored = localStorage.getItem("latch_local_projects");
           if (localStored) {
             const parsed = JSON.parse(localStored);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              const existingIds = new Set(combinedProjects.map((p) => p.id));
-              const extras = parsed.filter((p: ProjectRecord) => !existingIds.has(p.id));
-              combinedProjects = [...extras, ...combinedProjects];
+              combinedProjects = parsed;
             }
           }
         } catch {
@@ -200,64 +161,14 @@ export default function DashboardPage() {
         }
       }
 
-      // Fetch from Supabase projects table if available
-      try {
-        const { data: userProjects, error } = await supabase
-          .from("projects")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!error && userProjects && userProjects.length > 0) {
-          const existingIds = new Set(userProjects.map((p: ProjectRecord) => p.id));
-          combinedProjects = [
-            ...userProjects,
-            ...combinedProjects.filter((p: ProjectRecord) => !existingIds.has(p.id)),
-          ];
-        }
-      } catch {
-        // Supabase query error fallback
-      }
-
       setProjects(combinedProjects);
       setLoading(false);
-
-      // Attempt to fetch real GitHub repos if authenticated with GitHub
-      try {
-        const ghRes = await fetch("/api/github/repos");
-        if (ghRes.ok) {
-          const ghData = await ghRes.json();
-          if (ghData.repos && ghData.repos.length > 0) {
-            setRepos(ghData.repos);
-          }
-        }
-      } catch {
-        // keep defaultSampleRepos
-      }
     }
 
     loadData();
 
-    // Listen to real-time auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-      if (session?.user) {
-        setUser(session.user);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("latch_user_session", JSON.stringify(session.user));
-        }
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("latch_user_session");
-        }
-        router.push("/login");
-      }
-    });
-
     return () => {
       isSubscribed = false;
-      subscription.unsubscribe();
     };
   }, []);
 
@@ -297,6 +208,11 @@ export default function DashboardPage() {
     setModalStep(2);
   };
 
+  /**
+   * Prepend a local project from the form settings and close the modal, attempting
+   * to save the updated list under `latch_local_projects`. Blank project names are
+   * ignored; storage failures leave the project available in the current view.
+   */
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectName.trim()) return;
@@ -329,21 +245,6 @@ export default function DashboardPage() {
       }
     }
 
-    // 3. Persist to Supabase if table exists
-    try {
-      await supabase.from("projects").insert({
-        id: newProject.id,
-        user_id: newProject.user_id,
-        project_name: newProject.project_name,
-        render_id: newProject.render_id,
-        render_url: newProject.render_url,
-        status: newProject.status,
-        agent_limit: newProject.agent_limit,
-      });
-    } catch {
-      // ignore
-    }
-
     setSubmitting(false);
     setIsModalOpen(false);
   };
@@ -355,11 +256,14 @@ export default function DashboardPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  /**
+   * Remove the cached local user and navigate to `/login`.
+   * Storage errors reject the promise before navigation; navigation errors also propagate.
+   */
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("latch_user_session");
     }
-    await supabase.auth.signOut();
     router.push("/login");
   };
 

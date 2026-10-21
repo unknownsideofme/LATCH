@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoInput } from "@/components/deco/DecoInput";
 import { Sparkles, Terminal, ArrowUpRight } from "lucide-react";
@@ -12,12 +11,12 @@ import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ThinkingOrb } from "thinking-orbs";
 
+/** Render GitHub OAuth and local signup options, initially selecting `plan=pro` when supplied. */
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan") === "pro" ? "pro" : "free";
 
-  const supabase = createClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,57 +28,48 @@ function SignupForm() {
     if (searchParams.get("plan") === "pro") setSelectedPlan("pro");
   }, [searchParams]);
 
+  /**
+   * Navigate to the configured API's GitHub OAuth entry point, defaulting to
+   * http://localhost:4000. Display errors raised while initiating navigation in the form.
+   */
   const handleGitHubSignup = async () => {
     setLoading(true);
     setErrorMsg("");
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "github",
-        options: {
-          redirectTo: `${window.location.origin}/callback?next=/dashboard`,
-          scopes: "read:user repo",
-        },
-      });
-      if (error) throw error;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      window.location.href = `${apiUrl}/api/v1/auth/github`;
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to initialize GitHub OAuth");
       setLoading(false);
     }
   };
 
+  /**
+   * Create a local session from any nonblank email and password, including the
+   * name and selected plan, and store it under `latch_user_session` before opening
+   * `/dashboard`. Display caught validation, storage, and navigation errors in the form.
+   */
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-            preferred_plan: selectedPlan,
-          },
-        },
-      });
-
-      if (authError) throw authError;
-
-      if (authData.user) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("latch_user_session", JSON.stringify(authData.user));
-        }
-        await supabase.from("users").upsert({
-          id: authData.user.id,
-          email: authData.user.email,
-          name: name,
-          username: email.split("@")[0],
-          project_limit: selectedPlan === "pro" ? 50 : 3,
-        });
-
-        router.push("/dashboard");
+      if (!email.trim() || !password.trim()) {
+        throw new Error("Email and password are required");
       }
+      const localUser = {
+        id: `usr_${Date.now()}`,
+        email: email.trim(),
+        user_metadata: {
+          name: name || email.split("@")[0],
+          preferred_plan: selectedPlan,
+        },
+      };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("latch_user_session", JSON.stringify(localUser));
+      }
+      router.push("/dashboard");
     } catch (err: any) {
       setErrorMsg(err.message || "Sign up failed");
       setLoading(false);

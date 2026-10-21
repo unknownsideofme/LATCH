@@ -1,5 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import WebSocket from "ws";
 import { config } from "./env.js";
+
+// Ensure WebSocket is available in Node.js 20 environments for Supabase Realtime
+if (typeof globalThis.WebSocket === "undefined") {
+  globalThis.WebSocket = WebSocket;
+}
 
 if (!config.supabase.url || (!config.supabase.serviceRoleKey && !config.supabase.anonKey)) {
   console.warn("[supabase] Warning: SUPABASE_URL or Supabase keys missing in environment");
@@ -11,6 +17,7 @@ export const supabaseAdmin = createClient(
   config.supabase.serviceRoleKey || config.supabase.key || "placeholder-key",
   {
     auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { transport: WebSocket },
   }
 );
 
@@ -20,6 +27,7 @@ export const supabaseAuth = createClient(
   config.supabase.anonKey || config.supabase.key || "placeholder-key",
   {
     auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { transport: WebSocket },
   }
 );
 
