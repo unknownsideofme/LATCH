@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import type { ProjectRecord, GitHubRepo } from "@/lib/types";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UpgradeModal } from "@/components/billing/UpgradeModal";
 
 // Curated default repositories if GitHub API token is not yet connected
 const defaultSampleRepos: GitHubRepo[] = [
@@ -107,8 +108,19 @@ export default function DashboardPage() {
 
   const [user, setUser] = useState<any>(null);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [planTier, setPlanTier] = useState<"free" | "pro">("free");
   const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState("");
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:3001/api/billing/subscription")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.planTier) setPlanTier(data.planTier);
+      })
+      .catch(() => undefined);
+  }, []);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Modal State
@@ -262,6 +274,10 @@ export default function DashboardPage() {
   }, []);
 
   const handleOpenModal = () => {
+    if (planTier === "free" && projects.length >= 3) {
+      setIsUpgradeModalOpen(true);
+      return;
+    }
     setSelectedRepo(null);
     setRepoSearch("");
     setModalStep(1);
@@ -468,6 +484,22 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Pro Swarm Badge or Upgrade CTA */}
+            {planTier === "pro" ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/40 text-[11px] font-mono text-primary font-semibold">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Pro Swarm</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/40 text-primary text-xs font-semibold font-mono transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Upgrade to Pro</span>
+              </button>
+            )}
+
             {/* Theme Toggle */}
             <ThemeToggle />
 
@@ -936,6 +968,15 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        userId={user?.id}
+        onUpgradeSuccess={() => setPlanTier("pro")}
+      />
     </div>
   );
 }
+

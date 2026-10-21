@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { Check, Sparkles, Terminal, ArrowUpRight } from "lucide-react";
+import { UpgradeModal } from "@/components/billing/UpgradeModal";
 
 export function PricingTiers() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <section className="max-w-5xl mx-auto px-4 sm:px-6 py-10 md:py-16">
       {/* Header */}
@@ -111,7 +115,7 @@ export function PricingTiers() {
                   $24
                 </span>
                 <span className="text-xs font-mono text-muted-foreground">
-                  / seat Â· month
+                  / seat · month
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
@@ -139,16 +143,32 @@ export function PricingTiers() {
             </ul>
           </div>
 
-          <Link href="/signup?plan=pro" className="w-full">
-            <DecoButton variant="solid" size="default" className="w-full">
+          <div className="w-full space-y-2">
+            <DecoButton
+              variant="solid"
+              size="default"
+              className="w-full cursor-pointer"
+              onClick={() => setIsModalOpen(true)}
+            >
               <span className="inline-flex items-center gap-1">
-                <span>Start 14-Day Pro Trial</span>
+                <span>Subscribe via PayPal</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </span>
             </DecoButton>
-          </Link>
+            <div className="text-center">
+              <Link href="/signup?plan=pro" className="text-[11px] text-muted-foreground hover:text-foreground underline">
+                Or create an account first
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </section>
   );
 }

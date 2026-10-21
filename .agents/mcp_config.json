@@ -1,16 +1,24 @@
 {
   "mcpServers": {
     "latch": {
-      "command": "node",
+      "command": "C:\\Program Files\\nodejs\\node.exe",
       "args": [
-        "backend/mcp/server.js"
-      ]
+        "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH\\backend\\mcp\\server.js"
+      ],
+      "env": {
+        "LATCH_WORKSPACE_PATH": "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH",
+        "RELAY_WORKSPACE_PATH": "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH"
+      }
     },
     "relay": {
-      "command": "node",
+      "command": "C:\\Program Files\\nodejs\\node.exe",
       "args": [
-        "backend/mcp/server.js"
-      ]
+        "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH\\backend\\mcp\\server.js"
+      ],
+      "env": {
+        "LATCH_WORKSPACE_PATH": "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH",
+        "RELAY_WORKSPACE_PATH": "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH"
+      }
     }
   }
 }
