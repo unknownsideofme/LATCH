@@ -20,6 +20,12 @@ function parseArgs(argv) {
   return args;
 }
 
+/**
+ * Create the coordinator app and unbound HTTP server, restore persisted locks,
+ * and start periodic lock cleanup. Return app, server, lockTable, presence, and
+ * the numeric preferredPort (default zero). Allowed claims may include advisory
+ * dependency warnings and recent patch context. Home storage-directory errors propagate.
+ */
 function createCoordinator({ workspacePath, preferredPort } = {}) {
   const locksDir = workspacePath
     ? locksDirFor(workspacePath)

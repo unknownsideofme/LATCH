@@ -163,6 +163,17 @@ function applyIncoming(projectId, patch, lastApplied, workspacePath) {
   return { ready, conflicts, lastApplied: next, applied };
 }
 
+/**
+ * Return recent patches for a project's file with backslashes normalized to slashes.
+ * A case-insensitive owner match against agent or ownerLogin selects that owner's
+ * patches; an absent owner or no matching owner falls back to all patches for the file.
+ * Sort newest timestamp first, breaking ties by descending Lamport counter, and
+ * omit content from each returned copy while retaining diff and other metadata.
+ * limit is numerically coerced and capped at three; zero or NaN uses three,
+ * and negative values yield an empty array. Missing, unreadable, or invalid JSON
+ * memory files yield no patches. Ensure the project's storage directory exists;
+ * directory-creation errors propagate.
+ */
 function getRecentPatches(projectId, file, owner, limit = 3) {
   const rel = String(file || "").replace(/\\/g, "/");
   const wanted = String(owner || "").toLowerCase();

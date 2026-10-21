@@ -6,6 +6,11 @@ const { loadRegistry } = require("../lib/store");
 const { requireRoomMember, httpLockSession, roomScopedBody } = require("../middleware/authMiddleware");
 const { ContextService } = require("../services/ContextService");
 
+/**
+ * Return an Express router for lock status, streams, claims, releases, and read presence.
+ * Coordination claims are routed through the room host for guests; locally handled
+ * allowed claims may include advisory dependency warnings and recent patch context.
+ */
 function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceService }) {
   const router = express.Router();
 

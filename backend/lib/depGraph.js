@@ -253,6 +253,7 @@ class DepGraph {
     return this;
   }
 
+  /** Refresh component membership and multi-file cycles from the current import edges. */
   recalculateCycles() {
     const nodes = [...this.imports.keys()];
     this.scc = stronglyConnected(nodes, this.imports);
@@ -261,6 +262,14 @@ class DepGraph {
     );
   }
 
+  /**
+   * Refresh a workspace-relative source file in place and return this graph.
+   * Reconnect previously missing imports that now resolve to the file, recompute
+   * cycles, and refresh builtAt in milliseconds since the Unix epoch.
+   * Missing files, non-files, and unsupported extensions lose their graph edges.
+   * A source read failure leaves the graph unchanged. Stat errors other than
+   * ENOENT/ENOTDIR, import-extraction errors, and override-processing errors propagate.
+   */
   updateFile(filePath) {
     const file = posix(filePath);
     const abs = path.join(this.workspacePath, file);
@@ -331,6 +340,11 @@ class DepGraph {
     return this;
   }
 
+  /**
+   * Refresh graph state after removing a workspace-relative file from disk.
+   * Delegates to updateFile, including its return value and error behavior;
+   * a supported source file still on disk is refreshed. Only graph state is changed.
+   */
   removeFile(filePath) {
     return this.updateFile(filePath);
   }
@@ -365,7 +379,13 @@ class DepGraph {
   }
 
   /**
-   * Soft-lock if an upstream import is held, or another file in this SCC is held.
+   * Return the first advisory conflict for a workspace-relative file, or null.
+   * Check other members of its strongly connected component before dependencies
+   * within lockDepth hops. isHeld(path) supplies a truthy holder for a conflict.
+   * Optional patchFor(path, holder) supplies recentPatches, which otherwise is empty.
+   * The result includes the relation, reason, and graph freshness: lastUpdatedAt
+   * is milliseconds since the Unix epoch; confidence is partial if any graph
+   * imports are unresolved. Callback errors propagate; no lock is acquired.
    */
   blockedBy(file, isHeld, patchFor) {
     const rel = posix(file);
@@ -472,11 +492,22 @@ function graphFor(workspacePath) {
   return g;
 }
 
+/**
+ * Refresh a workspace-relative file in the cached graph, building the graph on
+ * first use. Return the graph, or null for an unset or nonexistent workspace.
+ * Uses DepGraph.updateFile's fallback behavior; graph build and update errors propagate.
+ */
 function updateFile(workspacePath, filePath) {
   const g = graphFor(workspacePath);
   return g ? g.updateFile(filePath) : null;
 }
 
+/**
+ * Refresh the cached graph after a workspace-relative file is removed from disk,
+ * building the graph on first use. An existing supported source file is refreshed.
+ * Return the graph, or null for an unset or nonexistent workspace; graph build
+ * and update errors propagate as in updateFile. Only graph state is changed.
+ */
 function removeFile(workspacePath, filePath) {
   const g = graphFor(workspacePath);
   return g ? g.removeFile(filePath) : null;
@@ -498,6 +529,11 @@ function holderOf(lockTable, file, agentId, workspacePath) {
   return e.holder?.label || e.agentId;
 }
 
+/**
+ * Convert a soft conflict into a structured WARNING with conflicting file,
+ * graph freshness, patch context, and a suggested action based on patch availability.
+ * Return null unless blocked.soft is truthy. This report does not enforce a lock.
+ */
 function dependencyRiskReport(blocked) {
   if (!blocked?.soft) return null;
   const patches = blocked.recentPatches || [];
@@ -516,6 +552,10 @@ function dependencyRiskReport(blocked) {
   };
 }
 
+/**
+ * Resolve a registered project ID by normalized workspace path, falling back to
+ * an exact project ID match. Return null when no match is found or lookup fails.
+ */
 function projectIdFor(workspacePath) {
   try {
     const root = resolveRoot(workspacePath);
@@ -527,6 +567,14 @@ function projectIdFor(workspacePath) {
   }
 }
 
+/**
+ * Return the first advisory dependency or cycle conflict for a workspace-relative
+ * file, ignoring expired locks and locks belonging to agentId's owner.
+ * Return null when the workspace graph is unavailable or no conflict is found.
+ * Attach up to three recent patches for the conflicting file; project lookup or
+ * patch-loading failures yield empty patch context. Graph and lock lookup errors
+ * propagate. This lookup does not claim a lock.
+ */
 function softBlock(lockTable, workspacePath, agentId, file) {
   const g = graphFor(workspacePath);
   if (!g) return null;
