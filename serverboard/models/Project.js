@@ -33,7 +33,7 @@ export const ProjectModel = {
     return count || 0;
   },
 
-  async create({ userId, projectName, agentLimit = 7 }) {
+  async create({ userId, projectName, agentLimit = 7, repoUrl, branch }) {
     // Validate user's project limit
     const { data: user } = await supabase.from("users").select("project_limit").eq("id", userId).maybeSingle();
     if (user?.project_limit != null) {
@@ -43,14 +43,18 @@ export const ProjectModel = {
       }
     }
 
+    const newProject = {
+      user_id: userId,
+      project_name: projectName.trim(),
+      status: "pending",
+      agent_limit: Number(agentLimit) || 7,
+    };
+    if (repoUrl) newProject.repo_url = repoUrl;
+    if (branch) newProject.branch = branch;
+
     const { data, error } = await supabase
       .from("projects")
-      .insert([{
-        user_id: userId,
-        project_name: projectName.trim(),
-        status: "pending",
-        agent_limit: Number(agentLimit) || 7,
-      }])
+      .insert([newProject])
       .select()
       .single();
 

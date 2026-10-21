@@ -99,8 +99,8 @@ export async function runProvisioningWorker(projectId, payload) {
     try {
       render = await RenderService.createService(payload);
     } catch (renderErr) {
-      if (!process.env.VITEST && (renderErr.code === "ENOENT" || renderErr.message?.includes("ENOENT"))) {
-        console.warn(`[worker] ⚠️ Render CLI not installed on host machine (${renderErr.message}). Using local development mock service for ${payload.name}...`);
+      if (!process.env.VITEST && (renderErr.code === "ENOENT" || renderErr.message?.includes("ENOENT") || renderErr.message?.includes("no workspace set") || !process.env.RENDER_API_KEY)) {
+        console.warn(`[worker] ⚠️ Render CLI not configured or not installed (${renderErr.message}). Using local development mock service for ${payload.name}...`);
         render = {
           id: `srv-local-${Date.now().toString(36)}`,
           url: `https://${payload.name}.onrender.com`,
@@ -110,6 +110,7 @@ export async function runProvisioningWorker(projectId, payload) {
         throw renderErr;
       }
     }
+
     const renderId = render?.id || render?.service?.id;
     if (!renderId) throw new Error("Render provisioning response missing service id");
 
@@ -117,7 +118,7 @@ export async function runProvisioningWorker(projectId, payload) {
     await ProjectModel.update(projectId, { render_id: renderId, render_url: renderUrl, status: "deploying" });
     console.log(`[worker] ✔ Render service created: ${renderId} (${renderUrl})`);
 
-    // If local mock service, wait 4s to demonstrate DEPLOYING state on UI, then mark running
+    // If local development mock service, wait 4s to demonstrate deploying state on UI, then mark running
     if (renderId.startsWith("srv-local-")) {
       await new Promise(r => setTimeout(r, 4000));
       await ProjectModel.update(projectId, { status: "running" });

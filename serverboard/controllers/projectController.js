@@ -53,21 +53,11 @@ export const ProjectController = {
       const repoUrlStr = typeof repo_url === "string" ? repo_url.trim() : "";
       const requestedRepo = repoStr || repoUrlStr;
 
-      const envAllowed = process.env.ALLOWED_REPOS
-        ? new Set(process.env.ALLOWED_REPOS.split(",").map(r => r.trim()))
-        : null;
-
       if (requestedRepo) {
         if (!GITHUB_REPO_REGEX.test(requestedRepo)) {
           return res.status(400).json({
             error: "validation_error",
             message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: https://github.com/owner/repo`,
-          });
-        }
-        if (envAllowed && !envAllowed.has(requestedRepo)) {
-          return res.status(400).json({
-            error: "validation_error",
-            message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...envAllowed].join(", ")}`,
           });
         }
         if ((Boolean(process.env.VITEST) || config.isTest) && !ALLOWED_REPOS.has(requestedRepo)) {
@@ -96,14 +86,18 @@ export const ProjectController = {
         userId: req.user.id,
         projectName: sanitizedName,
         agentLimit: selectedAgentLimit,
+        repoUrl: selectedRepo,
+        branch: selectedBranch,
       });
 
       const payload = {
         name: sanitizedName,
-        repo: selectedRepo,
+        repo: process.env.LATCH_IMAGE_REPO || "https://github.com/unknownsideofme/LATCH",
         branch: selectedBranch,
         region: selectedRegion,
         plan: selectedPlan,
+        targetRepo: selectedRepo,
+        targetBranch: selectedBranch,
       };
 
       // 6. In dev, local worker is the single source of provisioning (avoid double provisioning / Inngest dependency)
@@ -127,6 +121,7 @@ export const ProjectController = {
         message: "Project queued for deployment",
         project: {
           ...project,
+          repo_name: selectedRepo.replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "") || sanitizedName,
           connection_status: connectionStatus,
           repo_details: {
             repo_url: selectedRepo,
@@ -152,6 +147,7 @@ export const ProjectController = {
 
       const enrichedProjects = projects.map(p => ({
         ...p,
+        repo_name: p.repo_url?.replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "") || p.project_name,
         connection_status:
           p.status === "running" ? "connected" :
           p.status === "deploying" ? "connecting" :
@@ -189,9 +185,12 @@ export const ProjectController = {
         project.status === "failed" ? "disconnected" :
         project.status;
 
+      const repoName = project.repo_url?.replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "") || project.project_name;
+
       res.json({
         project: {
           ...project,
+          repo_name: repoName,
           connection_status: connectionStatus,
           repo_details: {
             repo_url: project.repo_url || ALLOWED_REPO,
