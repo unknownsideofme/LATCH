@@ -101,7 +101,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
       const held = blocked?.file ? lockTable.getLock(blocked.file, scoped.workspaceId) : null;
       const { sameOwner } = require("../coordinator/lockTable");
       if (blocked && !(held && sameOwner(held.agentId, scoped.agentId))) {
-        warnings.push(blocked.reason || blocked.holder || String(blocked));
+        warnings.push(blocked);
       }
     }
     const result = await lockService.runLockRpc(
@@ -110,7 +110,10 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
       httpLockSession(req),
       (p) => workspaceService?.ensureWorkspace(p)
     );
-    if (warnings.length && result.allowed) result.warning = result.warning || warnings[0];
+    if (warnings.length && result.allowed) {
+      result.warning = result.warning || warnings[0].reason || warnings[0].holder || String(warnings[0]);
+      result.dependencyPatches = warnings.flatMap((warning) => warning.recentPatches || []);
+    }
     res.status(result.allowed ? 200 : 409).json(result);
   });
 

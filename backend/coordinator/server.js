@@ -50,11 +50,14 @@ function createCoordinator({ workspacePath, preferredPort } = {}) {
       const blocked = softBlock(lockTable, body.workspaceId || workspacePath, body.agentId, file);
       const held = blocked?.file ? lockTable.getLock(blocked.file, body.workspaceId || workspacePath) : null;
       if (blocked && !(held && sameOwner(held.agentId, body.agentId))) {
-        warnings.push(blocked.reason || blocked.holder || String(blocked));
+        warnings.push(blocked);
       }
     }
     const result = lockTable.claim(body);
-    if (warnings.length && result.allowed) result.warning = result.warning || warnings[0];
+    if (warnings.length && result.allowed) {
+      result.warning = result.warning || warnings[0].reason || warnings[0].holder || String(warnings[0]);
+      result.dependencyPatches = warnings.flatMap((warning) => warning.recentPatches || []);
+    }
     res.status(result.allowed ? 200 : 409).json(result);
   });
 

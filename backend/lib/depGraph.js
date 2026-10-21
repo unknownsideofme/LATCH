@@ -3,6 +3,8 @@ const path = require("path");
 const { extractWithQuery, languageForExt, supportedLanguages } = require("./treeSitterImports");
 const { sameOwner } = require("../coordinator/lockTable");
 const { normalizeWorkspaceRoot } = require("./transcripts/util");
+const { loadRegistry } = require("./store");
+const { getRecentPatches } = require("./patches");
 
 const SKIP = new Set([
   "node_modules",
@@ -251,6 +253,64 @@ class DepGraph {
     return this;
   }
 
+  recalculateCycles() {
+    const nodes = [...this.imports.keys()];
+    this.scc = stronglyConnected(nodes, this.imports);
+    this.cycles = [...new Set([...this.scc.values()].filter((entry) => entry.cyclic).map((entry) => entry.id))].map((id) =>
+      [...this.scc.values()].find((entry) => entry.id === id)?.members || []
+    );
+  }
+
+  updateFile(filePath) {
+    const file = posix(filePath);
+    const oldImports = this.imports.get(file) || new Set();
+    const existingImporters = this.importedBy.get(file) || new Set();
+    for (const imported of oldImports) this.importedBy.get(imported)?.delete(file);
+    this.imports.delete(file);
+    this.unresolvable = this.unresolvable.filter((entry) => entry.from !== file);
+    const abs = path.join(this.workspacePath, file);
+    const exists = fs.existsSync(abs) && fs.statSync(abs).isFile() && SOURCE.has(path.extname(file));
+    if (exists) {
+      this.imports.set(file, new Set());
+      this.importedBy.set(file, existingImporters);
+      let source = "";
+      try { source = fs.readFileSync(abs, "utf8"); } catch { source = null; }
+      if (source !== null) {
+        const ext = path.extname(file);
+        const { staticSpecs, dynamic, engine } = extractSpecs(source, ext);
+        this.engine = engine || this.engine;
+        for (const spec of dynamic) this.unresolvable.push({ from: file, spec, reason: "dynamic" });
+        for (const spec of staticSpecs) {
+          const resolved = tryResolve(this.workspacePath, file, spec, ext);
+          if (!resolved || resolved.kind !== "file") {
+            if (resolved?.kind === "missing" && spec.startsWith(".")) this.unresolvable.push({ from: file, spec, reason: "missing" });
+            continue;
+          }
+          this.imports.get(file).add(resolved.spec);
+          if (!this.importedBy.has(resolved.spec)) this.importedBy.set(resolved.spec, new Set());
+          this.importedBy.get(resolved.spec).add(file);
+        }
+      }
+      for (const [from, to] of loadOverride(this.workspacePath).edges || []) {
+        if (posix(from) !== file) continue;
+        if (!this.imports.has(file)) this.imports.set(file, new Set());
+        this.imports.get(file).add(posix(to));
+        if (!this.importedBy.has(posix(to))) this.importedBy.set(posix(to), new Set());
+        this.importedBy.get(posix(to)).add(file);
+      }
+    } else {
+      for (const importer of existingImporters) this.imports.get(importer)?.delete(file);
+      this.importedBy.delete(file);
+    }
+    this.recalculateCycles();
+    this.builtAt = Date.now();
+    return this;
+  }
+
+  removeFile(filePath) {
+    return this.updateFile(filePath);
+  }
+
   walk(start, map, depth) {
     const out = new Set();
     const q = [{ file: posix(start), d: 0 }];
@@ -283,7 +343,7 @@ class DepGraph {
   /**
    * Soft-lock if an upstream import is held, or another file in this SCC is held.
    */
-  blockedBy(file, isHeld) {
+  blockedBy(file, isHeld, patchFor) {
     const rel = posix(file);
     for (const member of this.cycleMembers(rel)) {
       if (member === rel) continue;
@@ -293,6 +353,7 @@ class DepGraph {
           soft: true,
           file: member,
           holder,
+          recentPatches: patchFor ? patchFor(member, holder) : [],
           reason: `⚠️ \`${rel}\` is in a circular dependency with \`${member}\` (single lock unit). Held by ${holder}. Pick a different file.`,
         };
       }
@@ -304,6 +365,7 @@ class DepGraph {
           soft: true,
           file: dep,
           holder,
+          recentPatches: patchFor ? patchFor(dep, holder) : [],
           reason: `⚠️ \`${rel}\` depends on \`${dep}\`, which is currently being modified by ${holder}. Proceeding may cause inconsistencies. Pick a different file.`,
         };
       }
@@ -372,6 +434,16 @@ function graphFor(workspacePath) {
   return g;
 }
 
+function updateFile(workspacePath, filePath) {
+  const g = graphFor(workspacePath);
+  return g ? g.updateFile(filePath) : null;
+}
+
+function removeFile(workspacePath, filePath) {
+  const g = graphFor(workspacePath);
+  return g ? g.removeFile(filePath) : null;
+}
+
 function rebuild(workspacePath) {
   const root = resolveRoot(workspacePath);
   if (!root || !fs.existsSync(root)) return null;
@@ -388,10 +460,19 @@ function holderOf(lockTable, file, agentId, workspacePath) {
   return e.holder?.label || e.agentId;
 }
 
+function projectIdFor(workspacePath) {
+  const root = resolveRoot(workspacePath);
+  const projects = loadRegistry()?.projects || [];
+  return projects.find((project) => resolveRoot(project.path) === root)?.id || (projects.some((p) => p.id === workspacePath) ? workspacePath : null);
+}
+
 function softBlock(lockTable, workspacePath, agentId, file) {
   const g = graphFor(workspacePath);
   if (!g) return null;
-  return g.blockedBy(file, (f) => holderOf(lockTable, f, agentId, workspacePath));
+  const projectId = projectIdFor(workspacePath);
+  const patchFor = (conflictingFile, holder) =>
+    projectId ? getRecentPatches(projectId, conflictingFile, holder, 3) : [];
+  return g.blockedBy(file, (f) => holderOf(lockTable, f, agentId, workspacePath), patchFor);
 }
 
-module.exports = { DepGraph, graphFor, rebuild, posix, softBlock };
+module.exports = { DepGraph, graphFor, rebuild, updateFile, removeFile, posix, softBlock };

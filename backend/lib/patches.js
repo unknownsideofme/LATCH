@@ -163,6 +163,20 @@ function applyIncoming(projectId, patch, lastApplied, workspacePath) {
   return { ready, conflicts, lastApplied: next, applied };
 }
 
+function getRecentPatches(projectId, file, owner, limit = 3) {
+  const rel = String(file || "").replace(/\\/g, "/");
+  const wanted = String(owner || "").toLowerCase();
+  const patches = loadMemory(projectId).patches || [];
+  const byFile = patches.filter((patch) => String(patch.file || "").replace(/\\/g, "/") === rel);
+  const owned = wanted
+    ? byFile.filter((patch) => [patch.agent, patch.ownerLogin].some((value) => String(value || "").toLowerCase() === wanted))
+    : byFile;
+  return (owned.length ? owned : byFile)
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0) || (b.lamport || 0) - (a.lamport || 0))
+    .slice(0, Math.max(0, Math.min(Number(limit) || 3, 3)))
+    .map(({ content, ...patch }) => patch);
+}
+
 function replayUntil(projectId, lamport) {
   const memory = loadMemory(projectId);
   return (memory.patches || []).filter((p) => p.lamport <= lamport);
