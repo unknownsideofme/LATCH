@@ -326,6 +326,7 @@ function newHostRoom(url, extra, existing) {
     ...keep,
     role: "host",
     live: true,
+    open: extra.open !== undefined ? Boolean(extra.open) : Boolean(keep.open),
     url,
     roomId: keep.roomId || mintRoomId(),
     nonce: keep.nonce || mintNonce(),

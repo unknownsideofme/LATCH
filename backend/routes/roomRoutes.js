@@ -122,9 +122,17 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
     try {
       const room = loadRoom(project?.path);
       if (!room?.url) return res.status(409).json({ error: "no_room" });
-      const user = req.body?.user;
-      if (!user?.login) return res.status(400).json({ error: "user_required" });
-      const next = upsertMember(room, user, req.body?.role === "host" ? "host" : "guest");
+      const authenticated = req.roomMember;
+      const requested = req.body?.user;
+      const login = authenticated?.login || requested?.login;
+      if (!login) return res.status(400).json({ error: "user_required" });
+      const user = authenticated ? { ...requested, login: authenticated.login } : requested;
+      const existingMember = (room.members || []).some((member) => normLogin(member.login) === normLogin(login));
+      const maxMembers = roomMaxMembers(room, project);
+      if (!existingMember && activeMemberLogins(room).size >= maxMembers) {
+        return res.status(409).json({ error: "room_member_limit_reached", maxMembers });
+      }
+      const next = upsertMember(room, user, authenticated?.role === "host" ? "host" : "guest");
       const active = workspaceService && project ? workspaceService.activeAgent(project.id) : {};
       upsertMember(next, { ...ContextService.currentUser(), ...active }, "host");
       saveRoom(next, project?.path);
@@ -259,7 +267,7 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
     let token;
       if (!room.open && req.body?.code) {
         const redeemed = redeemInvite(room, req.body.code, user.login);
-        if (!redeemed.ok && !collaboratorCheck.allowed) {
+        if (!redeemed.ok && !collaboratorCheck?.allowed) {
           return res.status(403).json({
             error: redeemed.reason,
             invitedLogin: redeemed.invitedLogin,
@@ -468,9 +476,14 @@ function createRoomRoutes({ sse, roomService, lockService, patchService, workspa
           })
             .then((r) => r.json())
             .catch(() => ({}));
-          return res.status(403).json({
+          const status = detail.error === "room_member_limit_reached" ? 409 : 403;
+          return res.status(status).json({
             error: detail.error || "invite_required",
-            hint: detail.hint || "This room is invite-only. Ask the host to invite you from the Team tab.",
+            hint:
+              detail.hint ||
+              (detail.error === "room_member_limit_reached"
+                ? "This room is full. Try again when a member leaves."
+                : "This room is invite-only. Ask the host to invite you from the Team tab."),
           });
         }
         throw err;

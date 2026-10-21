@@ -23,7 +23,7 @@ function authorizeRoomSocket(socket, req) {
   const project = room.hostProjectId
     ? loadRegistry().projects.find((p) => p.id === room.hostProjectId)
     : null;
-  if (!member && room.open && activeMemberLogins(room).size >= roomMaxMembers(room, project)) {
+  if (!member && activeMemberLogins(room).size >= roomMaxMembers(room, project)) {
     socket.close(4429, "room_member_limit_reached");
     return null;
   }
