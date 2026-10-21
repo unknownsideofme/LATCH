@@ -107,6 +107,31 @@ export const AuthController = {
       }
 
       if (!code) {
+        if (req.headers?.accept?.includes("text/html")) {
+          return res.send(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Authenticating with Latch...</title></head>
+<body>
+  <script>
+    if (window.location.hash) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = params.get("access_token");
+      if (accessToken) {
+        localStorage.setItem("latch_token", accessToken);
+        window.location.href = "${config.frontendUrl}/dashboard";
+      } else {
+        window.location.href = "${config.frontendUrl}/login?error=oauth_failed";
+      }
+    } else {
+      window.location.href = "${config.frontendUrl}/login?error=missing_code";
+    }
+  </script>
+  <noscript>
+    <p>Authentication complete. <a href="${config.frontendUrl}/dashboard">Click here to continue to Dashboard</a>.</p>
+  </noscript>
+</body>
+</html>`);
+        }
         return res.status(400).json({ error: "missing_code", message: "OAuth code is required" });
       }
 

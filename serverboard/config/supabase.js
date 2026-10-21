@@ -26,7 +26,7 @@ export const supabaseAuth = createClient(
   config.supabase.url || "https://placeholder.supabase.co",
   config.supabase.anonKey || config.supabase.key || "placeholder-key",
   {
-    auth: { persistSession: false, autoRefreshToken: false },
+    auth: { persistSession: false, autoRefreshToken: false, flowType: "pkce" },
     realtime: { transport: WebSocket },
   }
 );
