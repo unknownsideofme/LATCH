@@ -126,20 +126,8 @@ function ProjectDashboardContent() {
         }
       }
 
-      // Fallback default sample project
-      setProject({
-        id: projectId || "proj_latch_core",
-        user_id: "demo-user",
-        project_name: "LATCH-Engine",
-        repo_name: "unknownsideofme/LATCH",
-        branch: "main",
-        render_id: "srv_latch_core_01",
-        render_url: "http://127.0.0.1:3001",
-        status: "ready",
-        agent_limit: 4,
-        created_at: new Date().toISOString(),
-      });
-
+      // Project not found in local workspace cache
+      setProject(null);
       setLoading(false);
     }
 
@@ -168,6 +156,31 @@ function ProjectDashboardContent() {
           <p className="text-xs font-mono text-muted-foreground">
             Calibrating collision-free AST lock tables
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6">
+        <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center flex flex-col items-center justify-center max-w-md mx-auto space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-muted border border-border text-muted-foreground flex items-center justify-center">
+            <Network className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold text-foreground">Project Not Found</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              No project found with ID <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">{projectId}</code>.
+            </p>
+          </div>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary hover:opacity-90 text-primary-foreground text-xs font-semibold transition-all shadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to Dashboard</span>
+          </Link>
         </div>
       </div>
     );

@@ -4,6 +4,8 @@ vi.mock("../../../serverboard/models/User.js", () => ({
   UserModel: {
     register: vi.fn(),
     authenticate: vi.fn(),
+    findById: vi.fn(),
+    findByUsername: vi.fn(),
   },
 }));
 
@@ -21,17 +23,31 @@ vi.mock("../../../serverboard/config/supabase.js", () => ({
   },
 }));
 
-import { AuthController } from "../../../serverboard/controllers/authController.js";
+import { AuthController, githubTokenCache } from "../../../serverboard/controllers/authController.js";
 import { UserModel } from "../../../serverboard/models/User.js";
+import { supabaseAuth } from "../../../serverboard/config/supabase.js";
 
 function makeRes() {
-  const res = { _status: 200, _body: null };
+  const res = { _status: 200, _body: null, _redirectUrl: null, _cookies: {}, _clearedCookies: [] };
   res.status = (code) => {
     res._status = code;
     return res;
   };
   res.json = (body) => {
     res._body = body;
+    return res;
+  };
+  res.redirect = (url) => {
+    res._redirectUrl = url;
+    return res;
+  };
+  res.cookie = (name, val, options) => {
+    res._cookies[name] = { val, options };
+    return res;
+  };
+  res.clearCookie = (name, options) => {
+    res._clearedCookies.push({ name, options });
+    delete res._cookies[name];
     return res;
   };
   return res;
@@ -218,6 +234,126 @@ describe("AuthController (serverboard/controllers/authController.js)", () => {
       await AuthController.me(req, res);
 
       expect(res._body).toEqual({ user: undefined });
+    });
+  });
+
+  describe("githubLogin()", () => {
+    it("sets oauth_state cookie and redirects to OAuth URL on standard browser request", async () => {
+      supabaseAuth.auth.signInWithOAuth.mockResolvedValueOnce({
+        data: { url: "https://github.com/login/oauth/authorize?test=1" },
+        error: null,
+      });
+
+      const req = { headers: {} };
+      const res = makeRes();
+      const next = vi.fn();
+
+      await AuthController.githubLogin(req, res, next);
+
+      expect(res._cookies.oauth_state).toBeDefined();
+      expect(res._cookies.oauth_state.options.httpOnly).toBe(true);
+      expect(typeof res._cookies.oauth_state.val).toBe("string");
+      expect(res._redirectUrl).toBe("https://github.com/login/oauth/authorize?test=1");
+    });
+
+    it("returns JSON when format=json query is provided", async () => {
+      supabaseAuth.auth.signInWithOAuth.mockResolvedValueOnce({
+        data: { url: "https://github.com/login/oauth/authorize?test=2" },
+        error: null,
+      });
+
+      const req = { headers: {}, query: { format: "json" } };
+      const res = makeRes();
+      const next = vi.fn();
+
+      await AuthController.githubLogin(req, res, next);
+
+      expect(res._body).toEqual({
+        url: "https://github.com/login/oauth/authorize?test=2",
+        state: res._cookies.oauth_state.val,
+      });
+    });
+  });
+
+  describe("githubCallback()", () => {
+    it("validates CSRF state, clears state cookie, sets session cookies, and redirects without tokens in URL", async () => {
+      const validState = "safe-csrf-state-abc";
+
+      supabaseAuth.auth.exchangeCodeForSession.mockResolvedValueOnce({
+        data: {
+          session: {
+            access_token: "mock-access-token",
+            refresh_token: "mock-refresh-token",
+            provider_token: "mock-gh-provider-token",
+            expires_in: 3600,
+          },
+          user: {
+            id: "u-gh-123",
+            email: "ghuser@example.com",
+            user_metadata: { user_name: "ghuser" },
+          },
+        },
+        error: null,
+      });
+
+      UserModel.findById.mockResolvedValueOnce({
+        id: "u-gh-123",
+        username: "ghuser",
+      });
+
+      const req = {
+        query: { code: "oauth-auth-code-123", state: validState },
+        cookies: { oauth_state: validState },
+      };
+      const res = makeRes();
+      const next = vi.fn();
+
+      await AuthController.githubCallback(req, res, next);
+
+      // Verify oauth_state cookie was cleared
+      expect(res._clearedCookies.some((c) => c.name === "oauth_state")).toBe(true);
+
+      // Verify session cookies set
+      expect(res._cookies.token).toBeDefined();
+      expect(res._cookies.token.val).toBe("mock-access-token");
+      expect(res._cookies.token.options.httpOnly).toBe(true);
+
+      expect(res._cookies.refresh_token).toBeDefined();
+      expect(res._cookies.refresh_token.val).toBe("mock-refresh-token");
+      expect(res._cookies.refresh_token.options.httpOnly).toBe(true);
+
+      // Verify provider_token is cached on server and NEVER in cookie or URL
+      expect(githubTokenCache.get("u-gh-123")).toBe("mock-gh-provider-token");
+      expect(res._cookies.provider_token).toBeUndefined();
+
+      // Verify redirect target has NO token parameters in URL query or hash
+      expect(res._redirectUrl).toMatch(/\/dashboard$/);
+      expect(res._redirectUrl).not.toContain("token=");
+      expect(res._redirectUrl).not.toContain("provider_token=");
+    });
+
+    it("rejects callback with 403 invalid_state when state parameter is missing or mismatched", async () => {
+      const req = {
+        query: { code: "oauth-auth-code-123", state: "tampered-state" },
+        cookies: { oauth_state: "original-state" },
+      };
+      const res = makeRes();
+      const next = vi.fn();
+
+      await AuthController.githubCallback(req, res, next);
+
+      expect(res._status).toBe(403);
+      expect(res._body.error).toBe("invalid_state");
+    });
+
+    it("redirects with error parameter when OAuth error occurs", async () => {
+      const req = { query: { error: "access_denied", error_description: "User cancelled" } };
+      const res = makeRes();
+      const next = vi.fn();
+
+      await AuthController.githubCallback(req, res, next);
+
+      expect(res._redirectUrl).toContain("error=access_denied");
     });
   });
 });

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { UserModel } from "../models/User.js";
 import { supabaseAuth, supabaseAdmin } from "../config/supabase.js";
 import { config } from "../config/env.js";
@@ -47,12 +48,26 @@ export const AuthController = {
    */
   async githubLogin(req, res, next) {
     try {
+      const state = crypto.randomBytes(16).toString("hex");
+      const isSecure = config.isProd || process.env.NODE_ENV === "production";
+
+      if (typeof res.cookie === "function") {
+        res.cookie("oauth_state", state, {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: "lax",
+          maxAge: 10 * 60 * 1000, // 10 minutes
+          path: "/",
+        });
+      }
+
       const redirectUri = `${config.serverUrl}/api/v1/auth/github/callback`;
       const { data, error } = await supabaseAuth.auth.signInWithOAuth({
         provider: "github",
         options: {
           redirectTo: redirectUri,
           scopes: "read:user user:email repo",
+          queryParams: { state },
         },
       });
 
@@ -61,8 +76,8 @@ export const AuthController = {
       }
 
       // If requested via JSON, return URL directly
-      if (req.xhr || req.headers.accept?.includes("application/json") || req.query.format === "json") {
-        return res.json({ url: data.url });
+      if (req.xhr || req.headers?.accept?.includes("application/json") || req.query?.format === "json") {
+        return res.json({ url: data.url, state });
       }
 
       // Otherwise redirect browser to GitHub OAuth authorization URL
@@ -84,7 +99,7 @@ export const AuthController = {
    */
   async githubCallback(req, res, next) {
     try {
-      const { code, error: oauthError, error_description } = req.query;
+      const { code, state, error: oauthError, error_description } = req.query || {};
 
       if (oauthError) {
         console.warn("[auth] GitHub OAuth error:", oauthError, error_description);
@@ -93,6 +108,24 @@ export const AuthController = {
 
       if (!code) {
         return res.status(400).json({ error: "missing_code", message: "OAuth code is required" });
+      }
+
+      // Validate CSRF state against HttpOnly cookie
+      let savedState = req.cookies?.oauth_state;
+      if (!savedState && req.headers?.cookie) {
+        const match = req.headers.cookie.match(/(?:^|;\s*)oauth_state=([^;]+)/);
+        if (match) savedState = decodeURIComponent(match[1]);
+      }
+
+      if (!state || !savedState || state !== savedState) {
+        return res.status(403).json({
+          error: "invalid_state",
+          message: "OAuth state mismatch or CSRF token missing",
+        });
+      }
+
+      if (typeof res.clearCookie === "function") {
+        res.clearCookie("oauth_state", { path: "/" });
       }
 
       const { data, error } = await supabaseAuth.auth.exchangeCodeForSession(String(code));
@@ -135,16 +168,30 @@ export const AuthController = {
         githubTokenCache.set(user.id, data.session.provider_token);
       }
 
-      const redirectTarget = new URL(`${config.frontendUrl}/dashboard`);
-      redirectTarget.searchParams.set("token", data.session.access_token);
-      if (data.session.refresh_token) {
-        redirectTarget.searchParams.set("refresh_token", data.session.refresh_token);
-      }
-      if (data.session.provider_token) {
-        redirectTarget.searchParams.set("provider_token", data.session.provider_token);
+      // Establish session via HttpOnly, Secure, SameSite cookies to avoid leaking tokens in redirect URL
+      const isSecure = config.isProd || process.env.NODE_ENV === "production";
+      const cookieOptions = {
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: isSecure ? "none" : "lax",
+        path: "/",
+      };
+
+      if (typeof res.cookie === "function") {
+        res.cookie("token", data.session.access_token, {
+          ...cookieOptions,
+          maxAge: (data.session.expires_in || 3600) * 1000,
+        });
+        if (data.session.refresh_token) {
+          res.cookie("refresh_token", data.session.refresh_token, {
+            ...cookieOptions,
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+          });
+        }
       }
 
-      res.redirect(redirectTarget.toString());
+      // Redirect directly to dashboard without tokens in query parameters or hash
+      res.redirect(`${config.frontendUrl}/dashboard`);
     } catch (err) {
       next(err);
     }

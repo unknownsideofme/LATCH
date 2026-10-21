@@ -145,45 +145,15 @@ export default function DashboardPage() {
         }
       }
 
-      // Default mock project for instant mission-control visualization
-      const sampleProjects: ProjectRecord[] = [
-        {
-          id: "proj_latch_core",
-          user_id: activeUser?.id || "demo-user",
-          project_name: "LATCH-Engine",
-          repo_name: "unknownsideofme/LATCH",
-          branch: "main",
-          render_id: "srv_latch_core_01",
-          render_url: "http://127.0.0.1:3001",
-          status: "ready",
-          agent_limit: 4,
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "proj_claude_runner",
-          user_id: activeUser?.id || "demo-user",
-          project_name: "Claude-CLI-Swarm",
-          repo_name: "anthropic/claude-code-runner",
-          branch: "develop",
-          render_id: "srv_claude_swarm_02",
-          render_url: "http://127.0.0.1:3002",
-          status: "ready",
-          agent_limit: 6,
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-        },
-      ];
-
-      // Check local projects cache
-      let combinedProjects = [...sampleProjects];
+      // Load stored projects from local storage
+      let combinedProjects: ProjectRecord[] = [];
       if (typeof window !== "undefined") {
         try {
           const localStored = localStorage.getItem("latch_local_projects");
           if (localStored) {
             const parsed = JSON.parse(localStored);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              const existingIds = new Set(combinedProjects.map((p) => p.id));
-              const extras = parsed.filter((p: ProjectRecord) => !existingIds.has(p.id));
-              combinedProjects = [...extras, ...combinedProjects];
+              combinedProjects = parsed;
             }
           }
         } catch {
