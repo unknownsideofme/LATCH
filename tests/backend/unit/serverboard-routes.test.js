@@ -23,6 +23,14 @@ vi.mock("../../../serverboard/controllers/authController.js", () => ({
     register: vi.fn((_req, res) => res.status(201).json({ message: "Registered" })),
     login: vi.fn((_req, res) => res.status(200).json({ message: "Logged in" })),
     me: vi.fn((_req, res) => res.status(200).json({ user: { id: "test-user" } })),
+    githubLogin: vi.fn((_req, res) => res.status(200).json({ url: "https://github.com/login" })),
+    githubCallback: vi.fn((_req, res) => res.redirect("/dashboard")),
+  },
+}));
+
+vi.mock("../../../serverboard/controllers/githubController.js", () => ({
+  GithubController: {
+    listRepos: vi.fn((_req, res) => res.status(200).json({ repos: [] })),
   },
 }));
 
@@ -65,6 +73,7 @@ vi.mock("../../../serverboard/config/env.js", () => ({
 
 import { createApp } from "../../../serverboard/app.js";
 import { AuthController } from "../../../serverboard/controllers/authController.js";
+import { GithubController } from "../../../serverboard/controllers/githubController.js";
 import { ProjectController } from "../../../serverboard/controllers/projectController.js";
 import { WebhookController } from "../../../serverboard/controllers/webhookController.js";
 import http from "node:http";
@@ -183,6 +192,34 @@ describe("Serverboard routes and server wiring (serverboard/routes/* and serverb
       const res = await fetch(`${baseUrl}/api/v1/auth/me`);
       expect(res.status).toBe(200);
       expect(AuthController.me).toHaveBeenCalled();
+    });
+
+    it("routes GET /api/v1/auth/github and /api/auth/github", async () => {
+      const resV1 = await fetch(`${baseUrl}/api/v1/auth/github`);
+      expect(resV1.status).toBe(200);
+      expect(AuthController.githubLogin).toHaveBeenCalled();
+
+      const resAlias = await fetch(`${baseUrl}/api/auth/github`);
+      expect(resAlias.status).toBe(200);
+      expect(AuthController.githubLogin).toHaveBeenCalledTimes(2);
+    });
+
+    it("routes GET /api/v1/auth/github/callback and /api/auth/github/callback", async () => {
+      const resV1 = await fetch(`${baseUrl}/api/v1/auth/github/callback`, { redirect: "manual" });
+      expect(AuthController.githubCallback).toHaveBeenCalled();
+
+      const resAlias = await fetch(`${baseUrl}/api/auth/github/callback`, { redirect: "manual" });
+      expect(AuthController.githubCallback).toHaveBeenCalledTimes(2);
+    });
+
+    it("routes GET /api/v1/github/repos with requireAuth", async () => {
+      const resV1 = await fetch(`${baseUrl}/api/v1/github/repos`);
+      expect(resV1.status).toBe(200);
+      expect(GithubController.listRepos).toHaveBeenCalled();
+
+      const resAlias = await fetch(`${baseUrl}/api/github/repos`);
+      expect(resAlias.status).toBe(200);
+      expect(GithubController.listRepos).toHaveBeenCalledTimes(2);
     });
   });
 

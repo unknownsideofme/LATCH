@@ -6,6 +6,11 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get("/repos", GithubController.listRepos);
+router.get("/repos", (req, res, next) => {
+  if (typeof GithubController?.listRepos === "function") {
+    return GithubController.listRepos(req, res, next);
+  }
+  return res.status(501).json({ error: "not_implemented" });
+});
 
 export default router;
