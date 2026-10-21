@@ -9,6 +9,7 @@ import { DecoInput } from "@/components/deco/DecoInput";
 import { Sparkles, Terminal, ArrowUpRight } from "lucide-react";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { api } from "@/lib/api";
 import { ThinkingOrb } from "thinking-orbs";
 
 /** Render GitHub OAuth and local signup options, initially selecting `plan=pro` when supplied. */
@@ -28,27 +29,17 @@ function SignupForm() {
     if (searchParams.get("plan") === "pro") setSelectedPlan("pro");
   }, [searchParams]);
 
-  /**
-   * Navigate to the configured API's GitHub OAuth entry point, defaulting to
-   * http://localhost:4000. Display errors raised while initiating navigation in the form.
-   */
-  const handleGitHubSignup = async () => {
+  const handleGitHubSignup = () => {
     setLoading(true);
     setErrorMsg("");
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-      window.location.href = `${apiUrl}/api/v1/auth/github`;
+      window.location.href = api.auth.getGithubOAuthUrl();
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to initialize GitHub OAuth");
       setLoading(false);
     }
   };
 
-  /**
-   * Create a local session from any nonblank email and password, including the
-   * name and selected plan, and store it under `latch_user_session` before opening
-   * `/dashboard`. Display caught validation, storage, and navigation errors in the form.
-   */
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -58,17 +49,18 @@ function SignupForm() {
       if (!email.trim() || !password.trim()) {
         throw new Error("Email and password are required");
       }
-      const localUser = {
-        id: `usr_${Date.now()}`,
+      const username = (name || email.split("@")[0])
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "_")
+        .slice(0, 30);
+
+      await api.auth.register({
         email: email.trim(),
-        user_metadata: {
-          name: name || email.split("@")[0],
-          preferred_plan: selectedPlan,
-        },
-      };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("latch_user_session", JSON.stringify(localUser));
-      }
+        password,
+        username,
+        name: name.trim() || undefined,
+      });
+
       router.push("/dashboard");
     } catch (err: any) {
       setErrorMsg(err.message || "Sign up failed");

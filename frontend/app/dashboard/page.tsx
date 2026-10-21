@@ -32,75 +32,13 @@ import {
   Lock,
   HelpCircle,
   Command,
+  Loader2,
 } from "lucide-react";
 import type { ProjectRecord, GitHubRepo } from "@/lib/types";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { api } from "@/lib/api";
 
-// Curated default repositories if GitHub API token is not yet connected
-const defaultSampleRepos: GitHubRepo[] = [
-  {
-    id: 101,
-    name: "LATCH",
-    full_name: "unknownsideofme/LATCH",
-    owner: { login: "unknownsideofme", avatar_url: "" },
-    private: false,
-    html_url: "https://github.com/unknownsideofme/LATCH",
-    description: "Cross-agent coordination layer with sub-ms file mutex and AST graph arbitration",
-    language: "TypeScript",
-    default_branch: "main",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 102,
-    name: "claude-code-runner",
-    full_name: "anthropic/claude-code-runner",
-    owner: { login: "anthropic", avatar_url: "" },
-    private: false,
-    html_url: "https://github.com/anthropic/claude-code-runner",
-    description: "Terminal CLI coordinator for autonomous LLM coding loops",
-    language: "Rust",
-    default_branch: "main",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 103,
-    name: "cursor-swarm-workspace",
-    full_name: "getcursor/cursor-swarm-workspace",
-    owner: { login: "getcursor", avatar_url: "" },
-    private: true,
-    html_url: "https://github.com/getcursor/cursor-swarm-workspace",
-    description: "Multi-window agent synchronization and local workspace cache",
-    language: "TypeScript",
-    default_branch: "main",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 104,
-    name: "ast-blast-radius",
-    full_name: "latch-systems/ast-blast-radius",
-    owner: { login: "latch-systems", avatar_url: "" },
-    private: false,
-    html_url: "https://github.com/latch-systems/ast-blast-radius",
-    description: "Tree-sitter boundary analyzer preventing concurrent phantom writes",
-    language: "Go",
-    default_branch: "main",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 105,
-    name: "supabase-realtime-engine",
-    full_name: "supabase/realtime-engine",
-    owner: { login: "supabase", avatar_url: "" },
-    private: false,
-    html_url: "https://github.com/supabase/realtime-engine",
-    description: "Distributed Postgres change streams and vector clock synchronization",
-    language: "Elixir",
-    default_branch: "master",
-    updated_at: new Date().toISOString(),
-  },
-];
-
-/** Render sample and locally stored projects with local project creation and sign-out. */
+/** Render authenticated user dashboard and repository selection with serverboard integration. */
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -113,7 +51,9 @@ export default function DashboardPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStep, setModalStep] = useState<1 | 2>(1);
-  const [repos, setRepos] = useState<GitHubRepo[]>(defaultSampleRepos);
+  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [reposLoading, setReposLoading] = useState(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
   const [repoSearch, setRepoSearch] = useState("");
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepo | null>(null);
   const [customRepoName, setCustomRepoName] = useState("");
@@ -121,48 +61,36 @@ export default function DashboardPage() {
   const [agentCount, setAgentCount] = useState<number>(4);
   const [branchName, setBranchName] = useState("main");
   const [submitting, setSubmitting] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     let isSubscribed = true;
 
-    /**
-     * Restore the cached user and prepend stored projects whose IDs differ from
-     * the sample projects. Ignore storage and parsing errors and finish loading
-     * with the available sample data.
-     */
     async function loadData() {
-      // 1. Check local session cache first
-      let activeUser: any = null;
-      if (typeof window !== "undefined") {
-        try {
-          const cachedUser = localStorage.getItem("latch_user_session");
-          if (cachedUser) {
-            activeUser = JSON.parse(cachedUser);
-            if (isSubscribed) setUser(activeUser);
-          }
-        } catch {
-          // parse error
+      // 1. Fetch authenticated user profile from serverboard
+      try {
+        const meRes = await api.auth.me();
+        if (isSubscribed && meRes?.user) {
+          setUser(meRes.user);
+        }
+      } catch (err: any) {
+        if (isSubscribed) {
+          router.push("/login");
+          return;
         }
       }
 
-      // Load stored projects from local storage
-      let combinedProjects: ProjectRecord[] = [];
-      if (typeof window !== "undefined") {
-        try {
-          const localStored = localStorage.getItem("latch_local_projects");
-          if (localStored) {
-            const parsed = JSON.parse(localStored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              combinedProjects = parsed;
-            }
-          }
-        } catch {
-          // ignore error
+      // 2. Fetch projects from serverboard API
+      try {
+        const projRes = await api.projects.list();
+        if (isSubscribed && projRes?.projects) {
+          setProjects(projRes.projects);
         }
+      } catch (err: any) {
+        console.warn("[projects] Failed to fetch projects:", err.message);
+      } finally {
+        if (isSubscribed) setLoading(false);
       }
-
-      setProjects(combinedProjects);
-      setLoading(false);
     }
 
     loadData();
@@ -170,13 +98,52 @@ export default function DashboardPage() {
     return () => {
       isSubscribed = false;
     };
-  }, []);
+  }, [router]);
+
+  // Auto-refresh when any project is in deploying/pending state
+  useEffect(() => {
+    const hasDeploying = projects.some(
+      (p) => p.status === "deploying" || p.status === "pending"
+    );
+    if (!hasDeploying) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.projects.list();
+        if (res?.projects) {
+          setProjects(res.projects);
+        }
+      } catch {}
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [projects]);
+
+  const fetchGithubRepos = async () => {
+    setReposLoading(true);
+    setGithubError(null);
+    try {
+      const res = await api.github.listRepos();
+      if (res?.repos && Array.isArray(res.repos)) {
+        setRepos(res.repos);
+      } else {
+        setRepos([]);
+      }
+    } catch (err: any) {
+      console.warn("[github] Could not fetch repos:", err.message);
+      setGithubError(err.message || "Failed to load GitHub repositories");
+      setRepos([]);
+    } finally {
+      setReposLoading(false);
+    }
+  };
 
   const handleOpenModal = () => {
     setSelectedRepo(null);
     setRepoSearch("");
     setModalStep(1);
     setIsModalOpen(true);
+    fetchGithubRepos();
   };
 
   const handleSelectRepo = (repo: GitHubRepo) => {
@@ -208,45 +175,33 @@ export default function DashboardPage() {
     setModalStep(2);
   };
 
-  /**
-   * Prepend a local project from the form settings and close the modal, attempting
-   * to save the updated list under `latch_local_projects`. Blank project names are
-   * ignored; storage failures leave the project available in the current view.
-   */
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectName.trim()) return;
 
     setSubmitting(true);
-    const newId = `proj_${Date.now()}`;
-    const newProject: ProjectRecord = {
-      id: newId,
-      user_id: user?.id || "local-user",
-      project_name: projectName.trim(),
-      repo_name: selectedRepo?.full_name || projectName.trim(),
-      branch: branchName || "main",
-      render_id: `srv_${newId}`,
-      render_url: `http://127.0.0.1:3001`,
-      status: "ready",
-      agent_limit: agentCount,
-      created_at: new Date().toISOString(),
-    };
+    setCreateError(null);
 
-    // 1. Update React state immediately
-    const updated = [newProject, ...projects];
-    setProjects(updated);
+    try {
+      const res = await api.projects.create({
+        projectName: projectName.trim(),
+        repo: selectedRepo?.html_url || (customRepoName.trim() ? `https://github.com/${customRepoName.trim()}` : undefined),
+        branch: branchName || "main",
+        agentLimit: agentCount,
+      });
 
-    // 2. Persist to localStorage
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("latch_local_projects", JSON.stringify(updated));
-      } catch {
-        // ignore
+      // Add the project directly to UI state with deploying status
+      if (res?.project) {
+        setProjects((prev) => [res.project, ...prev.filter((p) => p.id !== res.project.id)]);
       }
-    }
 
-    setSubmitting(false);
-    setIsModalOpen(false);
+      setIsModalOpen(false);
+    } catch (err: any) {
+      console.error("[projects] Create project failed:", err.message);
+      setCreateError(err.message || "Failed to create project");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCopyEndpoint = (e: React.MouseEvent, url: string, id: string) => {
@@ -256,14 +211,8 @@ export default function DashboardPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  /**
-   * Remove the cached local user and navigate to `/login`.
-   * Storage errors reject the promise before navigation; navigation errors also propagate.
-   */
   const handleSignOut = async () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("latch_user_session");
-    }
+    api.auth.logout();
     router.push("/login");
   };
 
@@ -534,10 +483,22 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                        <span>ACTIVE</span>
-                      </div>
+                      {proj.status === "deploying" || proj.status === "pending" ? (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-500 shrink-0">
+                          <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                          <span>DEPLOYING</span>
+                        </div>
+                      ) : proj.status === "failed" ? (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[10px] font-mono text-red-500 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          <span>FAILED</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                          <span>ACTIVE</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Stats & Metadata Matrix */}
@@ -638,42 +599,66 @@ export default function DashboardPage() {
                   </div>
 
                   {/* List of Repos */}
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {filteredRepos.map((repo) => (
-                      <div
-                        key={repo.id}
-                        onClick={() => handleSelectRepo(repo)}
-                        className="p-3 rounded-md bg-muted/40 border border-border hover:border-ring hover:bg-muted transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                  {reposLoading ? (
+                    <div className="py-8 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span>Fetching repositories from GitHub…</span>
+                    </div>
+                  ) : githubError ? (
+                    <div className="p-3 rounded-md border border-amber-500/30 bg-amber-500/5 text-xs space-y-2">
+                      <p className="text-muted-foreground">
+                        GitHub account is not connected or token expired. Connect your GitHub account to load your repositories.
+                      </p>
+                      <a
+                        href={api.auth.getGithubOAuthUrl()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 font-medium transition-all"
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors truncate">
-                              {repo.full_name}
-                            </span>
-                            {repo.private && (
-                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border">
-                                Private
+                        <GitBranch className="w-3.5 h-3.5" />
+                        <span>Connect GitHub Account</span>
+                      </a>
+                    </div>
+                  ) : filteredRepos.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-muted-foreground">
+                      {repoSearch ? "No repositories match your search." : "No GitHub repositories found."}
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {filteredRepos.map((repo) => (
+                        <div
+                          key={repo.id}
+                          onClick={() => handleSelectRepo(repo)}
+                          className="p-3 rounded-md bg-muted/40 border border-border hover:border-ring hover:bg-muted transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors truncate">
+                                {repo.full_name}
                               </span>
+                              {repo.private && (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border">
+                                  Private
+                                </span>
+                              )}
+                            </div>
+                            {repo.description && (
+                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                                {repo.description}
+                              </p>
                             )}
                           </div>
-                          {repo.description && (
-                            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                              {repo.description}
-                            </p>
-                          )}
-                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {repo.language && (
-                            <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 rounded bg-primary/10">
-                              {repo.language}
-                            </span>
-                          )}
-                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          <div className="flex items-center gap-2 shrink-0">
+                            {repo.language && (
+                              <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 rounded bg-primary/10">
+                                {repo.language}
+                              </span>
+                            )}
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Custom Repo Manual Entry */}
                   <div className="pt-3 border-t border-border space-y-2">
@@ -807,6 +792,12 @@ export default function DashboardPage() {
                       className="w-full px-3 py-2 rounded-md bg-input border border-border text-xs text-foreground focus:outline-none focus:border-ring"
                     />
                   </div>
+
+                  {createError && (
+                    <div className="p-2.5 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-mono">
+                      {createError}
+                    </div>
+                  )}
 
                   {/* Modal Footer Actions */}
                   <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
