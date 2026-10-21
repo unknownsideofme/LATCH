@@ -7,6 +7,20 @@ vi.mock("../../../serverboard/models/User.js", () => ({
   },
 }));
 
+vi.mock("../../../serverboard/config/supabase.js", () => ({
+  supabaseAuth: {
+    auth: {
+      signInWithOAuth: vi.fn(),
+      exchangeCodeForSession: vi.fn(),
+    },
+  },
+  supabaseAdmin: {
+    from: vi.fn(() => ({
+      insert: vi.fn(() => ({ select: vi.fn(() => ({ maybeSingle: vi.fn() })) })),
+    })),
+  },
+}));
+
 import { AuthController } from "../../../serverboard/controllers/authController.js";
 import { UserModel } from "../../../serverboard/models/User.js";
 
