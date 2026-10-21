@@ -263,33 +263,44 @@ class DepGraph {
 
   updateFile(filePath) {
     const file = posix(filePath);
+    const abs = path.join(this.workspacePath, file);
+    let source = null;
+    let exists = false;
+    if (SOURCE.has(path.extname(file))) {
+      try {
+        exists = fs.statSync(abs).isFile();
+      } catch (error) {
+        if (error?.code !== "ENOENT" && error?.code !== "ENOTDIR") throw error;
+      }
+      if (exists) {
+        try {
+          source = fs.readFileSync(abs, "utf8");
+        } catch {
+          return this;
+        }
+      }
+    }
     const oldImports = this.imports.get(file) || new Set();
     const existingImporters = this.importedBy.get(file) || new Set();
     for (const imported of oldImports) this.importedBy.get(imported)?.delete(file);
     this.imports.delete(file);
     this.unresolvable = this.unresolvable.filter((entry) => entry.from !== file);
-    const abs = path.join(this.workspacePath, file);
-    const exists = fs.existsSync(abs) && fs.statSync(abs).isFile() && SOURCE.has(path.extname(file));
     if (exists) {
       this.imports.set(file, new Set());
       this.importedBy.set(file, existingImporters);
-      let source = "";
-      try { source = fs.readFileSync(abs, "utf8"); } catch { source = null; }
-      if (source !== null) {
-        const ext = path.extname(file);
-        const { staticSpecs, dynamic, engine } = extractSpecs(source, ext);
-        this.engine = engine || this.engine;
-        for (const spec of dynamic) this.unresolvable.push({ from: file, spec, reason: "dynamic" });
-        for (const spec of staticSpecs) {
-          const resolved = tryResolve(this.workspacePath, file, spec, ext);
-          if (!resolved || resolved.kind !== "file") {
-            if (resolved?.kind === "missing" && spec.startsWith(".")) this.unresolvable.push({ from: file, spec, reason: "missing" });
-            continue;
-          }
-          this.imports.get(file).add(resolved.spec);
-          if (!this.importedBy.has(resolved.spec)) this.importedBy.set(resolved.spec, new Set());
-          this.importedBy.get(resolved.spec).add(file);
+      const ext = path.extname(file);
+      const { staticSpecs, dynamic, engine } = extractSpecs(source, ext);
+      this.engine = engine || this.engine;
+      for (const spec of dynamic) this.unresolvable.push({ from: file, spec, reason: "dynamic" });
+      for (const spec of staticSpecs) {
+        const resolved = tryResolve(this.workspacePath, file, spec, ext);
+        if (!resolved || resolved.kind !== "file") {
+          if (resolved?.kind === "missing" && spec.startsWith(".")) this.unresolvable.push({ from: file, spec, reason: "missing" });
+          continue;
         }
+        this.imports.get(file).add(resolved.spec);
+        if (!this.importedBy.has(resolved.spec)) this.importedBy.set(resolved.spec, new Set());
+        this.importedBy.get(resolved.spec).add(file);
       }
       for (const [from, to] of loadOverride(this.workspacePath).edges || []) {
         if (posix(from) !== file) continue;
@@ -297,6 +308,19 @@ class DepGraph {
         this.imports.get(file).add(posix(to));
         if (!this.importedBy.has(posix(to))) this.importedBy.set(posix(to), new Set());
         this.importedBy.get(posix(to)).add(file);
+      }
+      const resolvedMissing = new Set();
+      for (const entry of this.unresolvable) {
+        if (entry.reason !== "missing" || !this.imports.has(entry.from)) continue;
+        const resolved = tryResolve(this.workspacePath, entry.from, entry.spec, path.extname(entry.from));
+        if (resolved?.kind !== "file" || resolved.spec !== file) continue;
+        this.imports.get(entry.from).add(file);
+        if (!this.importedBy.has(file)) this.importedBy.set(file, new Set());
+        this.importedBy.get(file).add(entry.from);
+        resolvedMissing.add(entry);
+      }
+      if (resolvedMissing.size) {
+        this.unresolvable = this.unresolvable.filter((entry) => !resolvedMissing.has(entry));
       }
     } else {
       for (const importer of existingImporters) this.imports.get(importer)?.delete(file);
