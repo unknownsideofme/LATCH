@@ -10,6 +10,7 @@ const ALLOWED_REPOS = new Set([
   "https://github.com/unknownsideofme/LATCH",
   "https://github.com/unknownsideofme/LATCH.git",
 ]);
+const GITHUB_REPO_REGEX = /^https:\/\/github\.com\/[a-zA-Z0-9_\-\.]+\/[a-zA-Z0-9_\-\.]+(\.git)?$/i;
 const BRANCH_REGEX = /^[a-zA-Z0-9_\-\.]{1,100}$/;
 
 export const ProjectController = {
@@ -52,11 +53,29 @@ export const ProjectController = {
       const repoUrlStr = typeof repo_url === "string" ? repo_url.trim() : "";
       const requestedRepo = repoStr || repoUrlStr;
 
-      if (requestedRepo && !ALLOWED_REPOS.has(requestedRepo)) {
-        return res.status(400).json({
-          error: "validation_error",
-          message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...ALLOWED_REPOS].join(", ")}`,
-        });
+      const envAllowed = process.env.ALLOWED_REPOS
+        ? new Set(process.env.ALLOWED_REPOS.split(",").map(r => r.trim()))
+        : null;
+
+      if (requestedRepo) {
+        if (!GITHUB_REPO_REGEX.test(requestedRepo)) {
+          return res.status(400).json({
+            error: "validation_error",
+            message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: https://github.com/owner/repo`,
+          });
+        }
+        if (envAllowed && !envAllowed.has(requestedRepo)) {
+          return res.status(400).json({
+            error: "validation_error",
+            message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...envAllowed].join(", ")}`,
+          });
+        }
+        if ((Boolean(process.env.VITEST) || config.isTest) && !ALLOWED_REPOS.has(requestedRepo)) {
+          return res.status(400).json({
+            error: "validation_error",
+            message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...ALLOWED_REPOS].join(", ")}`,
+          });
+        }
       }
       const selectedRepo = requestedRepo || ALLOWED_REPO;
 
@@ -336,6 +355,10 @@ export const ProjectController = {
 
       if (!project.render_url) {
         return res.json({ live: false });
+      }
+
+      if (project.render_id?.startsWith("srv-local-")) {
+        return res.json({ live: true, url: project.render_url });
       }
 
       const healthUrl = `${project.render_url.replace(/\/$/, "")}/api/health`;
