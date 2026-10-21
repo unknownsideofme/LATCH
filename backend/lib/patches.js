@@ -199,6 +199,7 @@ module.exports = {
   applyPatchToDisk,
   replayUntil,
   rewindTo,
+  getRecentPatches,
   isBinary,
   sha256,
 };

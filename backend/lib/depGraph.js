@@ -517,17 +517,29 @@ function dependencyRiskReport(blocked) {
 }
 
 function projectIdFor(workspacePath) {
-  const root = resolveRoot(workspacePath);
-  const projects = loadRegistry()?.projects || [];
-  return projects.find((project) => resolveRoot(project.path) === root)?.id || (projects.some((p) => p.id === workspacePath) ? workspacePath : null);
+  try {
+    const root = resolveRoot(workspacePath);
+    const projects = loadRegistry()?.projects || [];
+    return projects.find((project) => resolveRoot(project.path) === root)?.id || (projects.some((p) => p.id === workspacePath) ? workspacePath : null);
+  } catch (error) {
+    console.warn(`[latch-depgraph] Could not resolve project for ${workspacePath}: ${error.message || error}`);
+    return null;
+  }
 }
 
 function softBlock(lockTable, workspacePath, agentId, file) {
   const g = graphFor(workspacePath);
   if (!g) return null;
   const projectId = projectIdFor(workspacePath);
-  const patchFor = (conflictingFile, holder) =>
-    projectId ? getRecentPatches(projectId, conflictingFile, holder, 3) : [];
+  const patchFor = (conflictingFile, holder) => {
+    if (!projectId) return [];
+    try {
+      return getRecentPatches(projectId, conflictingFile, holder, 3);
+    } catch (error) {
+      console.warn(`[latch-depgraph] Could not load patch context for ${conflictingFile}: ${error.message || error}`);
+      return [];
+    }
+  };
   return g.blockedBy(file, (f) => holderOf(lockTable, f, agentId, workspacePath), patchFor);
 }
 
