@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoInput } from "@/components/deco/DecoInput";
 import { GithubIcon } from "@/components/icons/GithubIcon";
@@ -14,7 +13,6 @@ import { ThinkingOrb } from "thinking-orbs";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,14 +22,9 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg("");
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "github",
-        options: {
-          redirectTo: `${window.location.origin}/callback?next=/dashboard`,
-          scopes: "read:user repo",
-        },
-      });
-      if (error) throw error;
+      // In decoupled mode, redirect to central backend OAuth endpoint
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      window.location.href = `${apiUrl}/api/v1/auth/github`;
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to initialize GitHub OAuth");
       setLoading(false);
@@ -43,13 +36,16 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg("");
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      if (data?.user && typeof window !== "undefined") {
-        localStorage.setItem("latch_user_session", JSON.stringify(data.user));
+      if (!email.trim() || !password.trim()) {
+        throw new Error("Email and password are required");
+      }
+      const localUser = {
+        id: `usr_${Date.now()}`,
+        email: email.trim(),
+        user_metadata: { name: email.split("@")[0] },
+      };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("latch_user_session", JSON.stringify(localUser));
       }
       router.push("/dashboard");
     } catch (err: any) {

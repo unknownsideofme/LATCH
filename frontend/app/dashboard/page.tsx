@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { ThinkingOrb } from "thinking-orbs";
 import {
   LayoutGrid,
@@ -103,7 +102,6 @@ const defaultSampleRepos: GitHubRepo[] = [
 
 export default function DashboardPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [user, setUser] = useState<any>(null);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
@@ -138,19 +136,6 @@ export default function DashboardPage() {
           }
         } catch {
           // parse error
-        }
-      }
-
-      // 2. Query Supabase for confirmed session
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        activeUser = session.user;
-        if (isSubscribed) setUser(session.user);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("latch_user_session", JSON.stringify(session.user));
         }
       }
 
@@ -200,64 +185,14 @@ export default function DashboardPage() {
         }
       }
 
-      // Fetch from Supabase projects table if available
-      try {
-        const { data: userProjects, error } = await supabase
-          .from("projects")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!error && userProjects && userProjects.length > 0) {
-          const existingIds = new Set(userProjects.map((p: ProjectRecord) => p.id));
-          combinedProjects = [
-            ...userProjects,
-            ...combinedProjects.filter((p: ProjectRecord) => !existingIds.has(p.id)),
-          ];
-        }
-      } catch {
-        // Supabase query error fallback
-      }
-
       setProjects(combinedProjects);
       setLoading(false);
-
-      // Attempt to fetch real GitHub repos if authenticated with GitHub
-      try {
-        const ghRes = await fetch("/api/github/repos");
-        if (ghRes.ok) {
-          const ghData = await ghRes.json();
-          if (ghData.repos && ghData.repos.length > 0) {
-            setRepos(ghData.repos);
-          }
-        }
-      } catch {
-        // keep defaultSampleRepos
-      }
     }
 
     loadData();
 
-    // Listen to real-time auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-      if (session?.user) {
-        setUser(session.user);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("latch_user_session", JSON.stringify(session.user));
-        }
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("latch_user_session");
-        }
-        router.push("/login");
-      }
-    });
-
     return () => {
       isSubscribed = false;
-      subscription.unsubscribe();
     };
   }, []);
 
@@ -329,21 +264,6 @@ export default function DashboardPage() {
       }
     }
 
-    // 3. Persist to Supabase if table exists
-    try {
-      await supabase.from("projects").insert({
-        id: newProject.id,
-        user_id: newProject.user_id,
-        project_name: newProject.project_name,
-        render_id: newProject.render_id,
-        render_url: newProject.render_url,
-        status: newProject.status,
-        agent_limit: newProject.agent_limit,
-      });
-    } catch {
-      // ignore
-    }
-
     setSubmitting(false);
     setIsModalOpen(false);
   };
@@ -359,7 +279,6 @@ export default function DashboardPage() {
     if (typeof window !== "undefined") {
       localStorage.removeItem("latch_user_session");
     }
-    await supabase.auth.signOut();
     router.push("/login");
   };
 

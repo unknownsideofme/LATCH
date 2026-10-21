@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
   ArrowLeft,
   LayoutGrid,
@@ -89,7 +88,6 @@ function ProjectDashboardContent() {
   const params = useParams();
   const projectId = (params?.id as string) || "";
   const router = useRouter();
-  const supabase = createClient();
 
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -122,30 +120,19 @@ function ProjectDashboardContent() {
         }
       }
 
-      // Query Supabase
-      const { data } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", projectId)
-        .single();
-
-      if (data) {
-        setProject(data);
-      } else {
-        // Fallback default sample project
-        setProject({
-          id: projectId || "proj_latch_core",
-          user_id: "demo-user",
-          project_name: "LATCH-Engine",
-          repo_name: "unknownsideofme/LATCH",
-          branch: "main",
-          render_id: "srv_latch_core_01",
-          render_url: "http://127.0.0.1:3001",
-          status: "ready",
-          agent_limit: 4,
-          created_at: new Date().toISOString(),
-        });
-      }
+      // Fallback default sample project
+      setProject({
+        id: projectId || "proj_latch_core",
+        user_id: "demo-user",
+        project_name: "LATCH-Engine",
+        repo_name: "unknownsideofme/LATCH",
+        branch: "main",
+        render_id: "srv_latch_core_01",
+        render_url: "http://127.0.0.1:3001",
+        status: "ready",
+        agent_limit: 4,
+        created_at: new Date().toISOString(),
+      });
 
       setLoading(false);
     }
