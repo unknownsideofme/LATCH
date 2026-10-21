@@ -38,14 +38,27 @@ export const ProjectController = {
       }
 
       // 2. Validate repository against server-side allowlist
-      const requestedRepo = repo || repo_url;
-      if (requestedRepo && !ALLOWED_REPOS.has(requestedRepo.trim())) {
+      if (
+        (repo !== undefined && repo !== null && typeof repo !== "string") ||
+        (repo_url !== undefined && repo_url !== null && typeof repo_url !== "string")
+      ) {
+        return res.status(400).json({
+          error: "validation_error",
+          message: "Repository must be a string",
+        });
+      }
+
+      const repoStr = typeof repo === "string" ? repo.trim() : "";
+      const repoUrlStr = typeof repo_url === "string" ? repo_url.trim() : "";
+      const requestedRepo = repoStr || repoUrlStr;
+
+      if (requestedRepo && !ALLOWED_REPOS.has(requestedRepo)) {
         return res.status(400).json({
           error: "validation_error",
           message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...ALLOWED_REPOS].join(", ")}`,
         });
       }
-      const selectedRepo = requestedRepo ? requestedRepo.trim() : ALLOWED_REPO;
+      const selectedRepo = requestedRepo || ALLOWED_REPO;
 
       // 3. Validate region and branch against server-side allowlists
       const selectedRegion = ALLOWED_REGIONS.has(region) ? region : "singapore";
@@ -214,14 +227,17 @@ export const ProjectController = {
         if (typeof branch !== "string" || !BRANCH_REGEX.test(branch)) {
           return res.status(400).json({ error: "validation_error", message: "branch contains invalid characters" });
         }
-        // If branch changed and Render service exists, update branch on Render
         if (project.render_id) {
           try {
             await RenderService.updateService(project.render_id, { branch });
-          } catch (renderErr) {
-            console.warn("[project] Warning updating branch on Render:", renderErr.message);
+          } catch (err) {
+            return res.status(502).json({
+              error: "upstream_update_failed",
+              message: "Failed to update branch on deployment service",
+            });
           }
         }
+        updates.branch = branch;
       }
 
       let updatedProject = project;
