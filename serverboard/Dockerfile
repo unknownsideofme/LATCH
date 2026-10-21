@@ -17,8 +17,8 @@ RUN ARCH=$(uname -m) \
 WORKDIR /app
 
 # Copy package descriptors and install production dependencies
-COPY package.json ./
-RUN npm install --omit=dev
+COPY package*.json ./
+RUN npm ci --omit=dev || npm install --omit=dev
 
 # Copy serverboard application source code
 COPY . ./
