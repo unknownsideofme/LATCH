@@ -17,7 +17,7 @@ export const ProjectController = {
     try {
       const projectNameInput = req.body.projectName || req.body.project_name;
       const { branch, region, repo, repo_url } = req.body;
-      const agentLimitInput = req.body.agentLimit || req.body.agent_limit || 5;
+      const agentLimitInput = req.body.agentLimit || req.body.agent_limit || 7;
 
       if (!projectNameInput || typeof projectNameInput !== "string") {
         return res.status(400).json({ error: "validation_error", message: "projectName (or project_name) is required" });
@@ -66,11 +66,11 @@ export const ProjectController = {
       // Plan is strictly enforced to 'free' to prevent unauthorized billing
       const selectedPlan = "free";
 
-      // 4. Validate and clamp agent limit (1 to 5)
+      // 4. Validate and clamp agent limit (1 to 7)
       const parsedAgentLimit = parseInt(agentLimitInput, 10);
       const selectedAgentLimit = Number.isFinite(parsedAgentLimit)
-        ? Math.min(Math.max(parsedAgentLimit, 1), 5)
-        : 5;
+        ? Math.min(Math.max(parsedAgentLimit, 1), 7)
+        : 7;
 
       // 5. Create database row (status: pending)
       const project = await ProjectModel.create({
@@ -199,10 +199,10 @@ export const ProjectController = {
       const rawLimit = agent_limit !== undefined ? agent_limit : agentLimit;
       if (rawLimit !== undefined) {
         const parsedLimit = parseInt(rawLimit, 10);
-        if (!Number.isFinite(parsedLimit) || parsedLimit < 1 || parsedLimit > 5) {
+        if (!Number.isFinite(parsedLimit) || parsedLimit < 1 || parsedLimit > 7) {
           return res.status(400).json({
             error: "validation_error",
-            message: "agent_limit must be a finite integer between 1 and 5",
+            message: "agent_limit must be a finite integer between 1 and 7",
           });
         }
         updates.agent_limit = parsedLimit;

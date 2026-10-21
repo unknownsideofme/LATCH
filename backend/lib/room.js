@@ -102,6 +102,23 @@ function dropMember(room, login) {
   return room;
 }
 
+function roomMaxMembers(room, project) {
+  const configured = Number(project?.agent_limit);
+  const stored = Number(room?.maxMembers);
+  // Future: replace local registry copy with authoritative project settings source.
+  if (Number.isInteger(configured) && configured >= 1) return configured;
+  if (Number.isInteger(stored) && stored >= 1) return stored;
+  return 7;
+}
+
+function activeMemberLogins(room) {
+  const active = new Set();
+  for (const member of membersView(room)) {
+    if (member.online && member.login) active.add(String(member.login).toLowerCase());
+  }
+  return active;
+}
+
 function membersView(room) {
   const now = Date.now();
   return (room?.members || []).map((m) => ({
@@ -309,6 +326,7 @@ function newHostRoom(url, extra, existing) {
     ...keep,
     role: "host",
     live: true,
+    open: extra.open !== undefined ? Boolean(extra.open) : Boolean(keep.open),
     url,
     roomId: keep.roomId || mintRoomId(),
     nonce: keep.nonce || mintNonce(),
@@ -358,6 +376,8 @@ module.exports = {
   markLeft,
   dropMember,
   membersView,
+  activeMemberLogins,
+  roomMaxMembers,
   inviteView: (room) => require("./roomAuth").inviteView(room),
   mintRoomId,
   NGROK_HINT,

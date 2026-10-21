@@ -150,7 +150,7 @@ describe("patch()", () => {
     expect(ProjectModel.update).toHaveBeenCalledWith("proj-1", expect.objectContaining({ branch: "staging" }));
   });
 
-  test.each([0, -1, 6, 99, "invalid", NaN])("invalid agent_limit '%s' returns 400", async (badLimit) => {
+  test.each([0, -1, 8, 99, "invalid", NaN])("invalid agent_limit '%s' returns 400", async (badLimit) => {
     ProjectModel.findById.mockResolvedValue(baseProject);
 
     const req = { params: { id: "proj-1" }, body: { agent_limit: badLimit }, user: { id: "user-1" } };
@@ -458,11 +458,11 @@ describe("create() — project name and input validation", () => {
       [5, 5],
       [3, 3],
       [-5, 1],
-      [0, 5], // 0 is falsy, falls back to 5
-      [10, 5], // clamped to 5
+      [0, 7], // 0 is falsy, falls back to 7
+      [10, 7], // clamped to 7
       ["4", 4],
-      ["invalid", 5],
-      [undefined, 5],
+      ["invalid", 7],
+      [undefined, 7],
     ])("agentLimitInput %s resolves to agentLimit %d", async (input, expected) => {
       ProjectModel.create.mockResolvedValue({ id: "proj-lim", project_name: "my-app", status: "pending", agent_limit: expected });
 

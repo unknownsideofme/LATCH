@@ -265,7 +265,7 @@ describe("ProjectModel (serverboard/models/Project.js)", () => {
       ).rejects.toThrow("Unique constraint violation");
     });
 
-    it("defaults agentLimit to 5 when omitted or non-numeric", async () => {
+    it("defaults agentLimit to 7 when omitted or non-numeric", async () => {
       queryResults.users = { maybeSingle: { data: null } };
       queryResults.projects = {
         single: { data: { id: "p-default" }, error: null },
@@ -278,7 +278,7 @@ describe("ProjectModel (serverboard/models/Project.js)", () => {
       });
 
       expect(lastQuery.insert).toHaveBeenCalledWith([
-        expect.objectContaining({ agent_limit: 5 }),
+        expect.objectContaining({ agent_limit: 7 }),
       ]);
     });
   });

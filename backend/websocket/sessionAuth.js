@@ -1,7 +1,9 @@
 "use strict";
 
-const { loadRoom } = require("../lib/room");
+const { loadRoom, activeMemberLogins, roomMaxMembers } = require("../lib/room");
 const { authorizeMember, normLogin, isRemoteRequest } = require("../lib/roomAuth");
+const { loadRegistry } = require("../lib/store");
+
 
 function authorizeRoomSocket(socket, req) {
   const room = loadRoom();
@@ -16,6 +18,13 @@ function authorizeRoomSocket(socket, req) {
   const member = authorizeMember(room, token);
   if (!member && !room.open) {
     socket.close(4401, "not_a_member");
+    return null;
+  }
+  const project = room.hostProjectId
+    ? loadRegistry().projects.find((p) => p.id === room.hostProjectId)
+    : null;
+  if (!member && activeMemberLogins(room).size >= roomMaxMembers(room, project)) {
+    socket.close(4429, "room_member_limit_reached");
     return null;
   }
   return { remote: true, login: member?.login || null, roomId: room.roomId || null };

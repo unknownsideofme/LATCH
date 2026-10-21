@@ -28,10 +28,16 @@ function defaultCloneDir(remoteUrl) {
   return path.join(os.homedir(), "Documents", "GitHub", name);
 }
 
-function registerProject({ name, workspacePath, remoteUrl, mode }) {
+function registerProject({ name, workspacePath, remoteUrl, mode, agentLimit = 7 }) {
   const reg = loadRegistry();
   const existing = reg.projects.find((p) => p.path === workspacePath);
-  if (existing) return existing;
+  if (existing) {
+    if (!Number.isInteger(Number(existing.agent_limit)) || existing.agent_limit < 1) {
+      existing.agent_limit = 7;
+      saveRegistry(reg);
+    }
+    return existing;
+  }
   const project = {
     id: id("proj"),
     name: name || path.basename(workspacePath || "workspace"),
@@ -39,6 +45,7 @@ function registerProject({ name, workspacePath, remoteUrl, mode }) {
     color: mode === "clone" ? "#a78bfa" : "#34d399",
     path: workspacePath,
     remoteUrl: remoteUrl || null,
+    agent_limit: Number.isInteger(Number(agentLimit)) && Number(agentLimit) >= 1 ? Number(agentLimit) : 7,
     apiKey: "rl_" + crypto.randomBytes(12).toString("hex"),
     createdAt: Date.now(),
     lastSyncAt: Date.now(),
