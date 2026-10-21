@@ -107,6 +107,9 @@ describe("AuthController (serverboard/controllers/authController.js)", () => {
         name: "Alice",
       });
       expect(res._status).toBe(201);
+      expect(res._cookies.token).toBeDefined();
+      expect(res._cookies.token.val).toBe("tok-123");
+      expect(res._cookies.token.options.httpOnly).toBe(true);
       expect(res._body).toEqual({
         message: "Registered successfully",
         ...registerResult,
@@ -174,6 +177,9 @@ describe("AuthController (serverboard/controllers/authController.js)", () => {
 
       expect(UserModel.authenticate).toHaveBeenCalledWith("alice@example.com", "password123");
       expect(res._status).toBe(200);
+      expect(res._cookies.token).toBeDefined();
+      expect(res._cookies.token.val).toBe("jwt-abc");
+      expect(res._cookies.token.options.httpOnly).toBe(true);
       expect(res._body).toEqual({
         message: "Logged in successfully",
         ...loginResult,
@@ -234,6 +240,19 @@ describe("AuthController (serverboard/controllers/authController.js)", () => {
       await AuthController.me(req, res);
 
       expect(res._body).toEqual({ user: undefined });
+    });
+  });
+
+  describe("logout()", () => {
+    it("clears token and refresh_token cookies and returns 200", async () => {
+      const req = {};
+      const res = makeRes();
+
+      await AuthController.logout(req, res);
+
+      expect(res._clearedCookies.some((c) => c.name === "token")).toBe(true);
+      expect(res._clearedCookies.some((c) => c.name === "refresh_token")).toBe(true);
+      expect(res._body).toEqual({ message: "Logged out successfully" });
     });
   });
 
@@ -310,8 +329,9 @@ describe("AuthController (serverboard/controllers/authController.js)", () => {
 
       await AuthController.githubCallback(req, res, next);
 
-      // Verify oauth_state cookie was cleared
+      // Verify oauth_state and oauth_verifier cookies were cleared
       expect(res._clearedCookies.some((c) => c.name === "oauth_state")).toBe(true);
+      expect(res._clearedCookies.some((c) => c.name === "oauth_verifier")).toBe(true);
 
       // Verify session cookies set
       expect(res._cookies.token).toBeDefined();
@@ -354,6 +374,63 @@ describe("AuthController (serverboard/controllers/authController.js)", () => {
       await AuthController.githubCallback(req, res, next);
 
       expect(res._redirectUrl).toContain("error=access_denied");
+    });
+
+    it("redirects browser to /login?error=missing_code when code is missing on HTML request", async () => {
+      const req = { headers: { accept: "text/html,application/xhtml+xml" }, query: {} };
+      const res = makeRes();
+      const next = vi.fn();
+
+      await AuthController.githubCallback(req, res, next);
+
+      expect(res._redirectUrl).toMatch(/\/login\?error=missing_code$/);
+    });
+
+    it("returns 400 missing_code when code is missing on API request", async () => {
+      const req = { headers: { accept: "application/json" }, query: {} };
+      const res = makeRes();
+      const next = vi.fn();
+
+      await AuthController.githubCallback(req, res, next);
+
+      expect(res._status).toBe(400);
+      expect(res._body.error).toBe("missing_code");
+    });
+
+    it("restores PKCE verifier from oauth_verifier cookie and passes flowId to exchangeCodeForSession", async () => {
+      const mockStorage = new Map();
+      supabaseAuth.auth.storageKey = "sb-test-token";
+      supabaseAuth.auth.storage = {
+        getItem: vi.fn((k) => mockStorage.get(k)),
+        setItem: vi.fn((k, v) => mockStorage.set(k, v)),
+      };
+      supabaseAuth.auth.exchangeCodeForSession.mockResolvedValueOnce({
+        data: {
+          session: { access_token: "tok" },
+          user: { id: "u-pkce", user_metadata: {} },
+        },
+        error: null,
+      });
+      UserModel.findById.mockResolvedValueOnce({ id: "u-pkce" });
+
+      const req = {
+        query: { code: "code-pkce-123", state: "st-1" },
+        cookies: {
+          oauth_state: "st-1",
+          oauth_verifier: JSON.stringify({ verifier: "raw-verifier-abc", flowId: "flow-999" }),
+        },
+      };
+      const res = makeRes();
+      const next = vi.fn();
+
+      await AuthController.githubCallback(req, res, next);
+
+      expect(mockStorage.get("sb-test-token-flow-flow-999-code-verifier")).toBe("raw-verifier-abc");
+      expect(mockStorage.get("sb-test-token-code-verifier")).toBe("raw-verifier-abc");
+      expect(supabaseAuth.auth.exchangeCodeForSession).toHaveBeenCalledWith(
+        "code-pkce-123",
+        { flowId: "flow-999" }
+      );
     });
   });
 });

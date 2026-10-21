@@ -18,15 +18,9 @@ export class ApiError extends Error {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${SERVERBOARD_URL}${path}`;
 
-  // Read token from localStorage if present (bearer fallback in case cookies are blocked across ports)
-  const token = typeof window !== "undefined" ? localStorage.getItem("latch_token") : null;
-
   const headers = new Headers(options.headers);
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
-  }
-  if (token && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const response = await fetch(url, {
@@ -58,34 +52,26 @@ export const api = {
       username: string;
       name?: string;
     }): Promise<{ message: string; session?: any; user?: UserProfile }> {
-      const res = await request<{ message: string; session?: any; user?: UserProfile }>(
+      return request<{ message: string; session?: any; user?: UserProfile }>(
         "/api/v1/auth/register",
         {
           method: "POST",
           body: JSON.stringify(params),
         }
       );
-      if (res.session?.access_token && typeof window !== "undefined") {
-        localStorage.setItem("latch_token", res.session.access_token);
-      }
-      return res;
     },
 
     async login(params: {
       email: string;
       password: string;
     }): Promise<{ message: string; session?: any; user?: UserProfile }> {
-      const res = await request<{ message: string; session?: any; user?: UserProfile }>(
+      return request<{ message: string; session?: any; user?: UserProfile }>(
         "/api/v1/auth/login",
         {
           method: "POST",
           body: JSON.stringify(params),
         }
       );
-      if (res.session?.access_token && typeof window !== "undefined") {
-        localStorage.setItem("latch_token", res.session.access_token);
-      }
-      return res;
     },
 
     async me(): Promise<{ user: UserProfile }> {
@@ -96,7 +82,14 @@ export const api = {
       return `${SERVERBOARD_URL}/api/v1/auth/github`;
     },
 
-    logout() {
+    async logout(): Promise<void> {
+      try {
+        await request<{ message: string }>("/api/v1/auth/logout", {
+          method: "POST",
+        });
+      } catch (err) {
+        console.warn("[auth] Server logout request failed:", err);
+      }
       if (typeof window !== "undefined") {
         localStorage.removeItem("latch_token");
         localStorage.removeItem("latch_user_session");

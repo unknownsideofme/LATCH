@@ -212,7 +212,7 @@ export default function DashboardPage() {
   };
 
   const handleSignOut = async () => {
-    api.auth.logout();
+    await api.auth.logout();
     router.push("/login");
   };
 

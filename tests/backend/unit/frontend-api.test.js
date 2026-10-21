@@ -76,6 +76,26 @@ describe("Frontend API client (frontend/lib/api.ts)", () => {
     });
   });
 
+  describe("auth.logout()", () => {
+    it("calls /api/v1/auth/logout with POST method and clears localStorage", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ message: "Logged out successfully" }),
+      });
+
+      await api.auth.logout();
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/auth/logout"),
+        expect.objectContaining({
+          method: "POST",
+          credentials: "include",
+        })
+      );
+    });
+  });
+
   describe("auth.me()", () => {
     it("fetches user profile from /api/v1/auth/me", async () => {
       const mockUser = { id: "u-1", email: "me@example.com", username: "me" };

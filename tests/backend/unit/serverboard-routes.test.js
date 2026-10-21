@@ -22,6 +22,7 @@ vi.mock("../../../serverboard/controllers/authController.js", () => ({
   AuthController: {
     register: vi.fn((_req, res) => res.status(201).json({ message: "Registered" })),
     login: vi.fn((_req, res) => res.status(200).json({ message: "Logged in" })),
+    logout: vi.fn((_req, res) => res.status(200).json({ message: "Logged out" })),
     me: vi.fn((_req, res) => res.status(200).json({ user: { id: "test-user" } })),
     githubLogin: vi.fn((_req, res) => res.status(200).json({ url: "https://github.com/login" })),
     githubCallback: vi.fn((_req, res) => res.redirect("/dashboard")),
@@ -186,6 +187,20 @@ describe("Serverboard routes and server wiring (serverboard/routes/* and serverb
       });
       expect(resV1.status).toBe(200);
       expect(AuthController.login).toHaveBeenCalled();
+    });
+
+    it("routes POST /api/v1/auth/logout and /api/auth/logout", async () => {
+      const resV1 = await fetch(`${baseUrl}/api/v1/auth/logout`, {
+        method: "POST",
+      });
+      expect(resV1.status).toBe(200);
+      expect(AuthController.logout).toHaveBeenCalled();
+
+      const resAlias = await fetch(`${baseUrl}/api/auth/logout`, {
+        method: "POST",
+      });
+      expect(resAlias.status).toBe(200);
+      expect(AuthController.logout).toHaveBeenCalledTimes(2);
     });
 
     it("routes GET /api/v1/auth/me with requireAuth", async () => {

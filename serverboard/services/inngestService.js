@@ -149,20 +149,22 @@ export async function runProvisioningWorker(projectId, payload) {
 }
 
 export async function runTeardownWorker(projectId, renderId) {
-  if (renderId) {
+  if (renderId && !renderId.startsWith("srv-local-")) {
     console.log(`[worker] 🗑 Tearing down Render service ${renderId}...`);
     try {
       await RenderService.deleteService(renderId);
       console.log(`[worker] ✔ Render service ${renderId} deleted`);
     } catch (renderErr) {
       const msg = renderErr?.message || "";
-      const isNotFound = /not found|does not exist|404/i.test(msg);
+      const isNotFound = /not found|does not exist|404|ENOENT/i.test(msg);
       if (!isNotFound) {
         console.error(`[worker] ❌ Render deletion failed:`, msg);
         throw new Error(`Failed to delete Render service: ${msg}`);
       }
-      console.warn(`[worker] ⚠️ Render service ${renderId} already removed on Render:`, msg);
+      console.warn(`[worker] ⚠️ Render service ${renderId} already removed or CLI unavailable:`, msg);
     }
+  } else if (renderId?.startsWith("srv-local-")) {
+    console.log(`[worker] ✔ Local development stub ${renderId} skipped for Render teardown`);
   }
 
   if (projectId) {

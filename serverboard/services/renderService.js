@@ -96,6 +96,9 @@ export const RenderService = {
   },
 
   async deleteService(serviceId) {
+    if (!serviceId || serviceId.startsWith("srv-local-")) {
+      return { success: true, local: true };
+    }
     return await runCli(["services", "delete", serviceId, "--confirm", "-o", "json"]);
   },
 
@@ -114,6 +117,9 @@ export const RenderService = {
   },
 
   async updateService(serviceId, { branch, name, plan } = {}) {
+    if (!serviceId || serviceId.startsWith("srv-local-")) {
+      return { success: true, local: true, branch, name, plan };
+    }
     const args = ["services", "update", serviceId];
     if (branch) args.push("--branch", branch);
     if (name) args.push("--name", name);

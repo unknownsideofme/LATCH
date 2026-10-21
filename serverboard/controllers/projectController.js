@@ -317,9 +317,10 @@ export const ProjectController = {
   },
 
   async logs(req, res, next) {
+    let project = null;
     try {
       const id = req.params.id?.replace(/^:/, "");
-      const project = await ProjectModel.findById(id);
+      project = await ProjectModel.findById(id);
       if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
       if (!project.render_id) return res.json({ logs: [] });
       if (project.render_id.startsWith("srv-local-")) {
@@ -337,9 +338,10 @@ export const ProjectController = {
   },
 
   async deploys(req, res, next) {
+    let project = null;
     try {
       const id = req.params.id?.replace(/^:/, "");
-      const project = await ProjectModel.findById(id);
+      project = await ProjectModel.findById(id);
       if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
       if (!project.render_id) return res.json({ deploys: [] });
       if (project.render_id.startsWith("srv-local-")) {
