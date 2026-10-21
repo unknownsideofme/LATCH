@@ -1,7 +1,8 @@
 import type { UserProfile, GitHubRepo, ProjectRecord, ProjectLog, ProjectDeploy } from "./types";
 
-const SERVERBOARD_URL =
-  process.env.NEXT_PUBLIC_SERVERBOARD_URL || "http://localhost:4000";
+const SERVERBOARD_URL = (
+  process.env.NEXT_PUBLIC_SERVERBOARD_URL || "http://localhost:4000"
+).replace(/\/+$/, "");
 
 export class ApiError extends Error {
   status: number;

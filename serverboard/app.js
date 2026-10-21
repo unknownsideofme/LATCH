@@ -28,8 +28,11 @@ export function createApp() {
   // Health check redirect
   app.get("/health", (_req, res) => res.redirect("/api/health"));
 
-  // URL normalization (handles /api/v1/projects:id and /api/projects:id -> /.../)
+  // URL normalization (handles leading //, and /api/v1/projects:id and /api/projects:id -> /.../)
   app.use((req, _res, next) => {
+    if (req.url.startsWith("//")) {
+      req.url = req.url.replace(/^\/+/, "/");
+    }
     if (req.url.startsWith("/api/v1/projects:")) {
       req.url = req.url.replace("/api/v1/projects:", "/api/v1/projects/");
     } else if (req.url.startsWith("/api/projects:")) {
