@@ -14,7 +14,7 @@ vi.mock("../../../serverboard/config/env.js", () => ({
   config: { supabase: { url: "https://example.supabase.co", key: "test-key" } },
 }));
 
-import { checkDbHealth } from "../../../serverboard/config/supabase.js";
+import { checkDbHealth, supabase, supabaseAdmin, supabaseAuth } from "../../../serverboard/config/supabase.js";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -33,6 +33,12 @@ function queryReturns(error) {
     return { error };
   });
 }
+
+test("exports configured Supabase clients with backward-compatible alias", () => {
+  expect(supabaseAdmin).toBeDefined();
+  expect(supabaseAuth).toBeDefined();
+  expect(supabase).toBe(supabaseAdmin);
+});
 
 test("health measures the completed users query", async () => {
   queryReturns(null);
