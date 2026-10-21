@@ -96,6 +96,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
     if (!scoped) return res.status(400).json({ allowed: false, error: "agent_required" });
     const files = Array.isArray(scoped.files) && scoped.files.length ? scoped.files : [scoped.file];
     const warnings = [];
+    const { dependencyRiskReport } = require("../lib/depGraph");
     for (const file of files.filter(Boolean)) {
       const blocked = require("../lib/depGraph").softBlock(lockTable, scoped.workspaceId, scoped.agentId, file);
       const held = blocked?.file ? lockTable.getLock(blocked.file, scoped.workspaceId) : null;
@@ -113,6 +114,7 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
     if (warnings.length && result.allowed) {
       result.warning = result.warning || warnings[0].reason || warnings[0].holder || String(warnings[0]);
       result.dependencyPatches = warnings.flatMap((warning) => warning.recentPatches || []);
+      result.dependencyWarnings = warnings.map(dependencyRiskReport).filter(Boolean);
     }
     res.status(result.allowed ? 200 : 409).json(result);
   });

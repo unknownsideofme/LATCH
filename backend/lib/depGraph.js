@@ -345,14 +345,23 @@ class DepGraph {
    */
   blockedBy(file, isHeld, patchFor) {
     const rel = posix(file);
+    const freshness = {
+      lastUpdatedAt: this.builtAt,
+      confidence: this.unresolvable.length ? "PARTIAL_PARSE_ERROR" : "FULL",
+    };
     for (const member of this.cycleMembers(rel)) {
       if (member === rel) continue;
       const holder = isHeld(member);
       if (holder) {
         return {
           soft: true,
+          targetPath: rel,
           file: member,
           holder,
+          category: "CIRCULAR_DEPENDENCY_RISK",
+          relationType: "circular_scc",
+          cycleCluster: this.cycleMembers(rel),
+          graphFreshness: freshness,
           recentPatches: patchFor ? patchFor(member, holder) : [],
           reason: `⚠️ \`${rel}\` is in a circular dependency with \`${member}\` (single lock unit). Held by ${holder}. Pick a different file.`,
         };
@@ -361,10 +370,15 @@ class DepGraph {
     for (const dep of this.dependencies(rel, this.lockDepth)) {
       const holder = isHeld(dep);
       if (holder) {
+        const direct = this.imports.get(rel)?.has(dep);
         return {
           soft: true,
+          targetPath: rel,
           file: dep,
           holder,
+          category: direct ? "DIRECT_DEPENDENCY_RISK" : "TRANSITIVE_DEPENDENCY_RISK",
+          relationType: direct ? "direct_import" : "transitive",
+          graphFreshness: freshness,
           recentPatches: patchFor ? patchFor(dep, holder) : [],
           reason: `⚠️ \`${rel}\` depends on \`${dep}\`, which is currently being modified by ${holder}. Proceeding may cause inconsistencies. Pick a different file.`,
         };
@@ -460,6 +474,24 @@ function holderOf(lockTable, file, agentId, workspacePath) {
   return e.holder?.label || e.agentId;
 }
 
+function dependencyRiskReport(blocked) {
+  if (!blocked?.soft) return null;
+  const patches = blocked.recentPatches || [];
+  return {
+    targetPath: blocked.targetPath,
+    category: blocked.category,
+    severity: "WARNING",
+    conflictingFiles: [{ path: blocked.file, heldByAgent: blocked.holder, relationType: blocked.relationType }],
+    ...(blocked.cycleCluster ? { cycleCluster: blocked.cycleCluster } : {}),
+    graphFreshness: blocked.graphFreshness,
+    advisoryMessage: blocked.reason,
+    suggestedAction: patches.length
+      ? "Review the attached recent patch context before editing."
+      : "Review the conflicting file before editing; no recent patch context is available.",
+    recentPatches: patches,
+  };
+}
+
 function projectIdFor(workspacePath) {
   const root = resolveRoot(workspacePath);
   const projects = loadRegistry()?.projects || [];
@@ -475,4 +507,4 @@ function softBlock(lockTable, workspacePath, agentId, file) {
   return g.blockedBy(file, (f) => holderOf(lockTable, f, agentId, workspacePath), patchFor);
 }
 
-module.exports = { DepGraph, graphFor, rebuild, updateFile, removeFile, posix, softBlock };
+module.exports = { DepGraph, graphFor, rebuild, updateFile, removeFile, posix, softBlock, dependencyRiskReport };

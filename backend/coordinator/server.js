@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { LockTable, sameOwner, normalizeFile } = require("./lockTable");
 const { coordinatorStatePath, locksDirFor, homeLatchDir, homeRelayDir } = require("../lib/paths");
-const { softBlock } = require("../lib/depGraph");
+const { softBlock, dependencyRiskReport } = require("../lib/depGraph");
 const { initTreeSitter } = require("../lib/treeSitterImports");
 const { ingest: ingestSupergraph, snapshot: superSnapshot } = require("../lib/supergraph");
 const { Presence } = require("../lib/presence");
@@ -57,6 +57,7 @@ function createCoordinator({ workspacePath, preferredPort } = {}) {
     if (warnings.length && result.allowed) {
       result.warning = result.warning || warnings[0].reason || warnings[0].holder || String(warnings[0]);
       result.dependencyPatches = warnings.flatMap((warning) => warning.recentPatches || []);
+      result.dependencyWarnings = warnings.map(dependencyRiskReport).filter(Boolean);
     }
     res.status(result.allowed ? 200 : 409).json(result);
   });
