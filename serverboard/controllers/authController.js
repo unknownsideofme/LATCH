@@ -38,6 +38,13 @@ export const AuthController = {
     res.json({ user: req.userProfile || req.user });
   },
 
+  /**
+   * Start GitHub OAuth with user, email, and repository scopes and the configured
+   * server callback URL. Return `{ url }` for XHR, an Accept header containing
+   * `application/json`, or `format=json`; otherwise redirect to the authorization URL.
+   * Supabase OAuth errors return HTTP 500 with `oauth_init_failed`;
+   * thrown errors are forwarded to `next`.
+   */
   async githubLogin(req, res, next) {
     try {
       const redirectUri = `${config.serverUrl}/api/v1/auth/github/callback`;
@@ -65,6 +72,16 @@ export const AuthController = {
     }
   },
 
+  /**
+   * Exchange the query's OAuth code for a session, attempt to create a missing
+   * user profile with a project limit of 10, and cache any GitHub token by user ID
+   * in memory. Redirect to the configured frontend's `/dashboard` with the access
+   * token in `token` and available `refresh_token` and `provider_token` query values.
+   * Provider errors redirect to `/login` with that error; a missing code returns
+   * HTTP 400 with `missing_code`. Failed or incomplete exchanges redirect to
+   * `/login?error=auth_failed`. Returned profile insertion errors do not block the
+   * dashboard redirect; thrown errors are forwarded to `next`.
+   */
   async githubCallback(req, res, next) {
     try {
       const { code, error: oauthError, error_description } = req.query;

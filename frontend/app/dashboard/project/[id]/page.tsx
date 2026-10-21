@@ -84,6 +84,7 @@ const defaultLocks: LiveLock[] = [
   },
 ];
 
+/** Render the route's locally stored project or a sample project, with simulated locks. */
 function ProjectDashboardContent() {
   const params = useParams();
   const projectId = (params?.id as string) || "";
@@ -99,6 +100,11 @@ function ProjectDashboardContent() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
+    /**
+     * Load the locally stored project matching the route ID and finish loading.
+     * Missing matches and storage, parsing, or lookup errors fall back to a
+     * sample project using the route ID, or `proj_latch_core` if the ID is empty.
+     */
     async function loadProject() {
       setLoading(true);
 

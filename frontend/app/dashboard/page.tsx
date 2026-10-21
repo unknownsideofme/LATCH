@@ -100,6 +100,7 @@ const defaultSampleRepos: GitHubRepo[] = [
   },
 ];
 
+/** Render sample and locally stored projects with local project creation and sign-out. */
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -124,6 +125,11 @@ export default function DashboardPage() {
   useEffect(() => {
     let isSubscribed = true;
 
+    /**
+     * Restore the cached user and prepend stored projects whose IDs differ from
+     * the sample projects. Ignore storage and parsing errors and finish loading
+     * with the available sample data.
+     */
     async function loadData() {
       // 1. Check local session cache first
       let activeUser: any = null;
@@ -232,6 +238,11 @@ export default function DashboardPage() {
     setModalStep(2);
   };
 
+  /**
+   * Prepend a local project from the form settings and close the modal, attempting
+   * to save the updated list under `latch_local_projects`. Blank project names are
+   * ignored; storage failures leave the project available in the current view.
+   */
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectName.trim()) return;
@@ -275,6 +286,10 @@ export default function DashboardPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  /**
+   * Remove the cached local user and navigate to `/login`.
+   * Storage errors reject the promise before navigation; navigation errors also propagate.
+   */
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("latch_user_session");

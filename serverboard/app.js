@@ -6,6 +6,11 @@ import { inngest, inngestFunctions } from "./services/inngestService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import apiRoutes from "./routes/index.js";
 
+/**
+ * Create the configured Express API app without starting a listener.
+ * If Inngest handler setup throws, `/api/inngest` returns HTTP 200 with
+ * `{ status: "inngest_mocked" }` instead.
+ */
 export function createApp() {
   const app = express();
 

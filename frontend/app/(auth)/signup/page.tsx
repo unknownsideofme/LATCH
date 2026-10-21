@@ -11,6 +11,7 @@ import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ThinkingOrb } from "thinking-orbs";
 
+/** Render GitHub OAuth and local signup options, initially selecting `plan=pro` when supplied. */
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,6 +28,10 @@ function SignupForm() {
     if (searchParams.get("plan") === "pro") setSelectedPlan("pro");
   }, [searchParams]);
 
+  /**
+   * Navigate to the configured API's GitHub OAuth entry point, defaulting to
+   * http://localhost:4000. Display errors raised while initiating navigation in the form.
+   */
   const handleGitHubSignup = async () => {
     setLoading(true);
     setErrorMsg("");
@@ -39,6 +44,11 @@ function SignupForm() {
     }
   };
 
+  /**
+   * Create a local session from any nonblank email and password, including the
+   * name and selected plan, and store it under `latch_user_session` before opening
+   * `/dashboard`. Display caught validation, storage, and navigation errors in the form.
+   */
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

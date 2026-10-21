@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ArrowUpRight } from "lucide-react";
 import { ThinkingOrb } from "thinking-orbs";
 
+/** Render sign-in options for backend GitHub OAuth and a local email session. */
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -18,6 +19,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  /**
+   * Navigate to the configured API's GitHub OAuth entry point, defaulting to
+   * http://localhost:4000. Display errors raised while initiating navigation in the form.
+   */
   const handleGitHubLogin = async () => {
     setLoading(true);
     setErrorMsg("");
@@ -31,6 +36,11 @@ export default function LoginPage() {
     }
   };
 
+  /**
+   * Create a local session from any nonblank email and password, store it under
+   * `latch_user_session`, and open `/dashboard`. Display caught validation,
+   * storage, and navigation errors in the form.
+   */
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
