@@ -20,6 +20,19 @@ export interface ProjectRecord {
   repo_url?: string | null;
   branch?: string | null;
   language?: string | null;
+  connection_status?: "connected" | "connecting" | "disconnected" | string;
+}
+
+export interface ProjectLog {
+  text: string;
+  timestamp?: string;
+}
+
+export interface ProjectDeploy {
+  id: string;
+  status: string;
+  commit?: string;
+  createdAt?: string;
 }
 
 export interface GitHubRepo {

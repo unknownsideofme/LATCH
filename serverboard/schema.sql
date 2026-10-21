@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     project_name TEXT NOT NULL,
-    repo_url TEXT NOT NULL DEFAULT 'https://github.com/unknownsideofme/LATCH',
+    repo_url TEXT,
     branch TEXT NOT NULL DEFAULT 'main',
     render_id TEXT,
     render_url TEXT,

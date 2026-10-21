@@ -8,6 +8,7 @@ import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoInput } from "@/components/deco/DecoInput";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { api } from "@/lib/api";
 import { ArrowUpRight } from "lucide-react";
 import { ThinkingOrb } from "thinking-orbs";
 
@@ -19,28 +20,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  /**
-   * Navigate to the configured API's GitHub OAuth entry point, defaulting to
-   * http://localhost:4000. Display errors raised while initiating navigation in the form.
-   */
-  const handleGitHubLogin = async () => {
+  const handleGitHubLogin = () => {
     setLoading(true);
     setErrorMsg("");
     try {
-      // In decoupled mode, redirect to central backend OAuth endpoint
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-      window.location.href = `${apiUrl}/api/v1/auth/github`;
+      window.location.href = api.auth.getGithubOAuthUrl();
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to initialize GitHub OAuth");
       setLoading(false);
     }
   };
 
-  /**
-   * Create a local session from any nonblank email and password, store it under
-   * `latch_user_session`, and open `/dashboard`. Display caught validation,
-   * storage, and navigation errors in the form.
-   */
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -49,14 +39,10 @@ export default function LoginPage() {
       if (!email.trim() || !password.trim()) {
         throw new Error("Email and password are required");
       }
-      const localUser = {
-        id: `usr_${Date.now()}`,
+      await api.auth.login({
         email: email.trim(),
-        user_metadata: { name: email.split("@")[0] },
-      };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("latch_user_session", JSON.stringify(localUser));
-      }
+        password,
+      });
       router.push("/dashboard");
     } catch (err: any) {
       setErrorMsg(err.message || "Invalid credentials");

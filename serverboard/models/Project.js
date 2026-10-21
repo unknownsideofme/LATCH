@@ -33,7 +33,7 @@ export const ProjectModel = {
     return count || 0;
   },
 
-  async create({ userId, projectName, agentLimit = 7 }) {
+  async create({ userId, projectName, agentLimit = 7, repoUrl, branch }) {
     // Validate user's project limit
     const { data: user } = await supabase.from("users").select("project_limit").eq("id", userId).maybeSingle();
     if (user?.project_limit != null) {
@@ -43,24 +43,48 @@ export const ProjectModel = {
       }
     }
 
-    const { data, error } = await supabase
-      .from("projects")
-      .insert([{
-        user_id: userId,
-        project_name: projectName.trim(),
-        status: "pending",
-        agent_limit: Number(agentLimit) || 7,
-      }])
-      .select()
-      .single();
+    const baseProject = {
+      user_id: userId,
+      project_name: projectName.trim(),
+      status: "pending",
+      agent_limit: Number(agentLimit) || 7,
+    };
 
-    if (error) throw error;
+    // Attempt to insert with repo_url and branch if columns exist
+    const fullProject = { ...baseProject };
+    if (repoUrl) fullProject.repo_url = repoUrl;
+    if (branch) fullProject.branch = branch;
+
+    let { data, error } = await supabase.from("projects").insert([fullProject]).select().single();
+
+    // Gracefully fallback to base columns if branch or repo_url columns are pending schema migration
+    if (error && (error.message?.includes("schema cache") || error.code === "PGRST204")) {
+      const fallback = await supabase.from("projects").insert([baseProject]).select().single();
+      if (fallback.error) throw fallback.error;
+      data = {
+        ...fallback.data,
+        repo_url: repoUrl || "https://github.com/unknownsideofme/LATCH",
+        branch: branch || "main",
+      };
+    } else if (error) {
+      throw error;
+    }
+
     return data;
   },
 
   async update(id, updates) {
-    const { data, error } = await supabase.from("projects").update(updates).eq("id", id).select().single();
-    if (error) throw error;
+    let { data, error } = await supabase.from("projects").update(updates).eq("id", id).select().single();
+    if (error && (error.message?.includes("schema cache") || error.code === "PGRST204")) {
+      const sanitized = { ...updates };
+      delete sanitized.branch;
+      delete sanitized.repo_url;
+      const fallback = await supabase.from("projects").update(sanitized).eq("id", id).select().single();
+      if (fallback.error) throw fallback.error;
+      data = { ...fallback.data, ...updates };
+    } else if (error) {
+      throw error;
+    }
     return data;
   },
 

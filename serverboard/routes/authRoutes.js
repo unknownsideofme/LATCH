@@ -6,6 +6,7 @@ const router = Router();
 
 router.post("/register", (req, res, next) => AuthController.register(req, res, next));
 router.post("/login", (req, res, next) => AuthController.login(req, res, next));
+router.post("/logout", (req, res, next) => AuthController.logout(req, res, next));
 router.get("/github", (req, res, next) => {
   if (typeof AuthController?.githubLogin === "function") {
     return AuthController.githubLogin(req, res, next);
