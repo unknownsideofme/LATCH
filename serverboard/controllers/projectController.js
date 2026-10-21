@@ -322,10 +322,16 @@ export const ProjectController = {
       const project = await ProjectModel.findById(id);
       if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
       if (!project.render_id) return res.json({ logs: [] });
+      if (project.render_id.startsWith("srv-local-")) {
+        return res.json({ logs: [], renderId: project.render_id });
+      }
 
       const logs = await RenderService.getLogs(project.render_id, { limit: req.query.limit });
       res.json({ logs, renderId: project.render_id });
     } catch (err) {
+      if (err.code === "ENOENT" || err.message?.includes("ENOENT")) {
+        return res.json({ logs: [], renderId: project?.render_id });
+      }
       next(err);
     }
   },
@@ -336,10 +342,16 @@ export const ProjectController = {
       const project = await ProjectModel.findById(id);
       if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
       if (!project.render_id) return res.json({ deploys: [] });
+      if (project.render_id.startsWith("srv-local-")) {
+        return res.json({ deploys: [], renderId: project.render_id });
+      }
 
       const deploys = await RenderService.getDeploys(project.render_id);
       res.json({ deploys, renderId: project.render_id });
     } catch (err) {
+      if (err.code === "ENOENT" || err.message?.includes("ENOENT")) {
+        return res.json({ deploys: [], renderId: project?.render_id });
+      }
       next(err);
     }
   },
