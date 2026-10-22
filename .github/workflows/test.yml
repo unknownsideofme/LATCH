@@ -7,13 +7,38 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  backend-tests:
+    name: Backend tests (Node 22.x)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run backend unit tests
+        run: npm run test:backend:unit
+
+      - name: Run backend integration tests
+        run: npm run test:backend:e2e
+
   test:
-    name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
+    name: Full suite (Node ${{ matrix.node-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -29,12 +54,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run test suite
+      - name: Run full test suite
         run: npm test
 
       - name: Verify Mission Control build

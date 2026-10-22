@@ -79,9 +79,18 @@ You can also run module-specific tests:
 
 ```bash
 npm run test:backend
+npm run test:backend:unit
+npm run test:backend:e2e
 npm run test:mission-control
 npm run test:landing
+npm run test:unit
+npm run test:e2e
+npm run test:coverage
 ```
+
+`test:backend` includes the primary backend and the serverboard-focused tests currently
+kept under `tests/backend/unit/`. See [docs/TESTING.md](docs/TESTING.md) for the test
+inventory, CI check names, and instructions for reproducing a CI failure.
 
 ### Manual verification
 
