@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { LockTable, sameOwner, normalizeFile } = require("./lockTable");
 const { coordinatorStatePath, locksDirFor, homeLatchDir, homeRelayDir } = require("../lib/paths");
-const { softBlock } = require("../lib/depGraph");
+const { softBlock, dependencyRiskReport } = require("../lib/depGraph");
 const { initTreeSitter } = require("../lib/treeSitterImports");
 const { ingest: ingestSupergraph, snapshot: superSnapshot } = require("../lib/supergraph");
 const { Presence } = require("../lib/presence");
@@ -20,6 +20,12 @@ function parseArgs(argv) {
   return args;
 }
 
+/**
+ * Create the coordinator app and unbound HTTP server, restore persisted locks,
+ * and start periodic lock cleanup. Return app, server, lockTable, presence, and
+ * the numeric preferredPort (default zero). Allowed claims may include advisory
+ * dependency warnings and recent patch context. Home storage-directory errors propagate.
+ */
 function createCoordinator({ workspacePath, preferredPort } = {}) {
   const locksDir = workspacePath
     ? locksDirFor(workspacePath)
@@ -50,11 +56,15 @@ function createCoordinator({ workspacePath, preferredPort } = {}) {
       const blocked = softBlock(lockTable, body.workspaceId || workspacePath, body.agentId, file);
       const held = blocked?.file ? lockTable.getLock(blocked.file, body.workspaceId || workspacePath) : null;
       if (blocked && !(held && sameOwner(held.agentId, body.agentId))) {
-        warnings.push(blocked.reason || blocked.holder || String(blocked));
+        warnings.push(blocked);
       }
     }
     const result = lockTable.claim(body);
-    if (warnings.length && result.allowed) result.warning = result.warning || warnings[0];
+    if (warnings.length && result.allowed) {
+      result.warning = result.warning || warnings[0].reason || warnings[0].holder || String(warnings[0]);
+      result.dependencyPatches = warnings.flatMap((warning) => warning.recentPatches || []);
+      result.dependencyWarnings = warnings.map(dependencyRiskReport).filter(Boolean);
+    }
     res.status(result.allowed ? 200 : 409).json(result);
   });
 
