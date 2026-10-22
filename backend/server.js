@@ -226,7 +226,14 @@ async function main() {
       );
       process.exit(1);
     }
-    throw err;
+    console.warn(`[latch-api] server error: ${err.message || err}`);
+  });
+
+  process.on("uncaughtException", (err) => {
+    console.error("[latch-api] uncaughtException:", err?.stack || err?.message || err);
+  });
+  process.on("unhandledRejection", (reason) => {
+    console.error("[latch-api] unhandledRejection:", reason?.stack || reason?.message || reason);
   });
 
   // Start HTTP Server

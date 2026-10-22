@@ -152,8 +152,8 @@ class RoomService {
     return this.stateSyncManager.rememberRoster(workspacePath, roster);
   }
 
-  syncRoomLocks() {
-    this.roomLocks.start(loadRoom());
+  syncRoomLocks(workspacePath) {
+    this.roomLocks.start(loadRoom(workspacePath));
   }
 
   shareExtras(project) {

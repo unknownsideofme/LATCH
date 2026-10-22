@@ -1,7 +1,7 @@
 "use strict";
 
 const { WebSocketServer } = require("ws");
-const { loadRoom } = require("../lib/room");
+const { loadRoom, saveRoom, markLeft } = require("../lib/room");
 const { sendSocket } = require("../lib/roomControl");
 const { authorizeRoomSocket, sessionValid } = require("./sessionAuth");
 const { ContextService } = require("../services/ContextService");
@@ -16,6 +16,14 @@ function createControlServer({ server, lockService, ensureWorkspaceFn }) {
   });
 
   wssControl.on("connection", (socket, req) => {
+    socket.on("error", (err) => {
+      console.warn(`[latch-ws-control] socket error: ${err.message || err}`);
+      try {
+        socket.terminate();
+      } catch {
+        /* ignore */
+      }
+    });
     const session = authorizeRoomSocket(socket, req);
     if (!session) return;
     const room = loadRoom();
@@ -43,7 +51,26 @@ function createControlServer({ server, lockService, ensureWorkspaceFn }) {
     }, 12000);
     if (beat.unref) beat.unref();
 
-    socket.on("close", () => clearInterval(beat));
+    socket.on("close", () => {
+      clearInterval(beat);
+      if (session?.remote && session.login) {
+        try {
+          const r = loadRoom();
+          if (r?.members) {
+            saveRoom(markLeft(r, session.login), r.projectPath || r.hostWorkspacePath);
+            if (lockService?.sse) {
+              lockService.sse.emit("presence", {
+                workspaceId: r.hostProjectId || r.projectId,
+                member: session.login,
+                online: false,
+              });
+            }
+          }
+        } catch (err) {
+          console.warn(`[latch-ws-control] peer disconnect cleanup error: ${err.message || err}`);
+        }
+      }
+    });
 
     let windowStart = Date.now();
     let inWindow = 0;

@@ -183,7 +183,7 @@ function createProjectRoutes({
       if (!project) return res.status(404).json({ error: "not_found" });
     const room = loadRoom(project.path);
     if (room?.url) {
-      roomService.syncRoomLocks();
+      roomService.syncRoomLocks(project.path);
       const live =
         room.role === "guest"
           ? guestClient?.hostWireOpen()
