@@ -64,17 +64,8 @@ function canonicalWorkspaceRoot(workspacePath) {
 function canonicalWorkspaceFile(workspacePath, filePath) {
   const root = canonicalWorkspaceRoot(workspacePath);
   if (!root || typeof filePath !== "string" || !filePath.trim()) return null;
-  let supplied = filePath.trim().replace(/\\/g, "/");
-  const rootPosix = root.replace(/\\/g, "/");
-  if (supplied.startsWith("/") || /^[a-zA-Z]:\//.test(supplied)) {
-    const rootNorm = process.platform === "win32" ? rootPosix.toLowerCase() : rootPosix;
-    const suppliedNorm = process.platform === "win32" ? supplied.toLowerCase() : supplied;
-    if (suppliedNorm === rootNorm || suppliedNorm.startsWith(rootNorm + "/")) {
-      supplied = supplied.slice(rootPosix.length).replace(/^\/+/, "");
-    } else {
-      return null;
-    }
-  }
+  const supplied = filePath.trim().replace(/\\/g, "/");
+  if (supplied.startsWith("/") || /^[a-zA-Z]:\//.test(supplied)) return null;
 
   const normalized = path.posix.normalize(supplied);
   if (normalized === "." || normalized === ".." || normalized.startsWith("../")) return null;
