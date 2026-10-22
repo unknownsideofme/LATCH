@@ -12,7 +12,12 @@ class SseHub {
     const client = { res, filter };
     this.clients.add(client);
     res.write(`event: hello\ndata: ${JSON.stringify({ ok: true, ts: Date.now() })}\n\n`);
-    res.on("close", () => this.clients.delete(client));
+    const cleanup = () => {
+      this.clients.delete(client);
+      try { res.end(); } catch { /* already closed */ }
+    };
+    res.on("close", cleanup);
+    res.on("error", cleanup);
     return client;
   }
 
@@ -32,6 +37,7 @@ class SseHub {
         client.res.write(data);
       } catch {
         this.clients.delete(client);
+        try { client.res.end(); } catch { /* already closed */ }
       }
     }
   }

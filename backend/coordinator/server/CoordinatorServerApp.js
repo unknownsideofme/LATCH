@@ -7,6 +7,7 @@ const { Presence } = require("../../lib/presence");
 const { CoordinatorRouter } = require("./CoordinatorRouter");
 const { CoordinatorStateWriter } = require("./CoordinatorStateWriter");
 const { PortListener } = require("./PortListener");
+const { hardenHttpServer } = require("../../lib/httpServer");
 
 function parseArgs(argv) {
   const args = {
@@ -38,7 +39,7 @@ function createCoordinator({ workspacePath, preferredPort } = {}) {
     startedAt,
   });
 
-  const server = http.createServer(app);
+  const server = hardenHttpServer(http.createServer(app));
   return { app, server, lockTable, presence, preferredPort: Number(preferredPort) || 0 };
 }
 

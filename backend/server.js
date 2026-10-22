@@ -16,6 +16,7 @@ const { normalizeCompare } = require("./lib/transcripts/util");
 
 const { parsePort, UI_ORIGIN } = require("./config/constants");
 const { createApp } = require("./app");
+const { hardenHttpServer, apiErrorHandler } = require("./lib/httpServer");
 const { ContextService } = require("./services/ContextService");
 const { NoticeService } = require("./services/NoticeService");
 const { TranscriptService } = require("./services/TranscriptService");
@@ -205,10 +206,11 @@ async function main() {
     getCoordPort: () => coordPort,
   });
 
+  // Express-level catch-all error handler (must be last middleware)
+  app.use(apiErrorHandler);
+
   const port = parsePort(process.argv);
-  const server = http.createServer(app);
-  server.keepAliveTimeout = 65000;
-  server.headersTimeout = 66000;
+  const server = hardenHttpServer(http.createServer(app));
 
   // Attach WebSockets
   wssPatches = createPatchesServer({ server, roomService, patchService });
@@ -218,6 +220,9 @@ async function main() {
     ensureWorkspaceFn: (p) => workspaceService.ensureWorkspace(p),
   });
 
+  // EADDRINUSE is the only server error that should kill the process;
+  // hardenHttpServer already handles everything else (clientError, etc.).
+  server.removeAllListeners("error");
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {
       console.error(
