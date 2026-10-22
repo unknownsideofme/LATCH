@@ -1,24 +1,37 @@
 "use strict";
 
 const { loadRoom } = require("../lib/room");
-const { loadRegistry } = require("../lib/store");
 const { broadcast } = require("../lib/roomControl");
 const { filterKeys, sameOwner } = require("../coordinator/lockTable");
-const { normalizeCompare } = require("../lib/transcripts/util");
-const { LOCK_OPS, MAX_FILES_PER_CLAIM } = require("../config/constants");
+const { LOCK_OPS } = require("../config/constants");
 const { ContextService } = require("./ContextService");
-const { canonicalWorkspaceFile } = require("../lib/paths");
-const { LockEntry } = require("../coordinator/LockEntry");
+const { LockBodySanitizer } = require("./lock/LockBodySanitizer");
+const { LockScopeResolver } = require("./lock/LockScopeResolver");
+const { SupabaseClaimStrategy } = require("./lock/SupabaseClaimStrategy");
 
 class LockService {
-  constructor({ lockTable, roomLocks, sse, wssControlRef, onBumpCollision, supabaseLockAdapter, useSupabaseLocks = false }) {
+  constructor({
+    lockTable,
+    roomLocks,
+    sse,
+    wssControlRef,
+    onBumpCollision,
+    supabaseLockAdapter,
+    useSupabaseLocks = false,
+  }) {
     this.lockTable = lockTable;
     this.roomLocks = roomLocks;
     this.sse = sse;
-    this.wssControlRef = wssControlRef; // function returning wssControl or object
+    this.wssControlRef = wssControlRef;
     this.onBumpCollision = onBumpCollision;
     this.supabaseLockAdapter = supabaseLockAdapter || null;
     this.useSupabaseLocks = Boolean(useSupabaseLocks);
+
+    this.supabaseStrategy = new SupabaseClaimStrategy({
+      supabaseLockAdapter: this.supabaseLockAdapter,
+      lockTable: this.lockTable,
+      recordClaimDenied: (scoped, res, fn) => this.recordClaimDenied(scoped, res, fn),
+    });
   }
 
   get wssControl() {
@@ -26,24 +39,11 @@ class LockService {
   }
 
   lockScope(projectId) {
-    const reg = loadRegistry();
-    const current = ContextService.currentProject();
-    const project =
-      reg.projects.find((p) => p.id === projectId || normalizeCompare(p.path) === normalizeCompare(projectId)) ||
-      (projectId ? null : current);
-    if (!project) return null;
-    const room = loadRoom(project.path) || loadRoom();
-    const aliases = [];
-    if (
-      room &&
-      (room.hostProjectId === project.id ||
-        room.projectId === project.id ||
-        normalizeCompare(room.projectPath) === normalizeCompare(project.path) ||
-        normalizeCompare(room.hostWorkspacePath) === normalizeCompare(project.path))
-    ) {
-      aliases.push(room.hostWorkspacePath, room.projectPath, room.hostProjectId, room.projectId);
-    }
-    return { id: project.id, path: project.path, aliases: aliases.filter(Boolean) };
+    return LockScopeResolver.resolve(projectId);
+  }
+
+  peerScoped(body, session) {
+    return LockScopeResolver.peerScoped(body, session);
   }
 
   readsFor(scope) {
@@ -86,15 +86,6 @@ class LockService {
     });
   }
 
-  peerScoped(body, session) {
-    if (!session?.remote) return body;
-    const room = loadRoom();
-    if (!room?.url || room.role !== "host") return body;
-    const shared = loadRegistry().projects.find((p) => p.id === room.hostProjectId) || ContextService.currentProject();
-    if (!shared?.path) return body;
-    return { ...body, workspaceId: shared.path, peerWorkspacePath: body?.workspaceId || null };
-  }
-
   recordClaimDenied(scoped, result, ensureWorkspaceFn) {
     const project = ContextService.projectForPath(scoped.workspaceId, ensureWorkspaceFn) || ContextService.currentProject();
     if (project?.id && typeof this.onBumpCollision === "function") {
@@ -109,43 +100,7 @@ class LockService {
   }
 
   sanitizeLockBody(body, session) {
-    const clean = {
-      agentId: String(body?.agentId || "").slice(0, 200),
-      file: typeof body?.file === "string" ? body.file.slice(0, 1024) : undefined,
-      workspaceId: typeof body?.workspaceId === "string" ? body.workspaceId : undefined,
-      ttl: Number(body?.ttl) || undefined,
-      mode: body?.mode === "read" ? "read" : "write",
-      keepAlive: body?.keepAlive === true,
-      files: Array.isArray(body?.files)
-        ? body.files.filter((f) => typeof f === "string").slice(0, MAX_FILES_PER_CLAIM)
-        : undefined,
-      dependsOn: Array.isArray(body?.dependsOn)
-        ? body.dependsOn.filter((f) => typeof f === "string").slice(0, MAX_FILES_PER_CLAIM)
-        : undefined,
-      holder: body?.holder && typeof body.holder === "object" ? body.holder : null,
-      annotation: typeof body?.annotation === "string" ? LockEntry.sanitizeAnnotation(body.annotation) : undefined,
-      sessionId: typeof body?.sessionId === "string" ? body.sessionId.slice(0, 200) : undefined,
-      ownershipToken: typeof body?.ownershipToken === "string" ? body.ownershipToken : undefined,
-      fencingToken: Number.isInteger(body?.fencingToken) ? body.fencingToken : undefined,
-      leases: Array.isArray(body?.leases)
-        ? body.leases.filter((lease) => lease && typeof lease.file === "string").slice(0, MAX_FILES_PER_CLAIM).map((lease) => ({
-            file: lease.file.slice(0, 1024),
-            ownershipToken: typeof lease.ownershipToken === "string" ? lease.ownershipToken : undefined,
-            fencingToken: Number.isSafeInteger(lease.fencingToken) ? lease.fencingToken : undefined,
-          }))
-        : [],
-    };
-    if (!clean.agentId) return null;
-    if (!clean.sessionId) {
-      const parts = clean.agentId.split(":");
-      clean.sessionId = parts.length > 2 ? parts.slice(2).join(":") : "";
-    }
-    if (session?.remote) {
-      const login = session.login || "guest";
-      clean.agentId = `${clean.agentId}@${login}`;
-      clean.holder = { ...(clean.holder || {}), login };
-    }
-    return clean;
+    return LockBodySanitizer.sanitize(body, session);
   }
 
   async runLockRpc(op, body, session, ensureWorkspaceFn) {
@@ -154,175 +109,46 @@ class LockService {
     if (!clean) return { error: "agent_required" };
     const scoped = this.peerScoped(clean, session);
 
-    // If explicit Supabase locks mode is enabled, run through Supabase
     if (this.useSupabaseLocks && this.supabaseLockAdapter?.enabled && op === "claim") {
-      const rawFiles = Array.isArray(scoped.files) && scoped.files.length ? scoped.files : [scoped.file];
-      const files = [...new Set(rawFiles.map((file) => canonicalWorkspaceFile(scoped.workspaceId, file)))].sort();
-      if (files.some((file) => !file)) {
-        return { allowed: false, code: "INVALID_PATH", reason: "file path is outside the workspace" };
-      }
-      const acquired = [];
-      const rollback = async () => {
-        for (const item of acquired.reverse()) {
-          if (!item.dbResult.renewed) {
-            await this.supabaseLockAdapter.release({
-              workspaceId: scoped.workspaceId,
-              file: item.file,
-              agentId: scoped.agentId,
-              sessionId: scoped.sessionId,
-              ownershipToken: item.dbResult.ownershipToken,
-              fencingToken: Number(item.dbResult.fencingToken),
-            });
-          }
-          if (!item.localResult.renewed) {
-            this.lockTable.release({
-              agentId: scoped.agentId,
-              file: item.file,
-              workspaceId: scoped.workspaceId,
-              ownershipToken: item.dbResult.ownershipToken,
-              fencingToken: Number(item.dbResult.fencingToken),
-            });
-          }
-        }
-      };
-      for (const file of files) {
-        const savedLease = scoped.leases.find((lease) => canonicalWorkspaceFile(scoped.workspaceId, lease.file) === file);
-        const dbResult = await this.supabaseLockAdapter.claim({
-          workspaceId: scoped.workspaceId,
-          file,
-          agentId: scoped.agentId,
-          sessionId: scoped.sessionId,
-          ownershipToken: savedLease?.ownershipToken || scoped.ownershipToken,
-          fencingToken: savedLease?.fencingToken ?? scoped.fencingToken,
-          mode: scoped.mode,
-          keepAlive: scoped.keepAlive,
-          ttl: scoped.ttl,
-          holder: scoped.holder,
-          annotation: scoped.annotation,
-        });
-        if (!dbResult) {
-          await rollback();
-          return {
-            allowed: false,
-            degraded: true,
-            code: "COORDINATOR_UNAVAILABLE",
-            reason: "The shared lock service could not verify this lease.",
-          };
-        }
-        if (!dbResult.allowed) {
-          await rollback();
-          this.recordClaimDenied({ ...scoped, file }, dbResult, ensureWorkspaceFn);
-          return dbResult;
-        }
-        if (!dbResult.ownershipToken || !Number.isSafeInteger(Number(dbResult.fencingToken))) {
-          await rollback();
-          return {
-            allowed: false,
-            degraded: true,
-            code: "LEASE_CREDENTIALS_MISSING",
-            reason: "The shared lock service granted a lease without usable credentials.",
-          };
-        }
-        const localResult = this.lockTable.claim({
-          ...scoped,
-          file,
-          files: undefined,
-          leases: [],
-          authoritativeLease: {
-            ownershipToken: dbResult.ownershipToken,
-            fencingToken: Number(dbResult.fencingToken),
-          },
-        });
-        if (!localResult.allowed) {
-          if (!dbResult.renewed) {
-            await this.supabaseLockAdapter.release({
-              workspaceId: scoped.workspaceId,
-              file,
-              agentId: scoped.agentId,
-              sessionId: scoped.sessionId,
-              ownershipToken: dbResult.ownershipToken,
-              fencingToken: Number(dbResult.fencingToken),
-            });
-          }
-          await rollback();
-          this.recordClaimDenied({ ...scoped, file }, localResult, ensureWorkspaceFn);
-          return localResult;
-        }
-        acquired.push({ file, dbResult, localResult });
-      }
-      if (files.length === 1) return { ...acquired[0].dbResult, source: "supabase" };
-      return {
-        allowed: true,
-        batch: files,
-        locks: acquired.map(({ file, dbResult }) => ({
-          ...dbResult,
-          filePath: file,
-          workspaceId: scoped.workspaceId,
-        })),
-        source: "supabase",
-      };
+      return this.supabaseStrategy.executeClaim(scoped, ensureWorkspaceFn);
     }
 
-    if (this.useSupabaseLocks && this.supabaseLockAdapter?.enabled && op === "release") {
-      const canonicalFile = canonicalWorkspaceFile(scoped.workspaceId, scoped.file) || scoped.file;
-      const result = await this.supabaseLockAdapter.release({
-        workspaceId: scoped.workspaceId,
-        file: canonicalFile,
-        agentId: scoped.agentId,
-        sessionId: scoped.sessionId,
-        ownershipToken: scoped.ownershipToken,
-        fencingToken: scoped.fencingToken,
-      });
-      if (!result) return { ok: false, degraded: true, reason: "shared_lock_service_unavailable" };
-      const local = this.lockTable.release({ ...scoped, file: canonicalFile });
-      return { ...result, localReleased: local.released };
-    }
-    if (this.useSupabaseLocks && this.supabaseLockAdapter?.enabled && op === "heartbeat") {
-      const canonicalFile = canonicalWorkspaceFile(scoped.workspaceId, scoped.file) || scoped.file;
-      const result = await this.supabaseLockAdapter.heartbeat({
-        workspaceId: scoped.workspaceId,
-        file: canonicalFile,
-        agentId: scoped.agentId,
-        sessionId: scoped.sessionId,
-        ownershipToken: scoped.ownershipToken,
-        fencingToken: scoped.fencingToken,
-        ttl: scoped.ttl,
-      });
-      if (!result) return { ok: false, degraded: true, reason: "shared_lock_service_unavailable" };
-      if (result.ok) this.lockTable.heartbeat({ ...scoped, file: canonicalFile });
-      return result;
-    }
-    if (this.useSupabaseLocks && this.supabaseLockAdapter?.enabled && op === "release-all") {
-      const result = await this.supabaseLockAdapter.releaseAll(scoped.agentId, scoped.workspaceId, scoped.sessionId);
-      if (!result) return { ok: false, degraded: true, released: [] };
-      const local = this.lockTable.releaseAll(scoped.agentId, scoped.workspaceId, scoped.leases);
-      return { ...result, localReleased: local.released };
-    }
-
-    // Default fast in-memory RAM execution path (instant, 0ms latency)
     if (op === "claim") {
       const result = this.lockTable.claim(scoped);
       if (!result.allowed) this.recordClaimDenied(scoped, result, ensureWorkspaceFn);
       return result;
     }
-    if (op === "release") return this.lockTable.release(scoped);
-    if (op === "heartbeat") return this.lockTable.heartbeat(scoped);
-    if (op === "read") {
-      const files = (Array.isArray(scoped.files) && scoped.files.length ? scoped.files : [scoped.file]).filter(Boolean);
-      for (const file of files) {
-        this.lockTable.noteRead({
-          agentId: scoped.agentId,
-          filePath: file,
-          workspaceId: scoped.workspaceId,
-          holder: scoped.holder,
-        });
-      }
-      return { ok: true, files };
+
+    if (op === "heartbeat") {
+      return this.lockTable.heartbeat(scoped);
     }
-    return this.lockTable.releaseAll(scoped.agentId, scoped.workspaceId, scoped.leases);
+
+    if (op === "release") {
+      return this.lockTable.release(scoped);
+    }
+
+    if (op === "release-all") {
+      return this.lockTable.releaseAll(scoped.agentId, scoped.workspaceId, scoped.leases);
+    }
+
+    if (op === "status") {
+      return this.lockTable.status(scoped);
+    }
+
+    return { error: "unsupported_op" };
+  }
+
+  statusSummary(projectId) {
+    const scope = this.lockScope(projectId);
+    const active = this.locksFor(scope);
+    const reads = this.readsFor(scope);
+    return {
+      activeWrites: active.filter((l) => l.mode === "write" && !l.released).length,
+      activeReads: reads.length,
+      locks: active,
+      reads,
+    };
   }
 }
 
-module.exports = {
-  LockService,
-};
+module.exports = { LockService };

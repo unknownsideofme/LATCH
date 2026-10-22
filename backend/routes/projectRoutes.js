@@ -294,8 +294,8 @@ function createProjectRoutes({
     }
       res.json(dashboard);
     } catch (err) {
-      console.error(`[latch] dashboard error for ${req.params?.id}:`, err?.message || err);
-      res.status(500).json({ error: "dashboard_error", detail: err?.message || String(err) });
+      console.error(`[latch] dashboard error for ${req.params?.id}:`, err?.stack || err?.message || err);
+      res.status(500).json({ error: "dashboard_error", detail: err?.message || String(err), stack: err?.stack });
     }
   });
 
