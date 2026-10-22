@@ -4,6 +4,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { locksDirFor, canonicalWorkspaceRoot, canonicalWorkspaceFile } = require("../lib/paths");
 const { normalizeWorkspaceRoot } = require("../lib/transcripts/util");
+const { LockEntry, MAX_ANNOTATION_LEN } = require("./LockEntry");
 
 const DEFAULT_TTL_MS = 15_000;
 const MIN_TTL_MS = 5_000;
@@ -110,6 +111,7 @@ function belongsTo(entry, keys) {
 }
 
 function alive(entry, now = Date.now()) {
+  if (entry && typeof entry.isAlive === "function") return entry.isAlive(now);
   const beat = entry.lastHeartbeat || entry.claimedAt;
   return now < beat + entry.ttlMs;
 }
@@ -160,7 +162,9 @@ class LockTable extends EventEmitter {
     try {
       const dir = this.dirFor(entry.workspaceId);
       if (!dir) return;
-      const serial = { ...entry, readers: [...(entry.readers || [])] };
+      const serial = typeof entry.toSerializable === "function"
+        ? entry.toSerializable()
+        : { ...entry, readers: [...(entry.readers || [])] };
       fs.writeFileSync(
         path.join(dir, `${lockHash(entry.filePath, entry.workspaceId)}.lock`),
         JSON.stringify(serial, null, 2),
@@ -209,8 +213,15 @@ class LockTable extends EventEmitter {
   }
 
   denial(existing, filePath, now, message) {
-    const expiresAt = (existing.lastHeartbeat || existing.claimedAt) + existing.ttlMs;
+    const expiresAt = typeof existing.expiresAt === "function"
+      ? existing.expiresAt()
+      : ((existing.lastHeartbeat || existing.claimedAt) + existing.ttlMs);
     const sessionId = String(existing.agentId || "").split(":").slice(2).join(":");
+    const holderLabel = existing.holder?.label || existing.agentId;
+    const annotation = existing.annotation || "";
+    const note = annotation ? ` (Working on: "${annotation}")` : "";
+    const defaultMsg = `File \`${filePath}\` is locked by ${holderLabel}${note}. Pick a different task.`;
+    const finalReason = message ? `${message}${note && !message.includes(annotation) ? ` ${note}` : ""}` : defaultMsg;
     return {
       allowed: false,
       status: "DENIED",
@@ -218,11 +229,12 @@ class LockTable extends EventEmitter {
       canonicalPath: filePath,
       owner: { agentId: existing.agentId, sessionId },
       holder: existing.agentId,
+      annotation: annotation || null,
       expiresInMs: Math.max(0, expiresAt - now),
       retryable: true,
       fencingToken: existing.fencingToken || 0,
-      reason: message,
-      message,
+      reason: finalReason,
+      message: finalReason,
     };
   }
 
@@ -240,16 +252,20 @@ class LockTable extends EventEmitter {
 
   ingestEntry(entry, fallbackWorkspace) {
     if (!entry?.filePath || !alive(entry)) return;
-    entry.workspaceId = workspaceRoot(entry.workspaceId) || entry.workspaceId || fallbackWorkspace || this.defaultWorkspace;
-    if (!entry.workspaceId) return;
-    entry.filePath = canonicalWorkspaceFile(entry.workspaceId, entry.filePath);
-    if (!entry.filePath) return;
-    entry.readers = new Set(entry.readers || []);
-    const key = lockKey(entry.workspaceId, entry.filePath);
-    if (Number.isSafeInteger(entry.fencingToken)) {
-      this.fencingTokens.set(key, Math.max(this.fencingTokens.get(key) || 0, entry.fencingToken));
+    const workspaceId = workspaceRoot(entry.workspaceId) || entry.workspaceId || fallbackWorkspace || this.defaultWorkspace;
+    if (!workspaceId) return;
+    const filePath = canonicalWorkspaceFile(workspaceId, entry.filePath);
+    if (!filePath) return;
+    const lockObj = entry instanceof LockEntry ? entry : new LockEntry({
+      ...entry,
+      workspaceId,
+      filePath,
+    });
+    const key = lockKey(workspaceId, filePath);
+    if (Number.isSafeInteger(lockObj.fencingToken)) {
+      this.fencingTokens.set(key, Math.max(this.fencingTokens.get(key) || 0, lockObj.fencingToken));
     }
-    this.locks.set(key, entry);
+    this.locks.set(key, lockObj);
   }
 
   /**
@@ -333,6 +349,9 @@ class LockTable extends EventEmitter {
   }
 
   publicEntry(entry, includeLease = false) {
+    if (entry && typeof entry.toPublic === "function") {
+      return entry.toPublic(includeLease);
+    }
     const result = {
       filePath: entry.filePath,
       agentId: entry.agentId,
@@ -344,6 +363,7 @@ class LockTable extends EventEmitter {
       workspaceId: entry.workspaceId || null,
       source: entry.source || "coordinator",
       holder: entry.holder || null,
+      annotation: entry.annotation || null,
       readers: [...(entry.readers || [])],
       escalated: Boolean(entry.escalated),
       fencingToken: entry.fencingToken || 0,
@@ -438,7 +458,7 @@ class LockTable extends EventEmitter {
     return { ok: true, lock: this.publicEntry(next) };
   }
 
-  claim({ agentId, file, ttl, workspaceId, holder, source, dependsOn, files, mode, ownershipToken, fencingToken, leases, authoritativeLease, keepAlive = false }) {
+  claim({ agentId, file, ttl, workspaceId, holder, source, dependsOn, files, mode, ownershipToken, fencingToken, leases, authoritativeLease, keepAlive = false, annotation }) {
     const ws = workspaceRoot(workspaceId) || workspaceId;
     if (authoritativeLease) {
       ownershipToken = authoritativeLease.ownershipToken;
@@ -469,6 +489,7 @@ class LockTable extends EventEmitter {
           ownershipToken: lease?.ownershipToken,
           fencingToken: lease?.fencingToken,
           authoritativeLease,
+          annotation,
         });
         if (!result.allowed) {
           for (const acquired of held) {
@@ -546,10 +567,15 @@ class LockTable extends EventEmitter {
           existing.ownershipToken = authoritativeLease?.ownershipToken || crypto.randomUUID();
           existing.fencingToken = nextToken;
         }
-        existing.claimedAt = now;
-        existing.lastHeartbeat = now;
-        existing.ttlMs = ttlMs;
-        existing.keepAliveUntil = keepAlive ? now + MAX_HOOK_KEEP_ALIVE_MS : 0;
+        if (typeof existing.touch === "function") {
+          existing.touch({ now, ttlMs, keepAlive, annotation });
+        } else {
+          existing.claimedAt = now;
+          existing.lastHeartbeat = now;
+          existing.ttlMs = ttlMs;
+          existing.keepAliveUntil = keepAlive ? now + MAX_HOOK_KEEP_ALIVE_MS : 0;
+          if (annotation) existing.annotation = LockEntry.sanitizeAnnotation(annotation);
+        }
         existing.workspaceId = ws;
         this.persist(existing);
         this.emit("change", { type: "renew", entry: existing });
@@ -580,7 +606,7 @@ class LockTable extends EventEmitter {
     const requestedFence = authoritativeLease ? authoritativeLease.fencingToken : undefined;
     const nextFence = this.nextFencingToken(ws, filePath, requestedFence);
     if (nextFence === null) return { allowed: false, code: "STALE_FENCING_TOKEN", reason: "fencing token is stale" };
-    const entry = {
+    const entry = new LockEntry({
       filePath,
       agentId,
       mode: lockMode,
@@ -595,7 +621,8 @@ class LockTable extends EventEmitter {
       ownershipToken: authoritativeLease?.ownershipToken || crypto.randomUUID(),
       fencingToken: nextFence,
       keepAliveUntil: keepAlive ? now + MAX_HOOK_KEEP_ALIVE_MS : 0,
-    };
+      annotation,
+    });
     this.locks.set(key, entry);
     this.persist(entry);
     this.emit("change", { type: "claim", entry });

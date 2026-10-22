@@ -190,7 +190,7 @@ function workspaceRelativeFiles(workspace, filePaths) {
 // Post-tool phases: post:enter, post:no-files, post:flush, post:release,
 // post:flush-fail, post:error. Stop: stop:flush-owned, stop:release-all.
 function debugHook(mode, phase, detail) {
-  if (!process.env.LATCH_HOOK_DEBUG || process.env.RELAY_HOOK_DEBUG) return;
+  if (!process.env.LATCH_HOOK_DEBUG && !process.env.RELAY_HOOK_DEBUG) return;
   try {
     const fs = require("fs");
     const file = path.join(os.homedir(), ".latch", "hook-debug.log");
@@ -317,16 +317,25 @@ function resolveWorkspacePath(payload) {
  *              "no decision" and every Antigravity lock silently allowed
  */
 function respond(mode, allowed, reason) {
+  const errMsg = reason || "Action blocked by Latch";
   if (mode === "cursor") {
     process.stdout.write(
-      JSON.stringify(allowed ? { permission: "allow" } : { permission: "deny", user_message: reason })
+      JSON.stringify(allowed ? { permission: "allow" } : { permission: "deny", user_message: errMsg })
     );
+    if (!allowed) {
+      process.stderr.write(errMsg + "\n");
+      process.exitCode = 2;
+    }
     return;
   }
   if (mode === "antigravity") {
     process.stdout.write(
-      JSON.stringify(allowed ? { decision: "allow" } : { decision: "deny", reason })
+      JSON.stringify(allowed ? { decision: "allow" } : { decision: "deny", reason: errMsg })
     );
+    if (!allowed) {
+      process.stderr.write(errMsg + "\n");
+      process.exitCode = 2;
+    }
     return;
   }
   if (mode === "copilot") {
@@ -334,9 +343,13 @@ function respond(mode, allowed, reason) {
       JSON.stringify(
         allowed
           ? { permissionDecision: "allow" }
-          : { permissionDecision: "deny", permissionDecisionReason: reason }
+          : { permissionDecision: "deny", permissionDecisionReason: errMsg }
       )
     );
+    if (!allowed) {
+      process.stderr.write(errMsg + "\n");
+      process.exitCode = 2;
+    }
     return;
   }
   // Claude Code and Codex share the hookSpecificOutput envelope.
@@ -345,12 +358,12 @@ function respond(mode, allowed, reason) {
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         permissionDecision: allowed ? "allow" : "deny",
-        ...(allowed ? {} : { permissionDecisionReason: reason }),
+        ...(allowed ? {} : { permissionDecisionReason: errMsg }),
       },
     })
   );
   if (!allowed) {
-    process.stderr.write(reason + "\n");
+    process.stderr.write(errMsg + "\n");
     process.exitCode = 2;
   }
 }
@@ -376,12 +389,32 @@ async function runPreTool(declaredMode) {
     const agentId = lockAgentIdFor(mode, payload);
     const { dependsOn } = require("../backend/lib/deps");
     const deps = files.flatMap((rel) => dependsOn(workspace, rel));
+    const annotationCandidates = [
+      payload.annotation,
+      payload.toolArgs?.annotation,
+      payload.toolArgs?.instruction,
+      payload.toolArgs?.Description,
+      payload.toolArgs?.description,
+      payload.toolArgs?.message,
+      payload.toolCall?.args?.Instruction,
+      payload.toolCall?.args?.Description,
+      payload.tool_input?.instruction,
+      payload.tool_input?.description,
+    ];
+    let annotation = "";
+    for (const c of annotationCandidates) {
+      if (typeof c === "string" && c.trim()) {
+        annotation = c.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 140);
+        break;
+      }
+    }
     const result = await client().claimFile(workspace, agentId, files[0], 15000, {
       dependsOn: deps,
       files: files.length > 1 ? files : undefined,
       mode: payload.mode === "read" ? "read" : "write",
       keepAlive: payload.mode !== "read",
       holder: { label: modeLabel(mode), host: os.hostname(), login: currentLogin() },
+      annotation: annotation || undefined,
     });
     debugHook(mode, "pre:claim", { workspace, files, agentId, via: result.via || null, allowed: result.allowed });
     if (result.allowed !== true) {

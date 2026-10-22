@@ -271,6 +271,7 @@ async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {})
     mode: opts.mode,
     keepAlive: opts.keepAlive === true,
     holder: opts.holder || null,
+    annotation: typeof opts.annotation === "string" ? opts.annotation.slice(0, 140) : undefined,
     leases: files.map((item) => {
       const lease = readLease(workspacePath, agentId, item);
       return lease ? { ...lease, file: lease.filePath } : null;
@@ -329,6 +330,37 @@ async function claimFile(workspacePath, agentId, file, ttlMs = 15000, opts = {})
       /* fall through */
     }
   }
+
+  // Direct Supabase fallback when coordinator daemon is offline
+  try {
+    const { isSupabaseConfigured } = require("../supabase/client");
+    if (isSupabaseConfigured()) {
+      const { SupabaseLockAdapter } = require("../supabase/SupabaseLockAdapter");
+      const adapter = new SupabaseLockAdapter();
+      if (adapter.enabled) {
+        const canonical = canonicalWorkspaceFile(workspacePath, file) || file;
+        const savedLease = readLease(workspacePath, agentId, canonical);
+        const res = await adapter.claim({
+          workspaceId: workspacePath,
+          file: canonical,
+          agentId,
+          sessionId: opts.sessionId || (savedLease?.sessionId || ""),
+          ownershipToken: savedLease?.ownershipToken,
+          fencingToken: savedLease?.fencingToken,
+          mode: opts.mode || "write",
+          ttl: ttlMs,
+          holder: opts.holder || {},
+        });
+        if (res && typeof res.allowed === "boolean") {
+          if (res.allowed) persistClaimLeases(workspacePath, agentId, res);
+          return { ...res, source: "supabase" };
+        }
+      }
+    }
+  } catch (err) {
+    /* fallback to fail-open or coordinator error */
+  }
+
   console.warn("[latch] COORDINATOR_UNAVAILABLE — write claim refused");
   return {
     allowed: false,
@@ -379,6 +411,33 @@ async function releaseFile(workspacePath, agentId, file) {
       markRoomDown(room);
     }
   }
+
+  // Direct Supabase fallback
+  try {
+    const { isSupabaseConfigured } = require("../supabase/client");
+    if (isSupabaseConfigured()) {
+      const { SupabaseLockAdapter } = require("../supabase/SupabaseLockAdapter");
+      const adapter = new SupabaseLockAdapter();
+      if (adapter.enabled) {
+        const canonical = canonicalWorkspaceFile(workspacePath, file) || file;
+        const res = await adapter.release({
+          workspaceId: workspacePath,
+          file: canonical,
+          agentId,
+          sessionId: lease?.sessionId,
+          ownershipToken: lease?.ownershipToken,
+          fencingToken: lease?.fencingToken,
+        });
+        if (res?.released || res?.released === false) {
+          removeLease(workspacePath, agentId, file);
+          return res;
+        }
+      }
+    }
+  } catch (err) {
+    /* fallback */
+  }
+
   return { ok: false, degraded: true, reason: "coordinator_unavailable" };
 }
 

@@ -15,6 +15,19 @@ This project uses **Latch** for cross-agent memory. Do not ask the user to confi
 **Stop hooks:** Cursor, Claude Code, Codex, Copilot CLI, Antigravity — installed by `latch add` / `latch init`.
 **Latch MCP:** `latch_room_brief`, locks, chat history — installed into each agent's MCP config by `latch add`.
 
+## Active Collaboration & Distributed File Locking
+You are participating in a **Latch** multi-agent collaborative workspace with real-time distributed locking and synchronization.
+
+1. **Mandatory Lock Acquisition**:
+   - Before modifying or creating any project file, you MUST call MCP tool `latch_claim_file({ file: "<path>" })`.
+   - If the claim is rejected or locked by a peer, STOP immediately. Do NOT overwrite or edit that file. Explain the lock conflict to the user.
+2. **Mandatory Lock Release**:
+   - As soon as your file edits are complete, you MUST call MCP tool `latch_release_file({ file: "<path>" })` to release the lease.
+3. **Real-time Database Sync**:
+   - Distributed locks and code patches are tracked in real-time in Supabase and broadcast live on the Mission Control canvas.
+   - Always read `.latch/latch_context.md` at session start to see room membership, active locks, and ngrok tunnel status.
+   - Call `latch_room_brief` or `latch_status` at any time to inspect live teammate activity and locks.
+
 ## Latch pseudo-commands (user chat)
 
 These are **not** built-in slash commands. They are a **project convention** — phrases the user types so agents recognize Latch intent.
@@ -32,4 +45,112 @@ Use `npx latch` if the `latch` command is not on PATH. Do not ask the user to ed
 
 Cursor: `@latch-sync` skill at `.cursor/skills/latch-sync/`.
 <!-- END:latch-os -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

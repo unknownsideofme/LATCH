@@ -41,6 +41,7 @@ export type GFile = {
   path: string;
   holder: string | null;
   reader: string | null;
+  annotation?: string | null;
   ttl: number;         // 0..1 remaining
   secondsLeft: number;
   waiting: number;
@@ -116,8 +117,15 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
     // afterglow and look empty while the feed was full. 45s matches the
     // coordinator's RECENT_TTL_MS.
     const GLOW_MS = 45_000;
-    const locks = dashboard?.locks ?? [];
-    const liveReads = dashboard?.reads ?? [];
+    const projectPath = (dashboard?.project?.path || "").toLowerCase().replace(/\\/g, "/");
+    const projectId = dashboard?.project?.id || "";
+    const belongsToThisProject = (wsId?: string | null): boolean => {
+      if (!wsId) return true;
+      const ws = wsId.toLowerCase().replace(/\\/g, "/");
+      return Boolean(ws === projectId || ws === projectPath || (projectPath && (ws.startsWith(projectPath + "/") || ws === projectPath)));
+    };
+    const locks = (dashboard?.locks ?? []).filter((l) => belongsToThisProject(l.workspaceId));
+    const liveReads = (dashboard?.reads ?? []).filter((r) => belongsToThisProject(r.workspaceId));
     const collaborators = dashboard?.collaborators ?? [];
     const conflicts = dashboard?.conflicts ?? [];
     const known = dashboard?.agents ?? [];
@@ -160,15 +168,13 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
       return a;
     };
 
-    // --- files + hold edges from WRITE locks only. Reads are presence, not
-    // claims, and live in dashboard.reads so they cannot be mistaken for a lock.
+    // --- files + hold edges from active WRITE locks only.
     for (const lock of locks) {
       if (lock.mode === "read") continue;
+      if (lock.released) continue; // Released locks are free; do not show active hold
       const fileId = lock.filePath.includes("::") ? lock.filePath.split("::")[1] : lock.filePath;
-      const left = lock.released
-        ? Math.max(0, (lock.releasedAt || 0) + GLOW_MS - now)
-        : Math.max(0, (lock.expiresAt || 0) - now);
-      if (lock.released && left <= 0) continue;
+      const left = Math.max(0, (lock.expiresAt || 0) - now);
+      if (left <= 0) continue;
       if (!files.has(fileId)) {
         files.set(fileId, {
           id: fileId, path: fileId, holder: null, reader: null,
@@ -178,11 +184,12 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
       const f = files.get(fileId)!;
       const agent = ensureAgent(lock.agentId, lock.holder);
 
-      const ttlMs = lock.released ? GLOW_MS : (lock.ttlMs || GLOW_MS);
+      const ttlMs = lock.ttlMs || 15000;
       const frac = ttlMs ? Math.max(0, Math.min(1, left / ttlMs)) : 0;
       f.holder = agent.label;
       f.ttl = frac;
       f.secondsLeft = Math.ceil(left / 1000);
+      f.annotation = lock.annotation || null;
       agent.state = "hold";
       edges.push({ id: `l-${agent.id}-${fileId}`, agentId: agent.id, fileId, kind: "hold" });
     }
@@ -213,9 +220,7 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
       edges.push({ id: `r-${agent.id}-${fileId}`, agentId: agent.id, fileId, kind: "read" });
     }
 
-    // Same stream that fills Activity: a code edit in the transcript is the
-    // board lighting up even when the pre-tool hook never claimed (or claimed
-    // and released before the first paint).
+    // Recent code edits from transcripts for file glow without fake lock hold
     for (const edit of dashboard?.edits ?? []) {
       const fileId = String(edit.file || "").replace(/\\/g, "/");
       if (!fileId || now - (edit.ts || 0) > GLOW_MS) continue;
@@ -227,17 +232,11 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
       }
       const f = files.get(fileId)!;
       const agentId = `${edit.agent}:${edit.ownerLogin || "local"}`;
-      const agent = ensureAgent(agentId, { label: edit.agent, login: edit.ownerLogin });
+      ensureAgent(agentId, { label: edit.agent, login: edit.ownerLogin });
       const left = Math.max(0, GLOW_MS - (now - edit.ts));
-      if (!f.holder) {
-        f.holder = agent.label;
+      if (!f.holder && !f.reader) {
         f.ttl = left / GLOW_MS;
         f.secondsLeft = Math.ceil(left / 1000);
-      }
-      agent.state = "hold";
-      const edgeId = `e-${agent.id}-${fileId}`;
-      if (!edges.some((e) => e.id === edgeId || (e.agentId === agent.id && e.fileId === fileId))) {
-        edges.push({ id: edgeId, agentId: agent.id, fileId, kind: "hold" });
       }
     }
 
@@ -275,10 +274,21 @@ export function useLockGraph(dashboard: Dashboard | null, me: User | null, now: 
       }
     }
 
-    // --- registered-but-idle agents, so the board shows the whole team ---
-    for (const a of known) {
-      if (a.status !== "connected") continue;
+    // --- registered agents, so the board shows the whole team ---
+    const candidateAgents: Array<{ id?: string; label: string; status?: string; ownerLogin?: string }> =
+      known.length
+        ? known
+        : [
+            { label: "Claude Code", status: "idle" },
+            { label: "Cursor", status: "idle" },
+            { label: "Codex", status: "idle" },
+            { label: "Copilot", status: "idle" },
+            { label: "Antigravity", status: "idle" },
+          ];
+
+    for (const a of candidateAgents) {
       const label = String(a.label || "");
+      if (!label) continue;
       const u = ensureUser(resolveUser(a.id || label, { label: a.label, login: a.ownerLogin }));
       const already = u.agents.some(
         (x) => x.label.toLowerCase() === label.toLowerCase()

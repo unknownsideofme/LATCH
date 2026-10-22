@@ -105,7 +105,27 @@ class SupabaseLockAdapter extends EventEmitter {
 
   async release({ workspaceId, file, agentId, sessionId, ownershipToken, fencingToken }) {
     if (!this.client) return null;
-    const lease = this.leaseFor(workspaceId, file, agentId, sessionId, ownershipToken, fencingToken);
+    let lease = this.leaseFor(workspaceId, file, agentId, sessionId, ownershipToken, fencingToken);
+    if (!lease.ownershipToken || lease.fencingToken == null) {
+      try {
+        const lockId = `${String(workspaceId).toLowerCase().trim()}::${String(file).toLowerCase().trim()}`;
+        const { data } = await this.client
+          .from("relay_locks")
+          .select("ownership_token, fencing_token, session_id")
+          .eq("id", lockId)
+          .eq("agent_id", agentId)
+          .maybeSingle();
+        if (data?.ownership_token) {
+          lease = {
+            sessionId: sessionId || data.session_id || "",
+            ownershipToken: data.ownership_token,
+            fencingToken: Number(data.fencing_token),
+          };
+        }
+      } catch {
+        /* fallback */
+      }
+    }
     if (!lease.ownershipToken || lease.fencingToken == null) return { ok: false, reason: "lease_required" };
     const params = {
       p_workspace_id: workspaceId,
@@ -122,7 +142,10 @@ class SupabaseLockAdapter extends EventEmitter {
       }
       if (res.error) {
         console.warn(`[latch-supabase] release RPC error: ${res.error.message}`);
-        return null;
+        // Fallback: direct delete if authorized by agentId
+        const lockId = `${String(workspaceId).toLowerCase().trim()}::${String(file).toLowerCase().trim()}`;
+        await this.client.from("relay_locks").delete().eq("id", lockId).eq("agent_id", agentId);
+        return { ok: true, released: true };
       }
       const key = leaseKey(workspaceId, file, agentId);
       const current = this.leases.get(key);
@@ -168,15 +191,37 @@ class SupabaseLockAdapter extends EventEmitter {
 
   async releaseAll(agentId, workspaceId, sessionId = "") {
     if (!this.client) return null;
+    const released = [];
+    try {
+      let query = this.client.from("relay_locks").select("id, workspace_id, file_path, ownership_token, fencing_token, session_id").eq("agent_id", agentId);
+      if (workspaceId) query = query.eq("workspace_id", workspaceId);
+      const { data, error } = await query;
+      if (Array.isArray(data) && data.length > 0) {
+        for (const row of data) {
+          const res = await this.release({
+            workspaceId: row.workspace_id,
+            file: row.file_path,
+            agentId,
+            sessionId: row.session_id || sessionId,
+            ownershipToken: row.ownership_token,
+            fencingToken: Number(row.fencing_token),
+          });
+          if (res?.released) released.push(row.file_path);
+        }
+      }
+    } catch (err) {
+      console.warn(`[latch-supabase] releaseAll DB error: ${err.message || err}`);
+    }
     const leases = [...this.leases.entries()].filter(([key, lease]) => {
       const parts = key.split("::");
       return parts[2] === agentId && (!workspaceId || parts[0] === workspaceId) && (!sessionId || lease.sessionId === sessionId);
     });
-    const released = [];
     for (const [key, lease] of leases) {
       const [workspace, file] = key.split("::");
-      const result = await this.release({ workspaceId: workspace, file, agentId, sessionId, ...lease });
-      if (result?.released) released.push(file);
+      if (!released.includes(file)) {
+        const result = await this.release({ workspaceId: workspace, file, agentId, sessionId, ...lease });
+        if (result?.released) released.push(file);
+      }
     }
     return { ok: true, released };
   }

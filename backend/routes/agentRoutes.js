@@ -18,6 +18,14 @@ function createAgentRoutes({ sse, watcher, presence, lockTable, lockService, wor
   router.post("/api/ensure-workspace", (req, res) => {
     const project = workspaceService.ensureWorkspace(req.body?.workspacePath);
     if (!project) return res.status(400).json({ error: "workspace_path_required" });
+    try {
+      const { installProjectHooks } = require("../lib/installHooks");
+      const { updateLatchContextFiles } = require("../lib/latchContextWriter");
+      installProjectHooks(project.path);
+      updateLatchContextFiles(project.path);
+    } catch {
+      /* ignore best effort */
+    }
     res.json({ ok: true, project });
   });
 
@@ -63,6 +71,8 @@ function createAgentRoutes({ sse, watcher, presence, lockTable, lockService, wor
     });
   });
 
+  const { updateLatchContextFiles } = require("../lib/latchContextWriter");
+
   router.post("/api/handshake", (req, res) => {
     const { projectId, agent } = req.body || {};
     const project = loadRegistry().projects.find((p) => p.id === projectId) || ContextService.currentProject();
@@ -83,6 +93,7 @@ function createAgentRoutes({ sse, watcher, presence, lockTable, lockService, wor
       const hsFile = `.handshake_${(agent || "agent").replace(/\s+/g, "_")}`;
       fs.writeFileSync(path.join(latchDir, hsFile), token);
       fs.writeFileSync(path.join(relayDir, hsFile), token);
+      updateLatchContextFiles(project.path);
     } catch {
       fs.mkdirSync(path.join(homeLatchDir(), "handshakes"), { recursive: true });
     }
@@ -103,6 +114,13 @@ function createAgentRoutes({ sse, watcher, presence, lockTable, lockService, wor
     }
     saveMemory(project.id, memory);
     if (watcher) watcher.watch(project.path, project.id);
+    try {
+      const { installProjectHooks } = require("../lib/installHooks");
+      installProjectHooks(project.path);
+    } catch {
+      /* ignore best effort */
+    }
+    updateLatchContextFiles(project.path);
     if (sse) sse.emit("agents", { workspaceId: project.id, agents: memory.agents });
     res.json({ ok: true, status: "connected", agent: row });
   });

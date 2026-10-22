@@ -6,6 +6,7 @@ import { CodeEdits } from "./CodeEdits";
 import { LayoutSwitcher } from "./LayoutSwitcher";
 import { ConnectedAgentsDropdown } from "./ConnectedAgentsDropdown";
 import { FileLocksPanel } from "./FileLocksPanel";
+import { LockTablePanel } from "./LockTablePanel";
 import { TeamPanel } from "./TeamPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
@@ -15,6 +16,7 @@ const TAB_TITLES: Partial<Record<TabId, { title: string; subtitle: string }>> = 
   chat: { title: "Chat Stream", subtitle: "Agent conversation transcript and tool logs" },
   edits: { title: "Code Edits", subtitle: "Lamport causal cuts & slide-out diff viewer" },
   locks: { title: "Ongoing Sessions", subtitle: "Coordinator board, file locks & graph" },
+  locktable: { title: "Lock Table", subtitle: "RAM lock registry, fencing tokens & intent annotations" },
   team: { title: "Invites", subtitle: "Collaborator invites & shared room tunnels" },
   memory: { title: "Memory", subtitle: "Project context digest & memory snapshot" },
   settings: { title: "Settings", subtitle: "Workspace configuration & credentials" },
@@ -44,6 +46,7 @@ export function ProjectDashboard() {
         <div className={ui.panelScroll}>
           {tab === "edits" && <CodeEdits />}
           {tab === "locks" && <FileLocksPanel />}
+          {tab === "locktable" && <LockTablePanel />}
           {tab === "team" && <TeamPanel />}
           {tab === "memory" && <MemoryPanel />}
           {tab === "settings" && <SettingsPanel />}

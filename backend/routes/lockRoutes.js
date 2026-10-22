@@ -200,6 +200,14 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
       if (sse) sse.emit("activity", { workspaceId: project?.id, item });
       roomService.broadcastRoom({ type: "read", workspaceId: project?.id, item });
     }
+    const scope = lockService.lockScope(project?.id);
+    if (sse && scope?.id) {
+      sse.emit("locks", {
+        workspaceId: scope.id,
+        locks: lockService.locksFor(scope),
+        reads: lockService.readsFor(scope),
+      });
+    }
     res.json({ ok: true, files, ...(degradedRead ? { source: "local_fallback", degraded: true } : {}) });
   });
 
