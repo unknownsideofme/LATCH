@@ -77,7 +77,6 @@ class GuestClient {
           if (latest?.role !== "guest") return;
           latest = (await this.roomService.refreshGuestRoom(latest)) || latest;
           this.connectHostPatches(latest);
-          this.connectHostControl(latest);
         };
         retry().catch(() => undefined);
       }, wait);

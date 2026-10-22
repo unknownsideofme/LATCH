@@ -25,7 +25,7 @@ const EDIT = {
   claude: "Edit|Write|NotebookEdit|MultiEdit|Replace",
   // cursor.com/docs/hooks — postToolUse matcher on tool_name; StrReplace/ApplyPatch
   // appear in agent transcripts but are under-documented in the matcher list.
-  cursor: "Write|Edit|Delete|StrReplace|ApplyPatch|EditNotebook|search_replace",
+  cursor: "Write|Edit|Delete|StrReplace|ApplyPatch|EditNotebook|search_replace|edit_file|write_to_file|delete_file|create_file|apply_patch|patch_file",
   // Codex hook config + session transcript tool names
   codex: "apply_patch|Edit|Write|write|edit_file|create_file|patch_file",
   // docs.github.com/copilot/reference/hooks-reference — toolName edit|create

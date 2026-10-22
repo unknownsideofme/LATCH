@@ -19,10 +19,11 @@ export function agentBrand(label: string) {
   return AGENTS.find((a) => a.match.some((m) => l.includes(m))) || null;
 }
 
-import { IconLock, IconFileCode, IconUsers, IconBrain } from "@/components/ui/icons";
+import { IconLock, IconFileCode, IconUsers, IconBrain, IconTable } from "@/components/ui/icons";
 
 const NAV_TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; kicker: string }[] = [
   { id: "locks", label: "Ongoing Sessions", icon: IconLock, kicker: "Board & locks" },
+  { id: "locktable", label: "Lock Table", icon: IconTable, kicker: "RAM registry & grid" },
   { id: "edits", label: "Code Edits", icon: IconFileCode, kicker: "Patches & time-travel" },
   { id: "team", label: "Invites", icon: IconUsers, kicker: "Collaborators" },
   { id: "memory", label: "Memory", icon: IconBrain, kicker: "Context digest" },
@@ -56,7 +57,7 @@ export function Sidebar() {
             const badgeCount =
               t.id === "team" ? inviteUnread :
               t.id === "edits" ? patchesCount :
-              t.id === "locks" ? activeLocks : 0;
+              t.id === "locks" || t.id === "locktable" ? activeLocks : 0;
 
             return (
               <button

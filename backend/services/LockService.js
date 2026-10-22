@@ -8,15 +8,17 @@ const { normalizeCompare } = require("../lib/transcripts/util");
 const { LOCK_OPS, MAX_FILES_PER_CLAIM } = require("../config/constants");
 const { ContextService } = require("./ContextService");
 const { canonicalWorkspaceFile } = require("../lib/paths");
+const { LockEntry } = require("../coordinator/LockEntry");
 
 class LockService {
-  constructor({ lockTable, roomLocks, sse, wssControlRef, onBumpCollision, supabaseLockAdapter }) {
+  constructor({ lockTable, roomLocks, sse, wssControlRef, onBumpCollision, supabaseLockAdapter, useSupabaseLocks = false }) {
     this.lockTable = lockTable;
     this.roomLocks = roomLocks;
     this.sse = sse;
     this.wssControlRef = wssControlRef; // function returning wssControl or object
     this.onBumpCollision = onBumpCollision;
     this.supabaseLockAdapter = supabaseLockAdapter || null;
+    this.useSupabaseLocks = Boolean(useSupabaseLocks);
   }
 
   get wssControl() {
@@ -121,6 +123,7 @@ class LockService {
         ? body.dependsOn.filter((f) => typeof f === "string").slice(0, MAX_FILES_PER_CLAIM)
         : undefined,
       holder: body?.holder && typeof body.holder === "object" ? body.holder : null,
+      annotation: typeof body?.annotation === "string" ? LockEntry.sanitizeAnnotation(body.annotation) : undefined,
       sessionId: typeof body?.sessionId === "string" ? body.sessionId.slice(0, 200) : undefined,
       ownershipToken: typeof body?.ownershipToken === "string" ? body.ownershipToken : undefined,
       fencingToken: Number.isInteger(body?.fencingToken) ? body.fencingToken : undefined,
@@ -151,7 +154,8 @@ class LockService {
     if (!clean) return { error: "agent_required" };
     const scoped = this.peerScoped(clean, session);
 
-    if (this.supabaseLockAdapter?.enabled && op === "claim") {
+    // If explicit Supabase locks mode is enabled, run through Supabase
+    if (this.useSupabaseLocks && this.supabaseLockAdapter?.enabled && op === "claim") {
       const rawFiles = Array.isArray(scoped.files) && scoped.files.length ? scoped.files : [scoped.file];
       const files = [...new Set(rawFiles.map((file) => canonicalWorkspaceFile(scoped.workspaceId, file)))].sort();
       if (files.some((file) => !file)) {
@@ -194,6 +198,7 @@ class LockService {
           keepAlive: scoped.keepAlive,
           ttl: scoped.ttl,
           holder: scoped.holder,
+          annotation: scoped.annotation,
         });
         if (!dbResult) {
           await rollback();
@@ -258,23 +263,25 @@ class LockService {
       };
     }
 
-    if (this.supabaseLockAdapter?.enabled && op === "release") {
+    if (this.useSupabaseLocks && this.supabaseLockAdapter?.enabled && op === "release") {
+      const canonicalFile = canonicalWorkspaceFile(scoped.workspaceId, scoped.file) || scoped.file;
       const result = await this.supabaseLockAdapter.release({
         workspaceId: scoped.workspaceId,
-        file: scoped.file,
+        file: canonicalFile,
         agentId: scoped.agentId,
         sessionId: scoped.sessionId,
         ownershipToken: scoped.ownershipToken,
         fencingToken: scoped.fencingToken,
       });
       if (!result) return { ok: false, degraded: true, reason: "shared_lock_service_unavailable" };
-      const local = this.lockTable.release(scoped);
+      const local = this.lockTable.release({ ...scoped, file: canonicalFile });
       return { ...result, localReleased: local.released };
     }
-    if (this.supabaseLockAdapter?.enabled && op === "heartbeat") {
+    if (this.useSupabaseLocks && this.supabaseLockAdapter?.enabled && op === "heartbeat") {
+      const canonicalFile = canonicalWorkspaceFile(scoped.workspaceId, scoped.file) || scoped.file;
       const result = await this.supabaseLockAdapter.heartbeat({
         workspaceId: scoped.workspaceId,
-        file: scoped.file,
+        file: canonicalFile,
         agentId: scoped.agentId,
         sessionId: scoped.sessionId,
         ownershipToken: scoped.ownershipToken,
@@ -282,16 +289,17 @@ class LockService {
         ttl: scoped.ttl,
       });
       if (!result) return { ok: false, degraded: true, reason: "shared_lock_service_unavailable" };
-      if (result.ok) this.lockTable.heartbeat(scoped);
+      if (result.ok) this.lockTable.heartbeat({ ...scoped, file: canonicalFile });
       return result;
     }
-    if (this.supabaseLockAdapter?.enabled && op === "release-all") {
+    if (this.useSupabaseLocks && this.supabaseLockAdapter?.enabled && op === "release-all") {
       const result = await this.supabaseLockAdapter.releaseAll(scoped.agentId, scoped.workspaceId, scoped.sessionId);
       if (!result) return { ok: false, degraded: true, released: [] };
       const local = this.lockTable.releaseAll(scoped.agentId, scoped.workspaceId, scoped.leases);
       return { ...result, localReleased: local.released };
     }
 
+    // Default fast in-memory RAM execution path (instant, 0ms latency)
     if (op === "claim") {
       const result = this.lockTable.claim(scoped);
       if (!result.allowed) this.recordClaimDenied(scoped, result, ensureWorkspaceFn);

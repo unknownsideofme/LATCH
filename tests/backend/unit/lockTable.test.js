@@ -461,16 +461,97 @@ test("paths: canonicalWorkspaceFile rejects escapes and resolves in-workspace sy
 
 test("LockTable: waiters recording when claim is denied", () => {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-test-ws-"));
- try {
-  const table = new LockTable();
+  try {
+    const table = new LockTable();
 
-  table.claim({ agentId: "holder:host1:s1", file: "locked.ts", workspaceId: ws });
-  table.claim({ agentId: "waiter:host1:s2", file: "locked.ts", workspaceId: ws });
+    table.claim({ agentId: "holder:host1:s1", file: "locked.ts", workspaceId: ws });
+    table.claim({ agentId: "waiter:host1:s2", file: "locked.ts", workspaceId: ws });
 
-  const waiters = table.takeWaiters("locked.ts", ws);
-  assert.equal(waiters.length, 1);
-  assert.equal(waiters[0].agentId, "waiter:host1:s2");
- } finally {
- fs.rmSync(ws, { recursive: true, force: true });
- }
+    const waiters = table.takeWaiters("locked.ts", ws);
+    assert.equal(waiters.length, 1);
+    assert.equal(waiters[0].agentId, "waiter:host1:s2");
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
+test("LockEntry: class structure, validation, sanitization, and lifecycle methods", () => {
+  const { LockEntry, MAX_ANNOTATION_LEN } = require("../../../backend/coordinator/LockEntry");
+  assert.equal(MAX_ANNOTATION_LEN, 140);
+
+  const clean = LockEntry.sanitizeAnnotation("  Fixing   oauth\n\nlogin flow\t\tbug  ");
+  assert.equal(clean, "Fixing oauth login flow bug");
+
+  const longText = "a".repeat(200);
+  assert.equal(LockEntry.sanitizeAnnotation(longText).length, 140);
+
+  const now = Date.now();
+  const entry = new LockEntry({
+    filePath: "src/auth.ts",
+    workspaceId: "/workspace",
+    agentId: "cursor:mac:123",
+    mode: "write",
+    claimedAt: now,
+    ttlMs: 15000,
+    annotation: "Refactoring auth middleware",
+    holder: { label: "Cursor" },
+  });
+
+  assert.equal(entry instanceof LockEntry, true);
+  assert.equal(entry.isAlive(now), true);
+  assert.equal(entry.isAlive(now + 16000), false);
+  assert.equal(entry.annotation, "Refactoring auth middleware");
+  assert.equal(entry.expiresAt(), now + 15000);
+
+  entry.touch({ now: now + 5000, ttlMs: 20000, annotation: "Updated task note" });
+  assert.equal(entry.lastHeartbeat, now + 5000);
+  assert.equal(entry.ttlMs, 20000);
+  assert.equal(entry.annotation, "Updated task note");
+
+  const pub = entry.toPublic(true);
+  assert.equal(pub.annotation, "Updated task note");
+  assert.ok(pub.ownershipToken);
+
+  const serial = entry.toSerializable();
+  assert.equal(serial.annotation, "Updated task note");
+  assert.equal(serial.filePath, "src/auth.ts");
+});
+
+test("LockTable: annotation propagation and peer denial context", () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "latch-annotation-test-"));
+  try {
+    const table = new LockTable();
+    const claimRes = table.claim({
+      agentId: "agentA:host1:s1",
+      file: "services/db.js",
+      workspaceId: ws,
+      holder: { label: "Antigravity" },
+      annotation: "Migrating connection pool to pg-pool",
+    });
+
+    assert.equal(claimRes.allowed, true);
+    assert.equal(claimRes.lock.annotation, "Migrating connection pool to pg-pool");
+
+    // Peer agent tries to claim the same file
+    const peerRes = table.claim({
+      agentId: "agentB:host1:s2",
+      file: "services/db.js",
+      workspaceId: ws,
+      holder: { label: "Cursor" },
+    });
+
+    assert.equal(peerRes.allowed, false);
+    assert.equal(peerRes.status, "DENIED");
+    assert.equal(peerRes.annotation, "Migrating connection pool to pg-pool");
+    assert.ok(peerRes.message.includes('Working on: "Migrating connection pool to pg-pool"'));
+    assert.ok(peerRes.message.includes("Antigravity"));
+
+    // Check list and status output include annotation
+    const list = table.list(ws);
+    const lockItem = list.find((l) => l.filePath === "services/db.js");
+    assert.ok(lockItem);
+    assert.equal(lockItem.annotation, "Migrating connection pool to pg-pool");
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
 });

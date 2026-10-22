@@ -46,7 +46,7 @@ class TranscriptService {
       });
       touched += 1;
     }
-    if (touched) this.lockTable.emit("change");
+    if (touched) this.lockTable.emit("change", { workspaceId: project.path });
   }
 
   ingestTranscripts(project) {

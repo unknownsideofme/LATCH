@@ -92,6 +92,11 @@ function FileNode({ data }: NodeProps) {
         ) : null}
       </div>
       <div className={g.fp}>{d.path}</div>
+      {d.annotation && (
+        <div style={{ color: "var(--copper, #f59e0b)", fontSize: 10, fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.annotation}>
+          &ldquo;{d.annotation}&rdquo;
+        </div>
+      )}
       <div className={g.who} style={clash ? { color: "var(--clash)" } : undefined}>
         {clash ? `${d.clashUsers.map((u) => "@" + u).join(" and ")} both editing`
           : d.holder ? `${d.holder} has it · ${d.secondsLeft}s left`
@@ -105,6 +110,14 @@ function FileNode({ data }: NodeProps) {
 /* ------------------------------- edge ------------------------------- */
 
 function StateEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }: EdgeProps) {
+  if (
+    !Number.isFinite(sourceX) ||
+    !Number.isFinite(sourceY) ||
+    !Number.isFinite(targetX) ||
+    !Number.isFinite(targetY)
+  ) {
+    return null;
+  }
   const kind = (data as { kind: EdgeKind }).kind;
   const animate = (data as { animate: boolean }).animate;
   const stop = kind === "wait" ? 52 : 6;   // a waiting line never reaches the file
@@ -112,6 +125,7 @@ function StateEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, tar
     sourceX, sourceY, sourcePosition,
     targetX: targetX - stop, targetY, targetPosition,
   });
+  if (!d) return null;
   const cls = kind === "hold" ? g.eHold : kind === "read" ? g.eRead : kind === "wait" ? g.eWait : g.eClash;
   const flowing = (kind === "hold" || kind === "clash") && animate;
   return (
@@ -244,8 +258,9 @@ function Board() {
   return (
     <div className={g.wrap}>
       <div className={g.caption}>
-        {holder ? <><b>{holder.holder}</b> is editing <b>{holder.path.split("/").pop()}</b> right now. </>
+        {holder ? <><b>{holder.holder}</b> is editing <b>{holder.path.split("/").pop()}</b>{holder.annotation ? ` ("${holder.annotation}")` : ""} right now. </>
           : reader ? <><b>{reader.reader}</b> is reading <b>{reader.path.split("/").pop()}</b>. </>
+          : !model.files.length ? "Agents ready and standing by. File edits and locks stream here live. "
           : "Files are open. "}
         {waiting > 0 && <span className={g.warn}><b>{waiting}</b> other agent{waiting > 1 ? "s" : ""} recently edited {waiting > 1 ? "files that are" : "a file that is"} open. </span>}
         {clashes > 0 && <span className={g.bad}><b>{clashes}</b> file{clashes > 1 ? "s need" : " needs"} attention — two people editing at once.</span>}
