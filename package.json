@@ -19,12 +19,13 @@
     "check:db": "node backend/supabase/check-connection.js",
     "test": "vitest run",
     "test:backend": "vitest run tests/backend",
+    "test:backend:unit": "vitest run tests/backend/unit",
+    "test:backend:e2e": "vitest run tests/backend/e2e",
     "test:mission-control": "vitest run tests/mission-control",
     "test:landing": "vitest run tests/landing",
-    "test:unit": "vitest run tests/**/unit",
-    "test:e2e": "vitest run tests/**/e2e",
-    "test:coverage": "vitest run --coverage",
-    "test:node": "node tests/run.js"
+    "test:unit": "vitest run tests/backend/unit tests/landing/unit tests/mission-control/unit",
+    "test:e2e": "vitest run tests/backend/e2e tests/landing/e2e tests/mission-control/e2e",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

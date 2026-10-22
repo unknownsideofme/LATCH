@@ -3,6 +3,7 @@ import { api, ApiError } from "../../../frontend/lib/api.ts";
 
 describe("Frontend API client (frontend/lib/api.ts)", () => {
   beforeEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -54,7 +55,7 @@ describe("Frontend API client (frontend/lib/api.ts)", () => {
   });
 
   describe("auth.login()", () => {
-    it("calls /api/v1/auth/login and stores session token if returned", async () => {
+    it("returns the session payload from the versioned login endpoint", async () => {
       const mockResponse = {
         message: "Logged in successfully",
         session: { access_token: "jwt-token-xyz" },
@@ -73,6 +74,14 @@ describe("Frontend API client (frontend/lib/api.ts)", () => {
       });
 
       expect(res).toEqual(mockResponse);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/auth/login"),
+        expect.objectContaining({
+          method: "POST",
+          credentials: "include",
+          body: JSON.stringify({ email: "login@example.com", password: "secret" }),
+        })
+      );
     });
   });
 
@@ -84,6 +93,11 @@ describe("Frontend API client (frontend/lib/api.ts)", () => {
         json: async () => ({ message: "Logged out successfully" }),
       });
 
+      const removeItem = vi.fn();
+      const storage = { removeItem };
+      vi.stubGlobal("window", { localStorage: storage });
+      vi.stubGlobal("localStorage", storage);
+
       await api.auth.logout();
 
       expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -93,6 +107,8 @@ describe("Frontend API client (frontend/lib/api.ts)", () => {
           credentials: "include",
         })
       );
+      expect(removeItem).toHaveBeenCalledWith("latch_token");
+      expect(removeItem).toHaveBeenCalledWith("latch_user_session");
     });
   });
 
