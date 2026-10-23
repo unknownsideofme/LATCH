@@ -60,7 +60,11 @@ export function PricingTiers() {
             <ul className="space-y-3 mb-8 text-xs text-foreground">
               <li className="flex items-center gap-2.5">
                 <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>Up to 3 concurrent local AI agents</span>
+                <span>Up to 2 cloud projects</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>Up to 7 concurrent AI agents per project</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -115,7 +119,7 @@ export function PricingTiers() {
                   $24
                 </span>
                 <span className="text-xs font-mono text-muted-foreground">
-                  / seat · month
+                  / seat · 30 days
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
@@ -126,7 +130,11 @@ export function PricingTiers() {
             <ul className="space-y-3 mb-8 text-xs text-foreground">
               <li className="flex items-center gap-2.5">
                 <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>Unlimited concurrent AI coding agents</span>
+                <span>Up to 10 cloud projects (500% capacity)</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>Up to 20 concurrent AI agents per project</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -151,7 +159,7 @@ export function PricingTiers() {
               onClick={() => setIsModalOpen(true)}
             >
               <span className="inline-flex items-center gap-1">
-                <span>Subscribe via PayPal</span>
+                <span>Get 30-Day Pro Pass</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </span>
             </DecoButton>

@@ -60,6 +60,13 @@ export const config = {
     isDev: isDev,
   },
   webhookSecret: process.env.RENDER_WEBHOOK_SECRET,
+  paypal: {
+    mode: (process.env.PAYPAL_MODE || "sandbox").toLowerCase(),
+    clientId: process.env.PAYPAL_CLIENT_ID || "",
+    clientSecret: process.env.PAYPAL_CLIENT_SECRET || "",
+    webhookId: process.env.PAYPAL_WEBHOOK_ID || "",
+    bypassWebhookVerification: process.env.PAYPAL_BYPASS_WEBHOOK_VERIFICATION === "true",
+  },
   frontendUrl: (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, ""),
   serverUrl: (process.env.SERVER_URL || `http://localhost:${Number(process.env.PORT || process.env.SERVERBOARD_PORT || 4000)}`).replace(/\/+$/, ""),
 };

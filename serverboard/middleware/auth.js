@@ -31,7 +31,7 @@ export async function requireAuth(req, res, next) {
             username: candidate,
             email: userEmail,
             name: data.user.user_metadata?.name || candidate,
-            project_limit: 3,
+            project_limit: 2,
           }]).select().maybeSingle();
 
           if (insertError) {

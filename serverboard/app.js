@@ -16,7 +16,11 @@ export function createApp() {
 
   // Middleware: restrict CORS to trusted origin allowlist
   app.use(cors({ origin: config.corsOrigins, credentials: true }));
-  app.use(express.json());
+  app.use(express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf.toString("utf8");
+    },
+  }));
 
   // Request logger
   app.use((req, _res, next) => {

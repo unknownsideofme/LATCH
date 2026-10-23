@@ -24,7 +24,6 @@ const { WorkspaceService } = require("./services/WorkspaceService");
 const { RoomService } = require("./services/RoomService");
 const { LockService } = require("./services/LockService");
 const { PatchService } = require("./services/PatchService");
-const { startReaperSchedule } = require("./jobs/subscriptionReaper");
 
 const { createPatchesServer } = require("./websocket/patchesServer");
 const { createControlServer } = require("./websocket/controlServer");
@@ -255,7 +254,6 @@ async function main() {
       guestClient.connectHostControl(existingRoom);
     }
     if (existingRoom?.url) roomService.syncRoomLocks();
-    startReaperSchedule({ sse });
 
     if (existingRoom?.role === "host") {
       roomService.startTunnelWatch();
@@ -289,4 +287,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

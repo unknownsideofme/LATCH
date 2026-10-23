@@ -166,7 +166,7 @@ describe("UserModel (serverboard/models/User.js)", () => {
       dbResults.users = {
         maybeSingle: { data: null, error: null }, // for findByUsername uniqueness check
         single: {
-          data: { id: "auth-1", username: "valid_user", email: "new@example.com", project_limit: 3 },
+          data: { id: "auth-1", username: "valid_user", email: "new@example.com", project_limit: 2 },
           error: null,
         },
       };

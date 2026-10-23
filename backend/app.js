@@ -25,16 +25,6 @@ function createApp(services) {
     })
   );
 
-  // Dedicated raw body preservation for PayPal webhook signature verification
-  app.use(
-    "/api/billing/paypal/webhook",
-    express.json({
-      verify: (req, _res, buf) => {
-        req.rawBody = buf.toString("utf8");
-      },
-    })
-  );
-
   // Large body parser for peer chat history payloads
   app.use("/api/room/history", express.json({ limit: "32mb" }));
   app.use(express.json({ limit: "2mb" }));

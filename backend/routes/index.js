@@ -17,7 +17,6 @@ const { createAgentRoutes } = require("./agentRoutes");
 const { createNoticeRoutes } = require("./noticeRoutes");
 const { createMcpRoutes } = require("./mcpRoutes");
 const { createCentralRoutes } = require("./centralRoutes");
-const { createBillingRoutes } = require("./billingRoutes");
 
 function registerRoutes(app, services) {
   const { sse, watcher, presence, lockTable, lockService, patchService, roomService, transcriptService, workspaceService, guestClient, getCoordPort } = services;
@@ -81,7 +80,6 @@ function registerRoutes(app, services) {
   app.use(createNoticeRoutes());
   app.use(createMcpRoutes());
   app.use(createCentralRoutes({ sse }));
-  app.use(createBillingRoutes({ sse }));
 
   // Static UI / Dashboard root handler
   const uiDist = path.join(__dirname, "..", "..", "mission-control", "out");

@@ -1,68 +1,89 @@
 "use client";
 
 import { useState } from "react";
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import { Sparkles, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Sparkles, AlertCircle, CheckCircle2, Loader2, CreditCard } from "lucide-react";
+import { api } from "@/lib/api";
 
-interface PayPalSubscriptionButtonProps {
-  planId?: string;
+interface PayPalButtonProps {
   seats?: number;
   userId?: string;
-  organizationId?: string | null;
   onSuccess?: (details: any) => void;
   onError?: (error: any) => void;
 }
 
 export function PayPalSubscriptionButton({
-  planId = process.env.NEXT_PUBLIC_PAYPAL_PRO_PLAN_ID || "P-MOCK-PRO-PLAN",
   seats = 1,
   userId,
-  organizationId,
   onSuccess,
   onError,
-}: PayPalSubscriptionButtonProps) {
-  const [verifying, setVerifying] = useState(false);
+}: PayPalButtonProps) {
+  const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "sb";
-
-  const handleApprove = async (data: any, actions: any) => {
-    setVerifying(true);
-    setStatusMessage("Verifying subscription and initial payment with PayPal...");
+  const handleCheckout = async () => {
+    setLoading(true);
     setErrorMessage(null);
+    setStatusMessage("Initializing secure checkout...");
 
     try {
-      const response = await fetch("http://127.0.0.1:3001/api/billing/paypal/verify-subscription", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": userId || "",
-        },
-        body: JSON.stringify({
-          subscriptionId: data.subscriptionID,
-          seats: seats,
-          organizationId: organizationId || null,
-        }),
-      });
+      const orderRes = await api.billing.createOrder(seats);
 
-      const resData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(resData.error || "Subscription verification failed on server");
+      if (!orderRes?.orderId || !orderRes?.approveUrl) {
+        throw new Error("Failed to initialize PayPal order");
       }
 
-      setStatusMessage("Subscription activated! Unlocking Pro Swarm features...");
-      if (onSuccess) {
-        onSuccess(resData);
-      }
+      // Store orderId in sessionStorage so the return page can capture it
+      sessionStorage.setItem("latch_paypal_order_id", orderRes.orderId);
+      sessionStorage.setItem("latch_paypal_seats", String(seats));
+
+      setStatusMessage("Opening PayPal checkout window...");
+
+      // Open in a focused popup/new window to prevent parent page reload
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2.5;
+
+      const popup = window.open(
+        orderRes.approveUrl,
+        "PayPalCheckout",
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
+      );
+
+      // Listen for message from popup upon payment completion/failure
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data?.type === "PAYPAL_PAYMENT_SUCCESS") {
+          window.removeEventListener("message", handleMessage);
+          setStatusMessage("Payment completed successfully!");
+          if (onSuccess) onSuccess(event.data.payload);
+        } else if (event.data?.type === "PAYPAL_PAYMENT_FAILED") {
+          window.removeEventListener("message", handleMessage);
+          setErrorMessage(event.data?.message || "Payment was cancelled or failed.");
+          setLoading(false);
+          setStatusMessage(null);
+          if (onError) onError(event.data);
+        }
+      };
+
+      window.addEventListener("message", handleMessage);
+
+      // Also monitor if user closed popup without paying
+      const checkPopupClosed = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(checkPopupClosed);
+          window.removeEventListener("message", handleMessage);
+          setLoading(false);
+          setStatusMessage(null);
+        }
+      }, 1000);
     } catch (err: any) {
-      console.error("Verification error:", err);
-      const msg = err.message || "Failed to confirm payment with backend";
+      console.error("[paypal] checkout error:", err);
+      const msg = err.message || "Failed to initiate checkout";
       setErrorMessage(msg);
+      setLoading(false);
+      setStatusMessage(null);
       if (onError) onError(err);
-    } finally {
-      setVerifying(false);
     }
   };
 
@@ -82,49 +103,27 @@ export function PayPalSubscriptionButton({
         </div>
       )}
 
-      {verifying ? (
-        <div className="p-4 rounded-md bg-muted border border-border flex items-center justify-center gap-2 text-xs font-mono text-muted-foreground animate-pulse">
-          <Sparkles className="w-4 h-4 text-primary animate-spin" />
-          <span>Arbitrating subscription state...</span>
-        </div>
-      ) : (
-        <div className="w-full min-h-[44px]">
-          <PayPalScriptProvider
-            options={{
-              clientId: clientId,
-              intent: "subscription",
-              vault: true,
-              components: "buttons",
-            }}
-          >
-            <PayPalButtons
-              style={{
-                shape: "rect",
-                color: "gold",
-                layout: "vertical",
-                label: "subscribe",
-                height: 44,
-              }}
-              createSubscription={(data, actions) => {
-                return actions.subscription.create({
-                  plan_id: planId,
-                  quantity: String(seats),
-                  custom_id: userId || "user_checkout",
-                });
-              }}
-              onApprove={handleApprove}
-              onError={(err) => {
-                console.error("PayPal Smart Button error:", err);
-                setErrorMessage("An error occurred during PayPal checkout.");
-                if (onError) onError(err);
-              }}
-              onCancel={() => {
-                setStatusMessage("Checkout cancelled.");
-              }}
-            />
-          </PayPalScriptProvider>
-        </div>
-      )}
+      <button
+        onClick={handleCheckout}
+        disabled={loading}
+        className="w-full py-3.5 px-6 rounded-lg bg-primary hover:opacity-90 disabled:opacity-60 text-primary-foreground font-semibold text-sm transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2.5 border border-primary/50"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-4.5 h-4.5 animate-spin" />
+            <span>Redirecting to PayPal...</span>
+          </>
+        ) : (
+          <>
+            <CreditCard className="w-4.5 h-4.5" />
+            <span>Pay with PayPal</span>
+          </>
+        )}
+      </button>
+
+      <p className="text-[10px] text-muted-foreground text-center font-mono">
+        Secure checkout powered by PayPal · 256-bit SSL encryption
+      </p>
     </div>
   );
 }

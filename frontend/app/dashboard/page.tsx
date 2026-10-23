@@ -49,9 +49,30 @@ export default function DashboardPage() {
   const [filterQuery, setFilterQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Payment cancelled/failed banner
+  const [paymentBanner, setPaymentBanner] = useState<{ type: "cancelled" | "failed"; message: string } | null>(null);
+
+  // Detect payment status query param via window.location (avoids SSR Suspense requirement)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    if (paymentStatus === "cancelled") {
+      setPaymentBanner({ type: "cancelled", message: "Payment was cancelled. No charges were made." });
+      window.history.replaceState({}, "", "/dashboard");
+      setTimeout(() => setPaymentBanner(null), 8000);
+    } else if (paymentStatus === "failed") {
+      setPaymentBanner({ type: "failed", message: "Payment failed. Please try again or contact support." });
+      window.history.replaceState({}, "", "/dashboard");
+      setTimeout(() => setPaymentBanner(null), 8000);
+    }
+  }, []);
+
   // Billing / Plan Tier
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [planTier, setPlanTier] = useState<"free" | "pro">("free");
+  const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+  const [isExpired, setIsExpired] = useState<boolean>(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -93,6 +114,18 @@ export default function DashboardPage() {
         }
       } catch (err: any) {
         console.warn("[projects] Failed to fetch projects:", err.message);
+      }
+
+      // 3. Fetch billing entitlement status
+      try {
+        const billing = await api.billing.getStatus();
+        if (isSubscribed && billing) {
+          setPlanTier(billing.planTier);
+          setDaysRemaining(billing.daysRemaining ?? null);
+          setIsExpired(Boolean(billing.expired));
+        }
+      } catch (err: any) {
+        console.warn("[billing] Could not fetch billing status:", err.message);
       } finally {
         if (isSubscribed) setLoading(false);
       }
@@ -144,7 +177,8 @@ export default function DashboardPage() {
   };
 
   const handleOpenModal = () => {
-    if (planTier === "free" && projects.length >= 3) {
+    if (loading) return;
+    if (planTier === "free" && projects.length >= 2) {
       setIsUpgradeModalOpen(true);
       return;
     }
@@ -353,7 +387,7 @@ export default function DashboardPage() {
             {planTier === "pro" ? (
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/40 text-[11px] font-mono text-primary font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Pro Swarm</span>
+                <span>Pro Swarm{daysRemaining !== null ? ` · ${daysRemaining}d left` : ""}</span>
               </div>
             ) : (
               <button
@@ -368,9 +402,14 @@ export default function DashboardPage() {
             {/* New Project Button */}
             <button
               onClick={handleOpenModal}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary hover:opacity-90 text-primary-foreground text-xs font-semibold transition-all shadow-sm cursor-pointer"
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground text-xs font-semibold transition-all shadow-sm cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              {loading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              )}
               <span>New project</span>
             </button>
           </div>
@@ -378,6 +417,56 @@ export default function DashboardPage() {
 
         {/* Studio Content Body */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 space-y-6">
+          {/* Expiration Alert if 30-Day Pro Pass Expired */}
+          {isExpired && (
+            <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs font-mono text-amber-500">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 shrink-0" />
+                <span>Your 30-day Pro Swarm pass has expired. Free tier is active (2 projects maximum).</span>
+              </div>
+              <button
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="px-3 py-1 rounded bg-amber-500 text-black font-semibold text-[11px] hover:opacity-90 transition-opacity cursor-pointer shrink-0"
+              >
+                Renew Pro Pass
+              </button>
+            </div>
+          )}
+
+          {/* Payment Cancelled / Failed Banner */}
+          {paymentBanner && (
+            <div
+              className={`p-3.5 rounded-lg flex items-center justify-between text-xs font-mono animate-in slide-in-from-top-2 duration-300 ${
+                paymentBanner.type === "cancelled"
+                  ? "bg-amber-500/10 border border-amber-500/30 text-amber-500"
+                  : "bg-destructive/10 border border-destructive/30 text-destructive"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <X className="w-4 h-4 shrink-0" />
+                <span>{paymentBanner.message}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setIsUpgradeModalOpen(true)}
+                  className={`px-3 py-1 rounded font-semibold text-[11px] transition-opacity cursor-pointer ${
+                    paymentBanner.type === "cancelled"
+                      ? "bg-amber-500 text-black hover:opacity-90"
+                      : "bg-destructive text-destructive-foreground hover:opacity-90"
+                  }`}
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={() => setPaymentBanner(null)}
+                  className="p-0.5 rounded hover:bg-muted/40 transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Dashboard Title & Overview Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
             <div>
@@ -404,7 +493,8 @@ export default function DashboardPage() {
 
               <button
                 onClick={handleOpenModal}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card hover:bg-muted text-foreground border border-border text-xs font-mono transition-colors cursor-pointer shadow-sm"
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed text-foreground border border-border text-xs font-mono transition-colors cursor-pointer shadow-sm"
               >
                 <FolderGit2 className="w-3.5 h-3.5 text-primary" />
                 <span>Import Repo</span>
@@ -755,7 +845,7 @@ export default function DashboardPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-mono text-muted-foreground">
-                        Concurrent Agents Limit
+                        Concurrent Agents Limit ({planTier === "pro" ? "Pro: max 20" : "Free: max 7"})
                       </label>
                       <span className="text-xs font-mono font-bold text-primary">
                         {agentCount} Coders
@@ -763,7 +853,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="grid grid-cols-4 gap-2">
-                      {[2, 4, 6, 8].map((count) => (
+                      {(planTier === "pro" ? [4, 8, 14, 20] : [2, 4, 6, 7]).map((count) => (
                         <button
                           key={count}
                           type="button"
@@ -862,7 +952,22 @@ export default function DashboardPage() {
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
         userId={user?.id}
-        onUpgradeSuccess={() => setPlanTier("pro")}
+        onUpgradeSuccess={async () => {
+          setPlanTier("pro");
+          // Re-fetch billing + user state to sync Pro limits
+          try {
+            const billing = await api.billing.getStatus();
+            if (billing) {
+              setPlanTier(billing.planTier);
+              setDaysRemaining(billing.daysRemaining ?? null);
+              setIsExpired(false);
+            }
+          } catch {}
+          try {
+            const meRes = await api.auth.me();
+            if (meRes?.user) setUser(meRes.user);
+          } catch {}
+        }}
       />
     </div>
   );

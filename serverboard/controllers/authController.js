@@ -242,7 +242,7 @@ export const AuthController = {
           username,
           name: metadata.full_name || metadata.name || username,
           email: user.email || `${username}@placeholder.internal`,
-          project_limit: 10,
+          project_limit: 2,
         }]).select().maybeSingle();
 
         if (insertError) {

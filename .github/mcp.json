@@ -2,13 +2,13 @@
   "mcpServers": {
     "relay": {
       "type": "local",
-      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
       "args": [
-        "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH\\backend\\mcp\\server.js"
+        "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH\\backend\\mcp\\server.js"
       ],
       "env": {
-        "LATCH_WORKSPACE_PATH": "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH",
-        "RELAY_WORKSPACE_PATH": "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH"
+        "LATCH_WORKSPACE_PATH": "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH",
+        "RELAY_WORKSPACE_PATH": "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH"
       },
       "tools": [
         "*"
@@ -16,13 +16,13 @@
     },
     "latch": {
       "type": "local",
-      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
       "args": [
-        "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH\\backend\\mcp\\server.js"
+        "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH\\backend\\mcp\\server.js"
       ],
       "env": {
-        "LATCH_WORKSPACE_PATH": "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH",
-        "RELAY_WORKSPACE_PATH": "C:\\Users\\Jatin\\Desktop\\Latch\\LATCH"
+        "LATCH_WORKSPACE_PATH": "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH",
+        "RELAY_WORKSPACE_PATH": "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH"
       },
       "tools": [
         "*"
