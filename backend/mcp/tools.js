@@ -32,7 +32,22 @@ const HOST_TIMEOUT_MS = 1500;
 const LATCH_TOOLS = [
   { name: "latch_get_chat_history", description: "Query unified agent chat history (time-ordered, filterable by agent and owner). In a room this spans every member, not just this machine.", inputSchema: { type: "object", properties: { agent: { type: "string" }, ownerLogin: { type: "string" }, limit: { type: "number" } } } },
   { name: "latch_sync", description: "Re-read agent transcripts into unified memory.json history", inputSchema: { type: "object", properties: {} } },
-  { name: "latch_claim_file", description: "Acquire exclusive write lock before editing", inputSchema: { type: "object", properties: { file: { type: "string" }, ttl_ms: { type: "number" } }, required: ["file"] } },
+  {
+    name: "latch_claim_file",
+    description: "Acquire exclusive write lock before editing",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string" },
+        ttl_ms: { type: "number" },
+        annotation: {
+          type: "string",
+          description: "Brief note (max 140 chars) describing what you are doing in this file so other agents have context if they attempt to access it."
+        }
+      },
+      required: ["file"]
+    }
+  },
   { name: "latch_release_file", description: "Release a lock after editing", inputSchema: { type: "object", properties: { file: { type: "string" } }, required: ["file"] } },
   { name: "latch_status", description: "View full lock table", inputSchema: { type: "object", properties: {} } },
   { name: "latch_report_change", description: "Push a code-change event to Central (JSON, not markdown)", inputSchema: { type: "object", properties: { file: { type: "string" }, content: { type: "string" } } } },
@@ -271,6 +286,7 @@ async function callTool(rawName, args = {}, context = {}) {
     case "latch_claim_file":
       return client.claimFile(ctx.workspace, ctx.agentId, args.file, args.ttl_ms, {
         dependsOn: dependsOn(ctx.workspace, args.file),
+        annotation: args.annotation || args.reason || args.intent,
       });
     case "latch_release_file":
       return client.releaseFile(ctx.workspace, ctx.agentId, args.file);

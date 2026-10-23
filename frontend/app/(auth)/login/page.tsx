@@ -4,34 +4,27 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoInput } from "@/components/deco/DecoInput";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { api } from "@/lib/api";
 import { ArrowUpRight } from "lucide-react";
 import { ThinkingOrb } from "thinking-orbs";
 
+/** Render sign-in options for backend GitHub OAuth and a local email session. */
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleGitHubLogin = async () => {
+  const handleGitHubLogin = () => {
     setLoading(true);
     setErrorMsg("");
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "github",
-        options: {
-          redirectTo: `${window.location.origin}/callback?next=/dashboard`,
-          scopes: "read:user repo",
-        },
-      });
-      if (error) throw error;
+      window.location.href = api.auth.getGithubOAuthUrl();
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to initialize GitHub OAuth");
       setLoading(false);
@@ -43,14 +36,13 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg("");
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+      if (!email.trim() || !password.trim()) {
+        throw new Error("Email and password are required");
+      }
+      await api.auth.login({
+        email: email.trim(),
         password,
       });
-      if (error) throw error;
-      if (data?.user && typeof window !== "undefined") {
-        localStorage.setItem("latch_user_session", JSON.stringify(data.user));
-      }
       router.push("/dashboard");
     } catch (err: any) {
       setErrorMsg(err.message || "Invalid credentials");

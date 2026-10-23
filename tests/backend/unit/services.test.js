@@ -130,6 +130,7 @@ test("LockService: Supabase batch claims sort, issue per-file leases, and roll b
     sse: null,
     wssControlRef: null,
     supabaseLockAdapter,
+    useSupabaseLocks: true,
   });
 
   try {

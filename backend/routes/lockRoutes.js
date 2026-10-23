@@ -6,6 +6,11 @@ const { loadRegistry } = require("../lib/store");
 const { requireRoomMember, httpLockSession, roomScopedBody } = require("../middleware/authMiddleware");
 const { ContextService } = require("../services/ContextService");
 
+/**
+ * Return an Express router for lock status, streams, claims, releases, and read presence.
+ * Coordination claims are routed through the room host for guests; locally handled
+ * allowed claims may include advisory dependency warnings and recent patch context.
+ */
 function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceService }) {
   const router = express.Router();
 
@@ -96,12 +101,13 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
     if (!scoped) return res.status(400).json({ allowed: false, error: "agent_required" });
     const files = Array.isArray(scoped.files) && scoped.files.length ? scoped.files : [scoped.file];
     const warnings = [];
+    const { dependencyRiskReport } = require("../lib/depGraph");
     for (const file of files.filter(Boolean)) {
       const blocked = require("../lib/depGraph").softBlock(lockTable, scoped.workspaceId, scoped.agentId, file);
       const held = blocked?.file ? lockTable.getLock(blocked.file, scoped.workspaceId) : null;
       const { sameOwner } = require("../coordinator/lockTable");
       if (blocked && !(held && sameOwner(held.agentId, scoped.agentId))) {
-        warnings.push(blocked.reason || blocked.holder || String(blocked));
+        warnings.push(blocked);
       }
     }
     const result = await lockService.runLockRpc(
@@ -110,7 +116,11 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
       httpLockSession(req),
       (p) => workspaceService?.ensureWorkspace(p)
     );
-    if (warnings.length && result.allowed) result.warning = result.warning || warnings[0];
+    if (warnings.length && result.allowed) {
+      result.warning = result.warning || warnings[0].reason || warnings[0].holder || String(warnings[0]);
+      result.dependencyPatches = warnings.flatMap((warning) => warning.recentPatches || []);
+      result.dependencyWarnings = warnings.map(dependencyRiskReport).filter(Boolean);
+    }
     res.status(result.allowed ? 200 : 409).json(result);
   });
 
@@ -189,6 +199,14 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
       const item = readActivity(scoped, file, project);
       if (sse) sse.emit("activity", { workspaceId: project?.id, item });
       roomService.broadcastRoom({ type: "read", workspaceId: project?.id, item });
+    }
+    const scope = lockService.lockScope(project?.id);
+    if (sse && scope?.id) {
+      sse.emit("locks", {
+        workspaceId: scope.id,
+        locks: lockService.locksFor(scope),
+        reads: lockService.readsFor(scope),
+      });
     }
     res.json({ ok: true, files, ...(degradedRead ? { source: "local_fallback", degraded: true } : {}) });
   });

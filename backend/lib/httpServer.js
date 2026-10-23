@@ -5,8 +5,7 @@ function hardenHttpServer(server) {
   server.requestTimeout = 0;
   server.timeout = 0;
   server.on("error", (err) => {
-    console.error("[latch-api]", err.message);
-    process.exitCode = 1;
+    console.error("[latch-api] server error:", err.message || err);
   });
   server.on("clientError", (err, socket) => {
     if (err?.code === "ECONNRESET" || !socket || socket.destroyed) return;

@@ -169,32 +169,44 @@ export function LatchProvider({ children }: { children: ReactNode }) {
       });
       setLastFetchedAt(at);
       return dash;
+    } catch (err) {
+      console.warn(`[LatchContext] fetchDash error for ${id}:`, err);
+      return dashCache.current.get(id) || null;
     } finally {
       if (busy && gen === fetchGen.current) setSyncing(false);
     }
   }, []);
 
   const loadAll = useCallback(async (id?: string) => {
-    const [session, proj] = await Promise.all([
-      json<{ user: User; users: User[]; projectId: string }>("/api/session"),
-      json<{ projects: Project[] }>("/api/projects"),
-    ]);
-    setUser(session.user);
-    setUsers(session.users);
-    setProjects(dedupeProjects(proj.projects));
-    const alreadyPicked = selectedRef.current;
-    const selected = id || alreadyPicked || session.projectId || proj.projects[0]?.id;
-    if (selected && !alreadyPicked) applySelection(selected);
-    const target = selectedRef.current || selected;
-    if (target) await fetchDash(target);
     try {
-      const body = await json<{ notices: Notice[] }>("/api/notices");
-      setNotices(body.notices || []);
-    } catch {
-      /* bell stays empty until SSE */
+      const [session, proj] = await Promise.all([
+        json<{ user: User; users: User[]; projectId: string }>("/api/session").catch(() => null),
+        json<{ projects: Project[] }>("/api/projects").catch(() => null),
+      ]);
+      if (session) {
+        setUser(session.user);
+        setUsers(session.users);
+      }
+      if (proj?.projects) {
+        setProjects(dedupeProjects(proj.projects));
+      }
+      const alreadyPicked = selectedRef.current;
+      const selected = id || alreadyPicked || session?.projectId || proj?.projects?.[0]?.id;
+      if (selected && !alreadyPicked) applySelection(selected);
+      const target = selectedRef.current || selected;
+      if (target) await fetchDash(target);
+      try {
+        const body = await json<{ notices: Notice[] }>("/api/notices");
+        setNotices(body.notices || []);
+      } catch {
+        /* bell stays empty until SSE */
+      }
+      noticesReady.current = true;
+    } catch (err) {
+      console.warn("[LatchContext] loadAll failed:", err);
+    } finally {
+      setLoading(false);
     }
-    noticesReady.current = true;
-    setLoading(false);
   }, [fetchDash]);
 
   useEffect(() => {
@@ -305,12 +317,14 @@ export function LatchProvider({ children }: { children: ReactNode }) {
     });
     ev.addEventListener("agents", (e) => {
       const data = JSON.parse((e as MessageEvent).data);
+      if (data.workspaceId && data.workspaceId !== selectedRef.current) return;
       if (!data.agents) return;
       markLive("agents");
       setDashboard((d) => (d && d.project.id === selectedRef.current ? { ...d, agents: data.agents } : d));
     });
     ev.addEventListener("activity", (e) => {
       const data = JSON.parse((e as MessageEvent).data);
+      if (data.workspaceId && data.workspaceId !== selectedRef.current) return;
       if (!data.item) return;
       markLive("activity");
       setDashboard((d) =>

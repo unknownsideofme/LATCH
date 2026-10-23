@@ -178,11 +178,12 @@ function createProjectRoutes({
   });
 
   router.get("/api/projects/:id/dashboard", async (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
-    if (!project) return res.status(404).json({ error: "not_found" });
+    try {
+      const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+      if (!project) return res.status(404).json({ error: "not_found" });
     const room = loadRoom(project.path);
     if (room?.url) {
-      roomService.syncRoomLocks();
+      roomService.syncRoomLocks(project.path);
       const live =
         room.role === "guest"
           ? guestClient?.hostWireOpen()
@@ -291,13 +292,17 @@ function createProjectRoutes({
         })
         .catch(() => undefined);
     }
-    res.json(dashboard);
+      res.json(dashboard);
+    } catch (err) {
+      console.error(`[latch] dashboard error for ${req.params?.id}:`, err?.stack || err?.message || err);
+      res.status(500).json({ error: "dashboard_error", detail: err?.message || String(err), stack: err?.stack });
+    }
   });
 
   router.get("/api/projects/:id/graph", requireRoomMember, (req, res) => {
     const project = loadRegistry().projects.find((p) => p.id === req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
-    const g = rebuild(project.path) || graphFor(project.path);
+    const g = graphFor(project.path) || rebuild(project.path);
     const lockedFiles = lockTable.list({ id: project.id, path: project.path }).map((l) =>
       l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath
     );

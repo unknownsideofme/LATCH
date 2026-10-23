@@ -1,19 +1,34 @@
-name: Tests
+name: "Tests: Full Suite"
 
+# Runs ALL tests. Triggered manually or when shared config changes that
+# could affect any workspace. Path-specific workflows handle the rest.
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - "vitest.config.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/test.yml"
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - "vitest.config.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/test.yml"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
+  full-suite:
+    name: Full suite (Node ${{ matrix.node-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -29,12 +44,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run test suite
+      - name: Run full test suite
         run: npm test
 
       - name: Verify Mission Control build

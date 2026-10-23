@@ -257,6 +257,20 @@ function installGlobalLatch() {
   } catch (err) {
     results["~/.copilot/mcp-config.json"] = String(err.message || err);
   }
+  try {
+    const geminiMcpPath = path.join(home, ".gemini", "config", "mcp_config.json");
+    mergeJsonMcp(geminiMcpPath, mcp);
+    results["~/.gemini/config/mcp_config.json"] = "ok";
+  } catch (err) {
+    results["~/.gemini/config/mcp_config.json"] = String(err.message || err);
+  }
+  try {
+    const globalRulePath = path.join(home, ".gemini", "config", "rules", "latch.md");
+    writeText(globalRulePath, latchOsBlock());
+    results["~/.gemini/config/rules/latch.md"] = "ok";
+  } catch (err) {
+    results["~/.gemini/config/rules/latch.md"] = String(err.message || err);
+  }
   return results;
 }
 

@@ -300,6 +300,27 @@ describe("inngestService (serverboard/services/inngestService.js)", () => {
       expect(result).toEqual({ success: true });
     });
 
+    it("skips Render teardown and deletes DB project when render_id is local stub srv-local-", async () => {
+      RenderService.deleteService.mockClear();
+      ProjectModel.delete.mockResolvedValue(true);
+
+      const result = await runTeardownWorker("proj-local", "srv-local-abc123");
+
+      expect(RenderService.deleteService).not.toHaveBeenCalled();
+      expect(ProjectModel.delete).toHaveBeenCalledWith("proj-local");
+      expect(result).toEqual({ success: true });
+    });
+
+    it("ignores ENOENT spawn errors when Render CLI is not installed and deletes DB project", async () => {
+      RenderService.deleteService.mockRejectedValue(new Error("spawn render ENOENT"));
+      ProjectModel.delete.mockResolvedValue(true);
+
+      const result = await runTeardownWorker("proj-no-cli", "srv-remote-123");
+
+      expect(ProjectModel.delete).toHaveBeenCalledWith("proj-no-cli");
+      expect(result).toEqual({ success: true });
+    });
+
     it("throws error and does not delete DB project when Render teardown fails with non-404 error", async () => {
       RenderService.deleteService.mockRejectedValue(new Error("Render internal server error 500"));
 

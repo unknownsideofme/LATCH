@@ -1,36 +1,33 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
   ArrowLeft,
-  LayoutGrid,
   Lock,
-  Clock,
   Terminal,
-  Shield,
   GitBranch,
   Bot,
   Activity,
-  Layers,
-  Sparkles,
   Copy,
   Check,
   Settings,
   Table as TableIcon,
-  LogOut,
-  ChevronDown,
-  BookOpen,
   Network,
-  Users,
   ArrowRight,
   PanelLeftClose,
   PanelLeftOpen,
+  RefreshCw,
+  Trash2,
+  ExternalLink,
+  AlertCircle,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
-import type { ProjectRecord } from "@/lib/types";
+import type { ProjectRecord, ProjectLog, ProjectDeploy } from "@/lib/types";
+import { api, ApiError } from "@/lib/api";
 import { SwarmLockGraph } from "@/components/graphs/SwarmLockGraph";
 import { AstDependencyGraph } from "@/components/graphs/AstDependencyGraph";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -85,11 +82,11 @@ const defaultLocks: LiveLock[] = [
   },
 ];
 
+/** Render the route's live project cockpit with backend connection and simulated AST locks. */
 function ProjectDashboardContent() {
   const params = useParams();
   const projectId = (params?.id as string) || "";
   const router = useRouter();
-  const supabase = createClient();
 
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -100,60 +97,120 @@ function ProjectDashboardContent() {
   const [locks, setLocks] = useState<LiveLock[]>(defaultLocks);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadProject() {
-      setLoading(true);
+  // Health, Logs, Deploys state
+  const [healthLive, setHealthLive] = useState<boolean | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState<boolean>(false);
+  const [logs, setLogs] = useState<ProjectLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
+  const [deploys, setDeploys] = useState<ProjectDeploy[]>([]);
+  const [loadingDeploys, setLoadingDeploys] = useState<boolean>(false);
 
-      // Check localStorage first
-      if (typeof window !== "undefined") {
-        try {
-          const stored = localStorage.getItem("latch_local_projects");
-          if (stored) {
-            const list: ProjectRecord[] = JSON.parse(stored);
-            const found = list.find((p) => p.id === projectId);
-            if (found) {
-              setProject(found);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch {
-          // ignore error
-        }
-      }
+  // Settings form state
+  const [settingsForm, setSettingsForm] = useState({
+    projectName: "",
+    branch: "main",
+    agentLimit: 4,
+  });
+  const [savingSettings, setSavingSettings] = useState<boolean>(false);
+  const [settingsMessage, setSettingsMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-      // Query Supabase
-      const { data } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", projectId)
-        .single();
+  // Delete project state
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState<string>("");
+  const [deleting, setDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-      if (data) {
-        setProject(data);
-      } else {
-        // Fallback default sample project
-        setProject({
-          id: projectId || "proj_latch_core",
-          user_id: "demo-user",
-          project_name: "LATCH-Engine",
-          repo_name: "unknownsideofme/LATCH",
-          branch: "main",
-          render_id: "srv_latch_core_01",
-          render_url: "http://127.0.0.1:3001",
-          status: "ready",
-          agent_limit: 4,
-          created_at: new Date().toISOString(),
-        });
-      }
-
+  const fetchProject = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await api.projects.get(projectId);
+      setProject(res.project);
+      setSettingsForm({
+        projectName: res.project.project_name || "",
+        branch: res.project.branch || "main",
+        agentLimit: res.project.agent_limit || 4,
+      });
+    } catch {
+      setProject(null);
+    } finally {
       setLoading(false);
     }
-
-    loadProject();
   }, [projectId]);
 
-  // Handle local simulated lock release
+  const checkHealth = useCallback(async () => {
+    if (!projectId) return;
+    setCheckingHealth(true);
+    try {
+      const res = await api.projects.getHealth(projectId);
+      setHealthLive(res.live);
+    } catch {
+      setHealthLive(false);
+    } finally {
+      setCheckingHealth(false);
+    }
+  }, [projectId]);
+
+  const fetchLogs = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingLogs(true);
+    try {
+      const res = await api.projects.getLogs(projectId, 50);
+      setLogs(res.logs || []);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, [projectId]);
+
+  const fetchDeploys = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingDeploys(true);
+    try {
+      const res = await api.projects.getDeploys(projectId);
+      setDeploys(res.deploys || []);
+    } catch {
+      setDeploys([]);
+    } finally {
+      setLoadingDeploys(false);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchProject();
+  }, [fetchProject]);
+
+  // Auto-poll project status if pending or deploying
+  useEffect(() => {
+    if (!project) return;
+    const isDeploying =
+      project.status === "pending" ||
+      project.status === "deploying" ||
+      project.status === "provisioning";
+
+    if (!isDeploying) return;
+
+    const interval = setInterval(() => {
+      fetchProject();
+      checkHealth();
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [project?.status, fetchProject, checkHealth]);
+
+  // Lazy-load data when active tab changes
+  useEffect(() => {
+    if (activeTab === "logs") {
+      fetchLogs();
+    } else if (activeTab === "overview") {
+      fetchDeploys();
+      checkHealth();
+    }
+  }, [activeTab, fetchLogs, fetchDeploys, checkHealth]);
+
   const handleReleaseLock = (lockId: string) => {
     setLocks((prev) => prev.filter((l) => l.id !== lockId));
   };
@@ -162,6 +219,44 @@ function ProjectDashboardContent() {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    setSettingsMessage(null);
+    try {
+      const res = await api.projects.update(projectId, {
+        project_name: settingsForm.projectName.trim(),
+        branch: settingsForm.branch.trim(),
+        agent_limit: Number(settingsForm.agentLimit),
+      });
+      setProject(res.project);
+      setSettingsMessage({
+        type: "success",
+        text: "Project settings updated successfully.",
+      });
+    } catch (err: any) {
+      setSettingsMessage({
+        type: "error",
+        text: err?.message || "Failed to update project settings.",
+      });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!project) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.projects.delete(projectId);
+      router.push("/dashboard");
+    } catch (err: any) {
+      setDeleteError(err?.message || "Failed to delete project");
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -173,12 +268,48 @@ function ProjectDashboardContent() {
             Initializing Cockpit & AST Graphs…
           </p>
           <p className="text-xs font-mono text-muted-foreground">
-            Calibrating collision-free AST lock tables
+            Connecting to Latch serverboard and calibrating lock tables
           </p>
         </div>
       </div>
     );
   }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-4 p-6">
+        <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center flex flex-col items-center justify-center max-w-md mx-auto space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-muted border border-border text-muted-foreground flex items-center justify-center">
+            <Network className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold text-foreground">Project Not Found</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              No project found with ID{" "}
+              <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">
+                {projectId}
+              </code>
+              .
+            </p>
+          </div>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary hover:opacity-90 text-primary-foreground text-xs font-semibold transition-all shadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to Dashboard</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isDeploying =
+    project.status === "pending" ||
+    project.status === "deploying" ||
+    project.status === "provisioning";
+  const isFailed = project.status === "failed";
+  const isRunning = project.status === "running" || project.status === "active";
 
   const NAV_ITEMS = [
     {
@@ -228,7 +359,7 @@ function ProjectDashboardContent() {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground font-sans antialiased transition-colors duration-200">
-      {/* 1. COLLAPSIBLE LEFT NAVIGATION SIDEBAR (Openable / Closeable) */}
+      {/* 1. COLLAPSIBLE LEFT NAVIGATION SIDEBAR */}
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-14"
@@ -298,16 +429,28 @@ function ProjectDashboardContent() {
               <div className="p-2.5 rounded-lg bg-card border border-sidebar-border shadow-xs space-y-1">
                 <div className="flex items-center justify-between gap-1 text-[10px] font-mono text-muted-foreground uppercase">
                   <span>Workspace</span>
-                  <span className="text-primary font-semibold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                    Online
-                  </span>
+                  {isDeploying ? (
+                    <span className="text-amber-500 font-semibold flex items-center gap-1">
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                      Deploying
+                    </span>
+                  ) : isFailed ? (
+                    <span className="text-destructive font-semibold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                      Failed
+                    </span>
+                  ) : (
+                    <span className="text-primary font-semibold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      Online
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-xs font-semibold text-foreground truncate font-mono">
-                  {project?.project_name}
+                  {project.project_name}
                 </h3>
                 <span className="text-[10px] font-mono text-muted-foreground block truncate">
-                  {project?.repo_name || "unknownsideofme/LATCH"}
+                  {project.repo_name || "unknownsideofme/LATCH"}
                 </span>
               </div>
 
@@ -317,7 +460,7 @@ function ProjectDashboardContent() {
             </div>
           )}
 
-          {/* Navigation Items (Single source of truth for tabs) */}
+          {/* Navigation Items */}
           <nav className={`flex flex-col gap-1 w-full ${sidebarOpen ? "px-2" : "px-1.5 items-center"}`}>
             {NAV_ITEMS.map((item) => {
               const isActive = activeTab === item.id;
@@ -383,10 +526,20 @@ function ProjectDashboardContent() {
             <>
               <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  <span>Daemon :3001</span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isRunning
+                        ? "bg-primary animate-pulse"
+                        : isDeploying
+                        ? "bg-amber-500 animate-spin"
+                        : "bg-destructive"
+                    }`}
+                  />
+                  <span>Daemon {isRunning ? "Online" : isDeploying ? "Deploying" : "Offline"}</span>
                 </span>
-                <span className="text-[10px] text-primary font-semibold">Active</span>
+                <span className="text-[10px] text-primary font-semibold">
+                  {isRunning ? "Active" : isDeploying ? "Provisioning" : "Halted"}
+                </span>
               </div>
               <button
                 onClick={() => router.push("/dashboard")}
@@ -399,8 +552,10 @@ function ProjectDashboardContent() {
           ) : (
             <>
               <div
-                className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm"
-                title="Daemon Online: Port 3001"
+                className={`w-2.5 h-2.5 rounded-full shadow-sm ${
+                  isRunning ? "bg-primary" : isDeploying ? "bg-amber-500 animate-pulse" : "bg-destructive"
+                }`}
+                title={`Daemon: ${project.status}`}
               />
               <button
                 onClick={() => router.push("/dashboard")}
@@ -428,28 +583,42 @@ function ProjectDashboardContent() {
             </Link>
             <span className="text-muted-foreground/60">/</span>
             <span className="text-xs font-semibold text-foreground font-mono flex items-center gap-1.5">
-              {project?.project_name}
+              {project.project_name}
             </span>
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span>ACTIVE</span>
-            </div>
+
+            {isDeploying ? (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-500 font-semibold">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>DEPLOYING</span>
+              </div>
+            ) : isFailed ? (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 border border-destructive/20 text-[10px] font-mono text-destructive font-semibold">
+                <AlertCircle className="w-3 h-3" />
+                <span>FAILED</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span>ACTIVE</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
-            {/* Theme Toggle */}
             <ThemeToggle />
-
             <span className="hidden sm:inline">
-              Daemon: <strong className="text-primary font-medium">:3001</strong>
+              Daemon:{" "}
+              <strong className="text-primary font-medium">
+                {project.render_url ? "Render Cloud" : ":3001"}
+              </strong>
             </span>
             <span className="hidden sm:inline">
-              Swarm: <strong className="text-foreground font-medium">{project?.agent_limit || 4} Agents</strong>
+              Swarm: <strong className="text-foreground font-medium">{project.agent_limit || 4} Agents</strong>
             </span>
           </div>
         </header>
 
-        {/* Project Header Banner with Mission-Control Status Toolbar (Non-redundant) */}
+        {/* Project Header Banner with Mission-Control Status Toolbar */}
         <div className="border-b border-border bg-card px-6 py-4 transition-colors duration-200">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
@@ -459,17 +628,17 @@ function ProjectDashboardContent() {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-foreground">
-                    {project?.project_name}
+                    {project.project_name}
                   </h1>
                   <span className="text-[11px] font-mono text-muted-foreground">
-                    {project?.repo_name || project?.project_name} · branch:{" "}
-                    <strong className="text-primary">{project?.branch || "main"}</strong>
+                    {project.repo_name || project.project_name} · branch:{" "}
+                    <strong className="text-primary">{project.branch || "main"}</strong>
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Mission Control Live Chamber Status & Toolbar (Non-redundant) */}
+            {/* Mission Control Live Chamber Status & Toolbar */}
             <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/60 border border-border">
                 <span className="text-muted-foreground">Chamber:</span>
@@ -521,22 +690,39 @@ function ProjectDashboardContent() {
               </div>
 
               <button
-                onClick={(e) => handleCopy(project?.render_url || "http://127.0.0.1:3001", "endpoint")}
+                onClick={() =>
+                  handleCopy(
+                    project.render_url || "http://127.0.0.1:3001",
+                    "endpoint"
+                  )
+                }
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-foreground hover:bg-muted transition-colors cursor-pointer shadow-2xs"
                 title="Copy API Endpoint"
               >
                 {copiedKey === "endpoint" ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-primary font-semibold">Copied :3001</span>
+                    <span className="text-primary font-semibold">Endpoint Copied</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span>:3001 Endpoint</span>
+                    <span>Copy Endpoint</span>
                   </>
                 )}
               </button>
+
+              {project.render_url && (
+                <a
+                  href={project.render_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Service</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -606,22 +792,34 @@ function ProjectDashboardContent() {
 
                 <div className="p-4 bg-card border border-border rounded-lg shadow-sm">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                    Connected Swarm
+                    Swarm Limit
                   </span>
                   <div className="mt-1 text-2xl font-bold text-foreground">
-                    {project?.agent_limit || 4} / {project?.agent_limit || 4}
+                    {project.agent_limit || 4} Agents
                   </div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Claude, Cursor, Copilot</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Cursor, Claude, Copilot</p>
                 </div>
 
                 <div className="p-4 bg-card border border-border rounded-lg shadow-sm">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                    AST Collision Rate
+                    Health Status
                   </span>
-                  <div className="mt-1 text-2xl font-bold text-primary">
-                    0.00%
+                  <div className="mt-1 text-base font-bold flex items-center gap-1.5">
+                    {checkingHealth ? (
+                      <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+                    ) : healthLive ? (
+                      <span className="text-primary flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4" /> Live
+                      </span>
+                    ) : isDeploying ? (
+                      <span className="text-amber-500 flex items-center gap-1">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Deploying
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Standby</span>
+                    )}
                   </div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Zero clobbered files</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Service heartbeat</p>
                 </div>
 
                 <div className="p-4 bg-card border border-border rounded-lg shadow-sm">
@@ -635,7 +833,7 @@ function ProjectDashboardContent() {
                 </div>
               </div>
 
-              {/* Supabase-style Connection Info Box */}
+              {/* Connection Info Box */}
               <div className="p-5 bg-card border border-border rounded-lg space-y-3 shadow-sm">
                 <div className="flex items-center justify-between pb-3 border-b border-border">
                   <div>
@@ -646,17 +844,20 @@ function ProjectDashboardContent() {
                       Connect your local AI agent CLI or IDE extension to this project
                     </p>
                   </div>
-                  <span className="text-xs font-mono text-primary font-bold">Port 3001</span>
+                  <span className="text-xs font-mono text-primary font-bold">
+                    {project.render_id ? "Render Cloud" : "Port 3001"}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
                   <div className="p-3 rounded bg-muted/40 border border-border space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase">Project Ref</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">Project ID</span>
                     <div className="flex items-center justify-between">
-                      <span className="text-foreground">{project?.id}</span>
+                      <span className="text-foreground truncate mr-2">{project.id}</span>
                       <button
-                        onClick={() => handleCopy(project?.id || "", "ref")}
+                        onClick={() => handleCopy(project.id, "ref")}
                         className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                        title="Copy ID"
                       >
                         {copiedKey === "ref" ? (
                           <Check className="w-3.5 h-3.5 text-primary" />
@@ -672,14 +873,15 @@ function ProjectDashboardContent() {
                       CLI Sync Command
                     </span>
                     <div className="flex items-center justify-between">
-                      <span className="text-primary truncate">
-                        latch connect {project?.project_name}
+                      <span className="text-primary truncate mr-2">
+                        latch connect {project.project_name}
                       </span>
                       <button
                         onClick={() =>
-                          handleCopy(`latch connect ${project?.project_name}`, "cli")
+                          handleCopy(`latch connect ${project.project_name}`, "cli")
                         }
                         className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                        title="Copy Command"
                       >
                         {copiedKey === "cli" ? (
                           <Check className="w-3.5 h-3.5 text-primary" />
@@ -690,6 +892,103 @@ function ProjectDashboardContent() {
                     </div>
                   </div>
                 </div>
+
+                {project.render_url && (
+                  <div className="p-3 rounded bg-muted/40 border border-border space-y-1 text-xs font-mono">
+                    <span className="text-[10px] text-muted-foreground uppercase">
+                      Render Service URL
+                    </span>
+                    <div className="flex items-center justify-between">
+                      <a
+                        href={project.render_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline truncate mr-2 flex items-center gap-1"
+                      >
+                        {project.render_url}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                      <button
+                        onClick={() => handleCopy(project.render_url || "", "render_url")}
+                        className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                      >
+                        {copiedKey === "render_url" ? (
+                          <Check className="w-3.5 h-3.5 text-primary" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Deployment History Box */}
+              <div className="p-5 bg-card border border-border rounded-lg shadow-sm space-y-3">
+                <div className="flex items-center justify-between pb-3 border-b border-border">
+                  <div>
+                    <h3 className="text-xs font-semibold text-foreground font-mono uppercase tracking-wider">
+                      Deployment History
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground">
+                      Recent deployment triggers and provisioning status
+                    </p>
+                  </div>
+                  <button
+                    onClick={fetchDeploys}
+                    disabled={loadingDeploys}
+                    className="text-xs font-mono text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingDeploys ? "animate-spin" : ""}`} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {loadingDeploys ? (
+                  <div className="py-6 flex justify-center text-muted-foreground font-mono text-xs gap-2 items-center">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span>Loading deployments…</span>
+                  </div>
+                ) : deploys.length > 0 ? (
+                  <div className="divide-y divide-border font-mono text-xs">
+                    {deploys.map((dep) => (
+                      <div key={dep.id} className="py-2.5 flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-foreground">{dep.id}</span>
+                            <span
+                              className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                                dep.status === "live" || dep.status === "succeeded"
+                                  ? "bg-primary/10 text-primary border border-primary/20"
+                                  : dep.status === "build_in_progress" || dep.status === "in_progress"
+                                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {dep.status}
+                            </span>
+                          </div>
+                          {dep.commit && (
+                            <span className="text-[10px] text-muted-foreground block">
+                              Commit: {dep.commit}
+                            </span>
+                          )}
+                        </div>
+                        {dep.createdAt && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(dep.createdAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center text-xs font-mono text-muted-foreground">
+                    {project.render_id
+                      ? "No previous deployments recorded for this service."
+                      : "Container is provisioning. Deployment history will appear once registered on Render."}
+                  </div>
+                )}
               </div>
 
               {/* Active Leases Snapshot */}
@@ -730,7 +1029,7 @@ function ProjectDashboardContent() {
             </div>
           )}
 
-          {/* TAB 4: LOCKS (SUPABASE TABLE VIEW) */}
+          {/* TAB 4: LOCKS (TABLE VIEW) */}
           {activeTab === "locks" && (
             <div className="border border-border bg-card rounded-lg overflow-hidden shadow-sm">
               <div className="p-4 border-b border-border flex items-center justify-between">
@@ -802,72 +1101,262 @@ function ProjectDashboardContent() {
                 <div className="flex items-center gap-2">
                   <Terminal className="w-4 h-4 text-primary" />
                   <h3 className="text-xs font-semibold text-foreground font-mono uppercase tracking-wider">
-                    Realtime Agent Stream & Telemetry
+                    Realtime Container & Daemon Logs
                   </h3>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                  Listening on :3001
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isRunning ? "bg-primary animate-ping" : "bg-amber-500 animate-pulse"
+                      }`}
+                    />
+                    <span>{project.render_url ? "Render Stream" : "Listening :3001"}</span>
+                  </div>
+                  <button
+                    onClick={fetchLogs}
+                    disabled={loadingLogs}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-muted border border-border text-xs font-mono text-foreground hover:bg-muted/80 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${loadingLogs ? "animate-spin" : ""}`} />
+                    <span>Refresh</span>
+                  </button>
                 </div>
               </div>
 
               {/* Console logs */}
-              <div className="rounded-lg bg-muted/40 border border-border p-6 font-mono text-xs space-y-2.5">
-                <div className="text-primary font-semibold">
-                  &gt; [LATCH DAEMON :3001] Connected to project: {project?.project_name}
+              <div className="rounded-lg bg-zinc-950 text-zinc-200 border border-border p-4 font-mono text-xs space-y-2 max-h-[500px] overflow-y-auto">
+                <div className="text-emerald-400 font-semibold">
+                  &gt; [LATCH DAEMON] Connected to project: {project.project_name} (ID: {project.id})
                 </div>
-                <div className="text-muted-foreground">
-                  &gt; [MUTEX] AST lock table initialized with {project?.agent_limit || 4} agent slots.
+                <div className="text-zinc-400">
+                  &gt; [MUTEX] AST lock table initialized with {project.agent_limit || 4} agent slots.
                 </div>
-                <div className="text-muted-foreground">
-                  &gt; [HEARTBEAT] Cursor IDE heartbeat verified (pulse latency: 0.8ms).
-                </div>
-                <div className="text-muted-foreground">
-                  &gt; [HEARTBEAT] Claude Code CLI authenticated. Lease held on src/engine/lock_table.rs.
-                </div>
-                <div className="p-4 rounded border border-primary/20 bg-primary/5 text-primary text-xs flex items-center gap-3 mt-4">
-                  <Sparkles className="w-4 h-4 shrink-0" />
-                  <div>
-                    <span className="font-semibold block text-foreground">Full Interactive Logs Viewer Staged</span>
-                    <span className="text-muted-foreground text-[11px]">
-                      Detailed agent step logs, AST diff inspector, and vector clock sync will be hooked up here in the next phase.
-                    </span>
+
+                {logs.length > 0 ? (
+                  logs.map((log, index) => (
+                    <div key={index} className="text-zinc-300 font-mono text-xs flex items-start gap-2">
+                      {log.timestamp && (
+                        <span className="text-zinc-500 text-[10px] shrink-0">
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </span>
+                      )}
+                      <span className="break-all">{log.text}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-zinc-500 italic pt-2">
+                    {isDeploying
+                      ? "> Container is currently provisioning on Render. Live stream logs will begin shortly..."
+                      : "> No external container logs found. Local daemon event bus active."}
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
 
           {/* TAB 6: SETTINGS */}
           {activeTab === "settings" && (
-            <div className="border border-border bg-card rounded-lg p-6 space-y-5 shadow-sm">
-              <h3 className="text-xs font-semibold text-foreground font-mono uppercase tracking-wider">
-                Project Settings & Agent Quotas
-              </h3>
-              <div className="space-y-4 max-w-lg font-mono text-xs">
+            <div className="space-y-6">
+              {/* Settings Form Card */}
+              <div className="border border-border bg-card rounded-lg p-6 space-y-5 shadow-sm">
                 <div>
-                  <label className="text-muted-foreground block mb-1">Project Name</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={project?.project_name || ""}
-                    className="w-full px-3 py-2 rounded bg-input border border-border text-foreground"
-                  />
+                  <h3 className="text-xs font-semibold text-foreground font-mono uppercase tracking-wider">
+                    Project Settings & Agent Quotas
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Configure repository branch targets and concurrent agent mutex slots
+                  </p>
                 </div>
+
+                {settingsMessage && (
+                  <div
+                    className={`p-3 rounded-lg border text-xs font-mono flex items-center gap-2 ${
+                      settingsMessage.type === "success"
+                        ? "bg-primary/10 border-primary/20 text-primary"
+                        : "bg-destructive/10 border-destructive/20 text-destructive"
+                    }`}
+                  >
+                    {settingsMessage.type === "success" ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>{settingsMessage.text}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl font-mono text-xs">
+                  <div>
+                    <label className="text-foreground block mb-1 font-semibold">
+                      Project Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={settingsForm.projectName}
+                      onChange={(e) =>
+                        setSettingsForm((prev) => ({ ...prev, projectName: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 rounded bg-input border border-border text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-foreground block mb-1 font-semibold">
+                      Target Git Branch
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={settingsForm.branch}
+                      onChange={(e) =>
+                        setSettingsForm((prev) => ({ ...prev, branch: e.target.value }))
+                      }
+                      placeholder="e.g. main, dev"
+                      className="w-full px-3 py-2 rounded bg-input border border-border text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      The branch checked out and synced across AI agent daemons.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-foreground block mb-1 font-semibold">
+                      Concurrent Agent Limit (1–7)
+                    </label>
+                    <select
+                      value={settingsForm.agentLimit}
+                      onChange={(e) =>
+                        setSettingsForm((prev) => ({
+                          ...prev,
+                          agentLimit: parseInt(e.target.value, 10),
+                        }))
+                      }
+                      className="w-full px-3 py-2 rounded bg-input border border-border text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                        <option key={num} value={num}>
+                          {num} Concurrent Agent{num > 1 ? "s" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Controls maximum simultaneous mutex leases across agents (Claude, Cursor, Copilot).
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="px-4 py-2 rounded-md bg-primary hover:opacity-90 text-primary-foreground font-semibold text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {savingSettings ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Saving…</span>
+                        </>
+                      ) : (
+                        <span>Save Changes</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Danger Zone Card */}
+              <div className="border border-destructive/30 bg-destructive/5 rounded-lg p-6 space-y-4 shadow-sm">
                 <div>
-                  <label className="text-muted-foreground block mb-1">Concurrent Agent Limit</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={`${project?.agent_limit || 4} Concurrent LLM Coders`}
-                    className="w-full px-3 py-2 rounded bg-input border border-border text-primary font-semibold"
-                  />
+                  <h3 className="text-xs font-semibold text-destructive font-mono uppercase tracking-wider flex items-center gap-2">
+                    <Trash2 className="w-4 h-4" />
+                    <span>Danger Zone</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Permanently delete this project and teardown its associated Render cloud service, lock tables, and workspace metadata.
+                  </p>
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmInput("");
+                      setDeleteError(null);
+                      setShowDeleteModal(true);
+                    }}
+                    className="px-4 py-2 rounded-md bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    Delete Project
+                  </button>
                 </div>
               </div>
             </div>
           )}
         </main>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-xl bg-card border border-border p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2.5 text-destructive">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <h3 className="text-base font-bold text-foreground">Confirm Project Deletion</h3>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              This action cannot be undone. This will permanently delete the project{" "}
+              <strong className="text-foreground font-mono">{project.project_name}</strong> and terminate any active cloud workers and lock tables.
+            </p>
+
+            {deleteError && (
+              <div className="p-3 rounded bg-destructive/10 border border-destructive/20 text-destructive text-xs font-mono">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-xs font-mono text-muted-foreground block">
+                Type <strong className="text-foreground">{project.project_name}</strong> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                placeholder={project.project_name}
+                className="w-full px-3 py-2 rounded bg-input border border-border text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-destructive"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setShowDeleteModal(false)}
+                className="px-3.5 py-1.5 rounded-md border border-border text-xs font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmInput !== project.project_name || deleting}
+                onClick={handleDeleteProject}
+                className="px-4 py-1.5 rounded-md bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-mono font-semibold transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting…</span>
+                  </>
+                ) : (
+                  <span>Delete Project</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

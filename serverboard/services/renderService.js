@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-function runCli(args, timeoutMs = 60_000) {
+function runRawCli(args, timeoutMs = 60_000) {
   return new Promise((resolve, reject) => {
     const child = spawn("render", args, {
       stdio: ["ignore", "pipe", "pipe"],
@@ -32,7 +32,52 @@ function runCli(args, timeoutMs = 60_000) {
   });
 }
 
+async function runCli(args, timeoutMs = 60_000, retryOnMissingWorkspace = true) {
+  try {
+    return await runRawCli(args, timeoutMs);
+  } catch (err) {
+    if (retryOnMissingWorkspace && /no workspace set/i.test(err.message)) {
+      console.warn("[renderService] No workspace set detected, auto-configuring workspace...");
+      const initialized = await RenderService.ensureWorkspace();
+      if (initialized) {
+        return await runRawCli(args, timeoutMs);
+      }
+    }
+    throw err;
+  }
+}
+
 export const RenderService = {
+  async ensureWorkspace() {
+    try {
+      const current = await runRawCli(["workspace", "current"]);
+      if (current && !/no workspace set/i.test(current)) {
+        return true;
+      }
+    } catch {
+      // workspace not set
+    }
+
+    try {
+      if (process.env.RENDER_WORKSPACE_ID) {
+        await runRawCli(["workspace", "set", process.env.RENDER_WORKSPACE_ID]);
+        return true;
+      }
+      const out = await runRawCli(["workspaces", "-o", "json"]);
+      const list = JSON.parse(out);
+      if (Array.isArray(list) && list.length > 0) {
+        const wsId = list[0].id || list[0].name;
+        if (wsId) {
+          await runRawCli(["workspace", "set", wsId]);
+          return true;
+        }
+      }
+    } catch (wsErr) {
+      console.warn("[renderService] Auto-workspace setup failed:", wsErr.message);
+    }
+    return false;
+  },
+
   async createService({ name, repo, branch = "main", region = "singapore", plan = "free" }) {
     const args = [
       "services", "create",
@@ -51,6 +96,9 @@ export const RenderService = {
   },
 
   async deleteService(serviceId) {
+    if (!serviceId || serviceId.startsWith("srv-local-")) {
+      return { success: true, local: true };
+    }
     return await runCli(["services", "delete", serviceId, "--confirm", "-o", "json"]);
   },
 
@@ -69,6 +117,9 @@ export const RenderService = {
   },
 
   async updateService(serviceId, { branch, name, plan } = {}) {
+    if (!serviceId || serviceId.startsWith("srv-local-")) {
+      return { success: true, local: true, branch, name, plan };
+    }
     const args = ["services", "update", serviceId];
     if (branch) args.push("--branch", branch);
     if (name) args.push("--name", name);
@@ -82,4 +133,3 @@ export const RenderService = {
     }
   },
 };
-

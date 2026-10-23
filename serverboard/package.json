@@ -11,6 +11,7 @@
     "@supabase/supabase-js": "^2.117.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "inngest": "^4.24.0"
+    "inngest": "^4.24.0",
+    "ws": "^8.22.0"
   }
 }

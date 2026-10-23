@@ -4,20 +4,20 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { DecoInput } from "@/components/deco/DecoInput";
 import { Sparkles, Terminal, ArrowUpRight } from "lucide-react";
 import { GithubIcon } from "@/components/icons/GithubIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { api } from "@/lib/api";
 import { ThinkingOrb } from "thinking-orbs";
 
+/** Render GitHub OAuth and local signup options, initially selecting `plan=pro` when supplied. */
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan") === "pro" ? "pro" : "free";
 
-  const supabase = createClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,18 +29,11 @@ function SignupForm() {
     if (searchParams.get("plan") === "pro") setSelectedPlan("pro");
   }, [searchParams]);
 
-  const handleGitHubSignup = async () => {
+  const handleGitHubSignup = () => {
     setLoading(true);
     setErrorMsg("");
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "github",
-        options: {
-          redirectTo: `${window.location.origin}/callback?next=/dashboard`,
-          scopes: "read:user repo",
-        },
-      });
-      if (error) throw error;
+      window.location.href = api.auth.getGithubOAuthUrl();
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to initialize GitHub OAuth");
       setLoading(false);
@@ -53,33 +46,22 @@ function SignupForm() {
     setErrorMsg("");
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
+      if (!email.trim() || !password.trim()) {
+        throw new Error("Email and password are required");
+      }
+      const username = (name || email.split("@")[0])
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "_")
+        .slice(0, 30);
+
+      await api.auth.register({
+        email: email.trim(),
         password,
-        options: {
-          data: {
-            full_name: name,
-            preferred_plan: selectedPlan,
-          },
-        },
+        username,
+        name: name.trim() || undefined,
       });
 
-      if (authError) throw authError;
-
-      if (authData.user) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("latch_user_session", JSON.stringify(authData.user));
-        }
-        await supabase.from("users").upsert({
-          id: authData.user.id,
-          email: authData.user.email,
-          name: name,
-          username: email.split("@")[0],
-          project_limit: selectedPlan === "pro" ? 50 : 3,
-        });
-
-        router.push("/dashboard");
-      }
+      router.push("/dashboard");
     } catch (err: any) {
       setErrorMsg(err.message || "Sign up failed");
       setLoading(false);

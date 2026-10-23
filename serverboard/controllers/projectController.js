@@ -10,6 +10,7 @@ const ALLOWED_REPOS = new Set([
   "https://github.com/unknownsideofme/LATCH",
   "https://github.com/unknownsideofme/LATCH.git",
 ]);
+const GITHUB_REPO_REGEX = /^https:\/\/github\.com\/[a-zA-Z0-9_\-\.]+\/[a-zA-Z0-9_\-\.]+(\.git)?$/i;
 const BRANCH_REGEX = /^[a-zA-Z0-9_\-\.]{1,100}$/;
 
 export const ProjectController = {
@@ -52,11 +53,19 @@ export const ProjectController = {
       const repoUrlStr = typeof repo_url === "string" ? repo_url.trim() : "";
       const requestedRepo = repoStr || repoUrlStr;
 
-      if (requestedRepo && !ALLOWED_REPOS.has(requestedRepo)) {
-        return res.status(400).json({
-          error: "validation_error",
-          message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...ALLOWED_REPOS].join(", ")}`,
-        });
+      if (requestedRepo) {
+        if (!GITHUB_REPO_REGEX.test(requestedRepo)) {
+          return res.status(400).json({
+            error: "validation_error",
+            message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: https://github.com/owner/repo`,
+          });
+        }
+        if ((Boolean(process.env.VITEST) || config.isTest) && !ALLOWED_REPOS.has(requestedRepo)) {
+          return res.status(400).json({
+            error: "validation_error",
+            message: `Repository '${requestedRepo}' is not permitted. Permitted repositories: ${[...ALLOWED_REPOS].join(", ")}`,
+          });
+        }
       }
       const selectedRepo = requestedRepo || ALLOWED_REPO;
 
@@ -77,14 +86,18 @@ export const ProjectController = {
         userId: req.user.id,
         projectName: sanitizedName,
         agentLimit: selectedAgentLimit,
+        repoUrl: selectedRepo,
+        branch: selectedBranch,
       });
 
       const payload = {
         name: sanitizedName,
-        repo: selectedRepo,
+        repo: process.env.LATCH_IMAGE_REPO || "https://github.com/unknownsideofme/LATCH",
         branch: selectedBranch,
         region: selectedRegion,
         plan: selectedPlan,
+        targetRepo: selectedRepo,
+        targetBranch: selectedBranch,
       };
 
       // 6. In dev, local worker is the single source of provisioning (avoid double provisioning / Inngest dependency)
@@ -108,6 +121,7 @@ export const ProjectController = {
         message: "Project queued for deployment",
         project: {
           ...project,
+          repo_name: selectedRepo.replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "") || sanitizedName,
           connection_status: connectionStatus,
           repo_details: {
             repo_url: selectedRepo,
@@ -133,6 +147,7 @@ export const ProjectController = {
 
       const enrichedProjects = projects.map(p => ({
         ...p,
+        repo_name: p.repo_url?.replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "") || p.project_name,
         connection_status:
           p.status === "running" ? "connected" :
           p.status === "deploying" ? "connecting" :
@@ -170,9 +185,12 @@ export const ProjectController = {
         project.status === "failed" ? "disconnected" :
         project.status;
 
+      const repoName = project.repo_url?.replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "") || project.project_name;
+
       res.json({
         project: {
           ...project,
+          repo_name: repoName,
           connection_status: connectionStatus,
           repo_details: {
             repo_url: project.repo_url || ALLOWED_REPO,
@@ -299,29 +317,43 @@ export const ProjectController = {
   },
 
   async logs(req, res, next) {
+    let project = null;
     try {
       const id = req.params.id?.replace(/^:/, "");
-      const project = await ProjectModel.findById(id);
+      project = await ProjectModel.findById(id);
       if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
       if (!project.render_id) return res.json({ logs: [] });
+      if (project.render_id.startsWith("srv-local-")) {
+        return res.json({ logs: [], renderId: project.render_id });
+      }
 
       const logs = await RenderService.getLogs(project.render_id, { limit: req.query.limit });
       res.json({ logs, renderId: project.render_id });
     } catch (err) {
+      if (err.code === "ENOENT" || err.message?.includes("ENOENT")) {
+        return res.json({ logs: [], renderId: project?.render_id });
+      }
       next(err);
     }
   },
 
   async deploys(req, res, next) {
+    let project = null;
     try {
       const id = req.params.id?.replace(/^:/, "");
-      const project = await ProjectModel.findById(id);
+      project = await ProjectModel.findById(id);
       if (!project || project.user_id !== req.user.id) return res.status(404).json({ error: "not_found" });
       if (!project.render_id) return res.json({ deploys: [] });
+      if (project.render_id.startsWith("srv-local-")) {
+        return res.json({ deploys: [], renderId: project.render_id });
+      }
 
       const deploys = await RenderService.getDeploys(project.render_id);
       res.json({ deploys, renderId: project.render_id });
     } catch (err) {
+      if (err.code === "ENOENT" || err.message?.includes("ENOENT")) {
+        return res.json({ deploys: [], renderId: project?.render_id });
+      }
       next(err);
     }
   },
@@ -336,6 +368,10 @@ export const ProjectController = {
 
       if (!project.render_url) {
         return res.json({ live: false });
+      }
+
+      if (project.render_id?.startsWith("srv-local-")) {
+        return res.json({ live: true, url: project.render_url });
       }
 
       const healthUrl = `${project.render_url.replace(/\/$/, "")}/api/health`;

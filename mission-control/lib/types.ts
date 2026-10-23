@@ -181,7 +181,9 @@ export type FileLock = {
   escalated?: boolean;
   workspaceId?: string | null;
   source?: string;
-  holder?: { label?: string; login?: string } | null;
+  holder?: { label?: string; login?: string; host?: string } | null;
+  annotation?: string | null;
+  fencingToken?: number;
   /** Recently released, kept briefly so short-lived claims stay visible. */
   released?: boolean;
   releasedAt?: number;
@@ -233,6 +235,7 @@ export type Dashboard = {
     ttlMs?: number;
     expiresAt?: number;
     holder?: { label?: string; login?: string } | null;
+    workspaceId?: string;
   }[];
   patches?: CodeEdit[];
   lastAppliedLamport?: number;
@@ -259,6 +262,7 @@ export type TabId =
   | "chat"
   | "edits"
   | "locks"
+  | "locktable"
   | "team"
   | "memory"
   | "settings";

@@ -3,6 +3,8 @@ const path = require("path");
 const { extractWithQuery, languageForExt, supportedLanguages } = require("./treeSitterImports");
 const { sameOwner } = require("../coordinator/lockTable");
 const { normalizeWorkspaceRoot } = require("./transcripts/util");
+const { loadRegistry } = require("./store");
+const { getRecentPatches } = require("./patches");
 
 const SKIP = new Set([
   "node_modules",
@@ -251,6 +253,102 @@ class DepGraph {
     return this;
   }
 
+  /** Refresh component membership and multi-file cycles from the current import edges. */
+  recalculateCycles() {
+    const nodes = [...this.imports.keys()];
+    this.scc = stronglyConnected(nodes, this.imports);
+    this.cycles = [...new Set([...this.scc.values()].filter((entry) => entry.cyclic).map((entry) => entry.id))].map((id) =>
+      [...this.scc.values()].find((entry) => entry.id === id)?.members || []
+    );
+  }
+
+  /**
+   * Refresh a workspace-relative source file in place and return this graph.
+   * Reconnect previously missing imports that now resolve to the file, recompute
+   * cycles, and refresh builtAt in milliseconds since the Unix epoch.
+   * Missing files, non-files, and unsupported extensions lose their graph edges.
+   * A source read failure leaves the graph unchanged. Stat errors other than
+   * ENOENT/ENOTDIR, import-extraction errors, and override-processing errors propagate.
+   */
+  updateFile(filePath) {
+    const file = posix(filePath);
+    const abs = path.join(this.workspacePath, file);
+    let source = null;
+    let exists = false;
+    if (SOURCE.has(path.extname(file))) {
+      try {
+        exists = fs.statSync(abs).isFile();
+      } catch (error) {
+        if (error?.code !== "ENOENT" && error?.code !== "ENOTDIR") throw error;
+      }
+      if (exists) {
+        try {
+          source = fs.readFileSync(abs, "utf8");
+        } catch {
+          return this;
+        }
+      }
+    }
+    const oldImports = this.imports.get(file) || new Set();
+    const existingImporters = this.importedBy.get(file) || new Set();
+    for (const imported of oldImports) this.importedBy.get(imported)?.delete(file);
+    this.imports.delete(file);
+    this.unresolvable = this.unresolvable.filter((entry) => entry.from !== file);
+    if (exists) {
+      this.imports.set(file, new Set());
+      this.importedBy.set(file, existingImporters);
+      const ext = path.extname(file);
+      const { staticSpecs, dynamic, engine } = extractSpecs(source, ext);
+      this.engine = engine || this.engine;
+      for (const spec of dynamic) this.unresolvable.push({ from: file, spec, reason: "dynamic" });
+      for (const spec of staticSpecs) {
+        const resolved = tryResolve(this.workspacePath, file, spec, ext);
+        if (!resolved || resolved.kind !== "file") {
+          if (resolved?.kind === "missing" && spec.startsWith(".")) this.unresolvable.push({ from: file, spec, reason: "missing" });
+          continue;
+        }
+        this.imports.get(file).add(resolved.spec);
+        if (!this.importedBy.has(resolved.spec)) this.importedBy.set(resolved.spec, new Set());
+        this.importedBy.get(resolved.spec).add(file);
+      }
+      for (const [from, to] of loadOverride(this.workspacePath).edges || []) {
+        if (posix(from) !== file) continue;
+        if (!this.imports.has(file)) this.imports.set(file, new Set());
+        this.imports.get(file).add(posix(to));
+        if (!this.importedBy.has(posix(to))) this.importedBy.set(posix(to), new Set());
+        this.importedBy.get(posix(to)).add(file);
+      }
+      const resolvedMissing = new Set();
+      for (const entry of this.unresolvable) {
+        if (entry.reason !== "missing" || !this.imports.has(entry.from)) continue;
+        const resolved = tryResolve(this.workspacePath, entry.from, entry.spec, path.extname(entry.from));
+        if (resolved?.kind !== "file" || resolved.spec !== file) continue;
+        this.imports.get(entry.from).add(file);
+        if (!this.importedBy.has(file)) this.importedBy.set(file, new Set());
+        this.importedBy.get(file).add(entry.from);
+        resolvedMissing.add(entry);
+      }
+      if (resolvedMissing.size) {
+        this.unresolvable = this.unresolvable.filter((entry) => !resolvedMissing.has(entry));
+      }
+    } else {
+      for (const importer of existingImporters) this.imports.get(importer)?.delete(file);
+      this.importedBy.delete(file);
+    }
+    this.recalculateCycles();
+    this.builtAt = Date.now();
+    return this;
+  }
+
+  /**
+   * Refresh graph state after removing a workspace-relative file from disk.
+   * Delegates to updateFile, including its return value and error behavior;
+   * a supported source file still on disk is refreshed. Only graph state is changed.
+   */
+  removeFile(filePath) {
+    return this.updateFile(filePath);
+  }
+
   walk(start, map, depth) {
     const out = new Set();
     const q = [{ file: posix(start), d: 0 }];
@@ -281,18 +379,34 @@ class DepGraph {
   }
 
   /**
-   * Soft-lock if an upstream import is held, or another file in this SCC is held.
+   * Return the first advisory conflict for a workspace-relative file, or null.
+   * Check other members of its strongly connected component before dependencies
+   * within lockDepth hops. isHeld(path) supplies a truthy holder for a conflict.
+   * Optional patchFor(path, holder) supplies recentPatches, which otherwise is empty.
+   * The result includes the relation, reason, and graph freshness: lastUpdatedAt
+   * is milliseconds since the Unix epoch; confidence is partial if any graph
+   * imports are unresolved. Callback errors propagate; no lock is acquired.
    */
-  blockedBy(file, isHeld) {
+  blockedBy(file, isHeld, patchFor) {
     const rel = posix(file);
+    const freshness = {
+      lastUpdatedAt: this.builtAt,
+      confidence: this.unresolvable.length ? "PARTIAL_PARSE_ERROR" : "FULL",
+    };
     for (const member of this.cycleMembers(rel)) {
       if (member === rel) continue;
       const holder = isHeld(member);
       if (holder) {
         return {
           soft: true,
+          targetPath: rel,
           file: member,
           holder,
+          category: "CIRCULAR_DEPENDENCY_RISK",
+          relationType: "circular_scc",
+          cycleCluster: this.cycleMembers(rel),
+          graphFreshness: freshness,
+          recentPatches: patchFor ? patchFor(member, holder) : [],
           reason: `⚠️ \`${rel}\` is in a circular dependency with \`${member}\` (single lock unit). Held by ${holder}. Pick a different file.`,
         };
       }
@@ -300,10 +414,16 @@ class DepGraph {
     for (const dep of this.dependencies(rel, this.lockDepth)) {
       const holder = isHeld(dep);
       if (holder) {
+        const direct = this.imports.get(rel)?.has(dep);
         return {
           soft: true,
+          targetPath: rel,
           file: dep,
           holder,
+          category: direct ? "DIRECT_DEPENDENCY_RISK" : "TRANSITIVE_DEPENDENCY_RISK",
+          relationType: direct ? "direct_import" : "transitive",
+          graphFreshness: freshness,
+          recentPatches: patchFor ? patchFor(dep, holder) : [],
           reason: `⚠️ \`${rel}\` depends on \`${dep}\`, which is currently being modified by ${holder}. Proceeding may cause inconsistencies. Pick a different file.`,
         };
       }
@@ -372,6 +492,27 @@ function graphFor(workspacePath) {
   return g;
 }
 
+/**
+ * Refresh a workspace-relative file in the cached graph, building the graph on
+ * first use. Return the graph, or null for an unset or nonexistent workspace.
+ * Uses DepGraph.updateFile's fallback behavior; graph build and update errors propagate.
+ */
+function updateFile(workspacePath, filePath) {
+  const g = graphFor(workspacePath);
+  return g ? g.updateFile(filePath) : null;
+}
+
+/**
+ * Refresh the cached graph after a workspace-relative file is removed from disk,
+ * building the graph on first use. An existing supported source file is refreshed.
+ * Return the graph, or null for an unset or nonexistent workspace; graph build
+ * and update errors propagate as in updateFile. Only graph state is changed.
+ */
+function removeFile(workspacePath, filePath) {
+  const g = graphFor(workspacePath);
+  return g ? g.removeFile(filePath) : null;
+}
+
 function rebuild(workspacePath) {
   const root = resolveRoot(workspacePath);
   if (!root || !fs.existsSync(root)) return null;
@@ -388,10 +529,66 @@ function holderOf(lockTable, file, agentId, workspacePath) {
   return e.holder?.label || e.agentId;
 }
 
+/**
+ * Convert a soft conflict into a structured WARNING with conflicting file,
+ * graph freshness, patch context, and a suggested action based on patch availability.
+ * Return null unless blocked.soft is truthy. This report does not enforce a lock.
+ */
+function dependencyRiskReport(blocked) {
+  if (!blocked?.soft) return null;
+  const patches = blocked.recentPatches || [];
+  return {
+    targetPath: blocked.targetPath,
+    category: blocked.category,
+    severity: "WARNING",
+    conflictingFiles: [{ path: blocked.file, heldByAgent: blocked.holder, relationType: blocked.relationType }],
+    ...(blocked.cycleCluster ? { cycleCluster: blocked.cycleCluster } : {}),
+    graphFreshness: blocked.graphFreshness,
+    advisoryMessage: blocked.reason,
+    suggestedAction: patches.length
+      ? "Review the attached recent patch context before editing."
+      : "Review the conflicting file before editing; no recent patch context is available.",
+    recentPatches: patches,
+  };
+}
+
+/**
+ * Resolve a registered project ID by normalized workspace path, falling back to
+ * an exact project ID match. Return null when no match is found or lookup fails.
+ */
+function projectIdFor(workspacePath) {
+  try {
+    const root = resolveRoot(workspacePath);
+    const projects = loadRegistry()?.projects || [];
+    return projects.find((project) => resolveRoot(project.path) === root)?.id || (projects.some((p) => p.id === workspacePath) ? workspacePath : null);
+  } catch (error) {
+    console.warn(`[latch-depgraph] Could not resolve project for ${workspacePath}: ${error.message || error}`);
+    return null;
+  }
+}
+
+/**
+ * Return the first advisory dependency or cycle conflict for a workspace-relative
+ * file, ignoring expired locks and locks belonging to agentId's owner.
+ * Return null when the workspace graph is unavailable or no conflict is found.
+ * Attach up to three recent patches for the conflicting file; project lookup or
+ * patch-loading failures yield empty patch context. Graph and lock lookup errors
+ * propagate. This lookup does not claim a lock.
+ */
 function softBlock(lockTable, workspacePath, agentId, file) {
   const g = graphFor(workspacePath);
   if (!g) return null;
-  return g.blockedBy(file, (f) => holderOf(lockTable, f, agentId, workspacePath));
+  const projectId = projectIdFor(workspacePath);
+  const patchFor = (conflictingFile, holder) => {
+    if (!projectId) return [];
+    try {
+      return getRecentPatches(projectId, conflictingFile, holder, 3);
+    } catch (error) {
+      console.warn(`[latch-depgraph] Could not load patch context for ${conflictingFile}: ${error.message || error}`);
+      return [];
+    }
+  };
+  return g.blockedBy(file, (f) => holderOf(lockTable, f, agentId, workspacePath), patchFor);
 }
 
-module.exports = { DepGraph, graphFor, rebuild, posix, softBlock };
+module.exports = { DepGraph, graphFor, rebuild, updateFile, removeFile, posix, softBlock, dependencyRiskReport };

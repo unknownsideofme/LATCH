@@ -77,8 +77,17 @@ export function ConnectedAgentsDropdown() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
-  const live = dashboard && dashboard.project.id === selectedProjectId ? dashboard : null;
-  const agents = live?.agents || [];
+  const activeProjectId = selectedProjectId || dashboard?.project.id;
+  const live = dashboard && (!activeProjectId || dashboard.project.id === activeProjectId) ? dashboard : null;
+  const rawAgents = live?.agents || [];
+  // Deduplicate agents by id and ownerLogin
+  const seenAgentKeys = new Set<string>();
+  const agents = rawAgents.filter((a, idx) => {
+    const key = `${a.ownerLogin || "local"}::${a.id || a.label}::${a.sessionId || idx}`;
+    if (seenAgentKeys.has(key)) return false;
+    seenAgentKeys.add(key);
+    return true;
+  });
   const connectedAgents = agents.filter((a) => a.status === "connected");
   const handshakingAgents = agents.filter((a) => a.status === "handshaking");
 

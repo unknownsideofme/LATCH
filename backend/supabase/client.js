@@ -35,11 +35,15 @@ function loadSupabaseConfig() {
   const mergedEnv = { ...parentEnv, ...rootEnv, ...process.env };
 
   let url =
+    mergedEnv.LATCH_SUPABASE_URL ||
+    mergedEnv.RELAY_SUPABASE_URL ||
     mergedEnv.SUPABASE_URL ||
     mergedEnv.NEXT_PUBLIC_SUPABASE_URL ||
     null;
 
   let key =
+    mergedEnv.LATCH_SUPABASE_KEY ||
+    mergedEnv.RELAY_SUPABASE_KEY ||
     mergedEnv.SUPABASE_KEY ||
     mergedEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     mergedEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||

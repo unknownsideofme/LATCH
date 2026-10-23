@@ -16,6 +16,7 @@ const { normalizeCompare } = require("./lib/transcripts/util");
 
 const { parsePort, UI_ORIGIN } = require("./config/constants");
 const { createApp } = require("./app");
+const { hardenHttpServer, apiErrorHandler } = require("./lib/httpServer");
 const { ContextService } = require("./services/ContextService");
 const { NoticeService } = require("./services/NoticeService");
 const { TranscriptService } = require("./services/TranscriptService");
@@ -59,7 +60,29 @@ async function main() {
   if (supabaseLockAdapter.enabled) {
     console.log("[latch-supabase] Distributed locks & sync active via Supabase Realtime");
     supabaseLockAdapter.subscribe(null, (currentLocks) => {
-      sse.emit("locks", { locks: currentLocks });
+      const { filterKeys } = require("./coordinator/lockTable");
+      const reg = loadRegistry();
+      for (const project of reg.projects) {
+        const scope = lockService.lockScope(project.id);
+        if (!scope) continue;
+        const keys = filterKeys(scope);
+        const pPathNorm = normalizeCompare(project.path);
+        const projectLocks = (currentLocks || []).filter((l) => {
+          if (!l.workspaceId) return false;
+          const lWsNorm = normalizeCompare(l.workspaceId);
+          return (
+            keys.has(String(l.workspaceId)) ||
+            keys.has(lWsNorm) ||
+            lWsNorm === pPathNorm ||
+            (pPathNorm && lWsNorm.startsWith(pPathNorm + "/"))
+          );
+        });
+        const localLocks = lockTable.list(scope);
+        const onSupabase = new Set(projectLocks.map((l) => `${l.filePath}::${l.agentId}`));
+        const mergedLocks = [...projectLocks, ...localLocks.filter((l) => !onSupabase.has(`${l.filePath}::${l.agentId}`))];
+        const reads = lockService.readsFor(scope);
+        sse.emit("locks", { workspaceId: project.id, locks: mergedLocks, reads });
+      }
     });
   }
 
@@ -125,17 +148,13 @@ async function main() {
   // LockTable change event binding
   lockTable.on("change", (evt) => {
     const ws = evt?.entry?.workspaceId || evt?.workspaceId;
+    if (!ws) return;
     const room = loadRoom();
-    const curr = ContextService.currentProject();
-    const project = ws
-      ? loadRegistry().projects.find((p) => normalizeCompare(p.path) === normalizeCompare(ws)) ||
-        loadRegistry().projects.find((p) => p.id === room?.hostProjectId) || curr
-      : (curr || (room?.hostProjectId ? loadRegistry().projects.find((p) => p.id === room?.hostProjectId) : null));
-    const scope = project
-      ? lockService.lockScope(project.id)
-      : room?.role === "guest" && room.projectId
-        ? lockService.lockScope(room.projectId) || { id: room.projectId, path: room.projectPath, aliases: [room.hostWorkspacePath] }
-        : null;
+    const project = loadRegistry().projects.find(
+      (p) => normalizeCompare(p.path) === normalizeCompare(ws) || (room?.hostProjectId && p.id === room.hostProjectId)
+    );
+    if (!project) return;
+    const scope = lockService.lockScope(project.id);
     if (!scope?.id) return;
     const locks = lockService.locksFor(scope);
     const reads = lockService.readsFor(scope);
@@ -144,16 +163,31 @@ async function main() {
   });
 
   // Arm initial registered workspaces
+  const { updateLatchContextFiles } = require("./lib/latchContextWriter");
   for (const p of loadRegistry().projects) {
     if (p.path) {
       watcher.watch(p.path, p.id);
       lockTable.track(p.path);
+      updateLatchContextFiles(p.path);
     }
     transcriptService.watchTranscripts(p);
+    if (supabaseSyncAdapter.enabled && p.id) {
+      supabaseSyncAdapter.joinWorkspace(p.id, {
+        onPatch: ({ workspaceId, patch }) => {
+          if (patch && patch.originId !== ContextService.originId()) {
+            const result = patchService.acceptPeerPatch(patch, { projectId: workspaceId }, { skipIfOrigin: true });
+            if (result?.applied) {
+              patchService.broadcastPatch({ workspaceId, patch, incoming: true });
+            }
+          }
+        },
+      });
+    }
   }
 
   try {
     installProjectHooks(process.cwd());
+    updateLatchContextFiles(process.cwd());
   } catch {
     /* ignore */
   }
@@ -173,8 +207,11 @@ async function main() {
     getCoordPort: () => coordPort,
   });
 
+  // Express-level catch-all error handler (must be last middleware)
+  app.use(apiErrorHandler);
+
   const port = parsePort(process.argv);
-  const server = http.createServer(app);
+  const server = hardenHttpServer(http.createServer(app));
 
   // Attach WebSockets
   wssPatches = createPatchesServer({ server, roomService, patchService });
@@ -184,6 +221,9 @@ async function main() {
     ensureWorkspaceFn: (p) => workspaceService.ensureWorkspace(p),
   });
 
+  // EADDRINUSE is the only server error that should kill the process;
+  // hardenHttpServer already handles everything else (clientError, etc.).
+  server.removeAllListeners("error");
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {
       console.error(
@@ -192,7 +232,14 @@ async function main() {
       );
       process.exit(1);
     }
-    throw err;
+    console.warn(`[latch-api] server error: ${err.message || err}`);
+  });
+
+  process.on("uncaughtException", (err) => {
+    console.error("[latch-api] uncaughtException:", err?.stack || err?.message || err);
+  });
+  process.on("unhandledRejection", (reason) => {
+    console.error("[latch-api] unhandledRejection:", reason?.stack || reason?.message || reason);
   });
 
   // Start HTTP Server

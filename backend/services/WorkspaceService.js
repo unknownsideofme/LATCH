@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const { loadRegistry, saveRegistry, saveMemory, loadSession, id, loadMemory } = require("../lib/store");
 const { emptyMemory, initials } = require("../lib/seed");
 const { installProjectHooks } = require("../lib/installHooks");
-const { rebuild } = require("../lib/depGraph");
+const { graphFor, rebuild } = require("../lib/depGraph");
 const { ingest: ingestSupergraph } = require("../lib/supergraph");
 const { normalizeWorkspaceRoot, normalizeCompare } = require("../lib/transcripts/util");
 
@@ -16,11 +16,17 @@ class WorkspaceService {
     this.watcher = watcher;
     this.lockTable = lockTable;
     this.transcriptService = transcriptService;
+    this._publishTimers = new Map();
   }
 
   ensureWorkspace(workspacePath) {
     const resolved = normalizeWorkspaceRoot(workspacePath) || workspacePath;
     if (!resolved) return null;
+    const os = require("os");
+    const home = os.homedir();
+    if (normalizeCompare(resolved) === normalizeCompare(home) || resolved === "/" || /^[a-zA-Z]:[\\/]?$/.test(resolved)) {
+      return null;
+    }
     const reg = loadRegistry();
     let project = reg.projects.find((p) => normalizeCompare(p.path) === normalizeCompare(resolved));
     if (!project) {
@@ -69,10 +75,22 @@ class WorkspaceService {
 
   publishGraph(project) {
     if (!project?.path) return;
-    const g = rebuild(project.path);
-    const snap = g ? g.snapshot() : { edges: [] };
-    ingestSupergraph(project.id, { userId: loadSession().login, edges: snap.edges || [] });
-    if (this.sse) this.sse.emit("graph", { workspaceId: project.id, graph: snap });
+    const projectId = project.id || project.path;
+    if (this._publishTimers.has(projectId)) {
+      clearTimeout(this._publishTimers.get(projectId));
+    }
+    const timer = setTimeout(() => {
+      this._publishTimers.delete(projectId);
+      try {
+        const g = graphFor(project.path) || rebuild(project.path);
+        const snap = g ? g.snapshot() : { edges: [] };
+        ingestSupergraph(project.id, { userId: loadSession().login, edges: snap.edges || [] });
+        if (this.sse) this.sse.emit("graph", { workspaceId: project.id, graph: snap });
+      } catch (err) {
+        console.warn(`[latch] publishGraph error for ${projectId}: ${err.message || err}`);
+      }
+    }, 400);
+    this._publishTimers.set(projectId, timer);
   }
 
   activeAgent(projectId) {

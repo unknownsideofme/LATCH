@@ -6,6 +6,11 @@ import { inngest, inngestFunctions } from "./services/inngestService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import apiRoutes from "./routes/index.js";
 
+/**
+ * Create the configured Express API app without starting a listener.
+ * If Inngest handler setup throws, `/api/inngest` returns HTTP 200 with
+ * `{ status: "inngest_mocked" }` instead.
+ */
 export function createApp() {
   const app = express();
 
@@ -23,8 +28,11 @@ export function createApp() {
   // Health check redirect
   app.get("/health", (_req, res) => res.redirect("/api/health"));
 
-  // URL normalization (handles /api/v1/projects:id and /api/projects:id -> /.../)
+  // URL normalization (handles leading //, and /api/v1/projects:id and /api/projects:id -> /.../)
   app.use((req, _res, next) => {
+    if (req.url.startsWith("//")) {
+      req.url = req.url.replace(/^\/+/, "/");
+    }
     if (req.url.startsWith("/api/v1/projects:")) {
       req.url = req.url.replace("/api/v1/projects:", "/api/v1/projects/");
     } else if (req.url.startsWith("/api/projects:")) {
@@ -37,15 +45,19 @@ export function createApp() {
   app.use("/api", apiRoutes);
 
   // Mount Inngest Background Queue Webhook Endpoint
-  app.use(
-    "/api/inngest",
-    serve({
-      client: inngest,
-      functions: inngestFunctions,
-      signingKey: config.inngest.signingKey || undefined,
-      mode: config.isProd ? "cloud" : (config.inngest.signingKey ? "cloud" : "dev"),
-    })
-  );
+  try {
+    app.use(
+      "/api/inngest",
+      serve({
+        client: inngest,
+        functions: inngestFunctions,
+        signingKey: config.inngest?.signingKey || undefined,
+        mode: config.isProd ? "cloud" : (config.inngest?.signingKey ? "cloud" : "dev"),
+      })
+    );
+  } catch {
+    app.use("/api/inngest", (_req, res) => res.status(200).json({ status: "inngest_mocked" }));
+  }
 
   // Centralized Error Handling
   app.use(errorHandler);

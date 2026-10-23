@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { ThinkingOrb } from "thinking-orbs";
 import {
   LayoutGrid,
@@ -33,100 +32,33 @@ import {
   Lock,
   HelpCircle,
   Command,
+  Loader2,
 } from "lucide-react";
 import type { ProjectRecord, GitHubRepo } from "@/lib/types";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
+import { api } from "@/lib/api";
 
-// Curated default repositories if GitHub API token is not yet connected
-const defaultSampleRepos: GitHubRepo[] = [
-  {
-    id: 101,
-    name: "LATCH",
-    full_name: "unknownsideofme/LATCH",
-    owner: { login: "unknownsideofme", avatar_url: "" },
-    private: false,
-    html_url: "https://github.com/unknownsideofme/LATCH",
-    description: "Cross-agent coordination layer with sub-ms file mutex and AST graph arbitration",
-    language: "TypeScript",
-    default_branch: "main",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 102,
-    name: "claude-code-runner",
-    full_name: "anthropic/claude-code-runner",
-    owner: { login: "anthropic", avatar_url: "" },
-    private: false,
-    html_url: "https://github.com/anthropic/claude-code-runner",
-    description: "Terminal CLI coordinator for autonomous LLM coding loops",
-    language: "Rust",
-    default_branch: "main",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 103,
-    name: "cursor-swarm-workspace",
-    full_name: "getcursor/cursor-swarm-workspace",
-    owner: { login: "getcursor", avatar_url: "" },
-    private: true,
-    html_url: "https://github.com/getcursor/cursor-swarm-workspace",
-    description: "Multi-window agent synchronization and local workspace cache",
-    language: "TypeScript",
-    default_branch: "main",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 104,
-    name: "ast-blast-radius",
-    full_name: "latch-systems/ast-blast-radius",
-    owner: { login: "latch-systems", avatar_url: "" },
-    private: false,
-    html_url: "https://github.com/latch-systems/ast-blast-radius",
-    description: "Tree-sitter boundary analyzer preventing concurrent phantom writes",
-    language: "Go",
-    default_branch: "main",
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 105,
-    name: "supabase-realtime-engine",
-    full_name: "supabase/realtime-engine",
-    owner: { login: "supabase", avatar_url: "" },
-    private: false,
-    html_url: "https://github.com/supabase/realtime-engine",
-    description: "Distributed Postgres change streams and vector clock synchronization",
-    language: "Elixir",
-    default_branch: "master",
-    updated_at: new Date().toISOString(),
-  },
-];
-
+/** Render authenticated user dashboard and repository selection with serverboard integration. */
 export default function DashboardPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [user, setUser] = useState<any>(null);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-  const [planTier, setPlanTier] = useState<"free" | "pro">("free");
   const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState("");
-
-  useEffect(() => {
-    fetch("http://127.0.0.1:3001/api/billing/subscription")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.planTier) setPlanTier(data.planTier);
-      })
-      .catch(() => undefined);
-  }, []);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Billing / Plan Tier
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [planTier, setPlanTier] = useState<"free" | "pro">("free");
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStep, setModalStep] = useState<1 | 2>(1);
-  const [repos, setRepos] = useState<GitHubRepo[]>(defaultSampleRepos);
+  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [reposLoading, setReposLoading] = useState(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
   const [repoSearch, setRepoSearch] = useState("");
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepo | null>(null);
   const [customRepoName, setCustomRepoName] = useState("");
@@ -134,144 +66,82 @@ export default function DashboardPage() {
   const [agentCount, setAgentCount] = useState<number>(4);
   const [branchName, setBranchName] = useState("main");
   const [submitting, setSubmitting] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     let isSubscribed = true;
 
     async function loadData() {
-      // 1. Check local session cache first
-      let activeUser: any = null;
-      if (typeof window !== "undefined") {
-        try {
-          const cachedUser = localStorage.getItem("latch_user_session");
-          if (cachedUser) {
-            activeUser = JSON.parse(cachedUser);
-            if (isSubscribed) setUser(activeUser);
-          }
-        } catch {
-          // parse error
-        }
-      }
-
-      // 2. Query Supabase for confirmed session
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        activeUser = session.user;
-        if (isSubscribed) setUser(session.user);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("latch_user_session", JSON.stringify(session.user));
-        }
-      }
-
-      // Default mock project for instant mission-control visualization
-      const sampleProjects: ProjectRecord[] = [
-        {
-          id: "proj_latch_core",
-          user_id: activeUser?.id || "demo-user",
-          project_name: "LATCH-Engine",
-          repo_name: "unknownsideofme/LATCH",
-          branch: "main",
-          render_id: "srv_latch_core_01",
-          render_url: "http://127.0.0.1:3001",
-          status: "ready",
-          agent_limit: 4,
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "proj_claude_runner",
-          user_id: activeUser?.id || "demo-user",
-          project_name: "Claude-CLI-Swarm",
-          repo_name: "anthropic/claude-code-runner",
-          branch: "develop",
-          render_id: "srv_claude_swarm_02",
-          render_url: "http://127.0.0.1:3002",
-          status: "ready",
-          agent_limit: 6,
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-        },
-      ];
-
-      // Check local projects cache
-      let combinedProjects = [...sampleProjects];
-      if (typeof window !== "undefined") {
-        try {
-          const localStored = localStorage.getItem("latch_local_projects");
-          if (localStored) {
-            const parsed = JSON.parse(localStored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              const existingIds = new Set(combinedProjects.map((p) => p.id));
-              const extras = parsed.filter((p: ProjectRecord) => !existingIds.has(p.id));
-              combinedProjects = [...extras, ...combinedProjects];
-            }
-          }
-        } catch {
-          // ignore error
-        }
-      }
-
-      // Fetch from Supabase projects table if available
+      // 1. Fetch authenticated user profile from serverboard
       try {
-        const { data: userProjects, error } = await supabase
-          .from("projects")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!error && userProjects && userProjects.length > 0) {
-          const existingIds = new Set(userProjects.map((p: ProjectRecord) => p.id));
-          combinedProjects = [
-            ...userProjects,
-            ...combinedProjects.filter((p: ProjectRecord) => !existingIds.has(p.id)),
-          ];
+        const meRes = await api.auth.me();
+        if (isSubscribed && meRes?.user) {
+          setUser(meRes.user);
         }
-      } catch {
-        // Supabase query error fallback
+      } catch (err: any) {
+        if (isSubscribed) {
+          router.push("/login");
+          return;
+        }
       }
 
-      setProjects(combinedProjects);
-      setLoading(false);
-
-      // Attempt to fetch real GitHub repos if authenticated with GitHub
+      // 2. Fetch projects from serverboard API
       try {
-        const ghRes = await fetch("/api/github/repos");
-        if (ghRes.ok) {
-          const ghData = await ghRes.json();
-          if (ghData.repos && ghData.repos.length > 0) {
-            setRepos(ghData.repos);
-          }
+        const projRes = await api.projects.list();
+        if (isSubscribed && projRes?.projects) {
+          setProjects(projRes.projects);
         }
-      } catch {
-        // keep defaultSampleRepos
+      } catch (err: any) {
+        console.warn("[projects] Failed to fetch projects:", err.message);
+      } finally {
+        if (isSubscribed) setLoading(false);
       }
     }
 
     loadData();
 
-    // Listen to real-time auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-      if (session?.user) {
-        setUser(session.user);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("latch_user_session", JSON.stringify(session.user));
-        }
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("latch_user_session");
-        }
-        router.push("/login");
-      }
-    });
-
     return () => {
       isSubscribed = false;
-      subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
+
+  // Auto-refresh when any project is in deploying/pending state
+  useEffect(() => {
+    const hasDeploying = projects.some(
+      (p) => p.status === "deploying" || p.status === "pending"
+    );
+    if (!hasDeploying) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.projects.list();
+        if (res?.projects) {
+          setProjects(res.projects);
+        }
+      } catch {}
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [projects]);
+
+  const fetchGithubRepos = async () => {
+    setReposLoading(true);
+    setGithubError(null);
+    try {
+      const res = await api.github.listRepos();
+      if (res?.repos && Array.isArray(res.repos)) {
+        setRepos(res.repos);
+      } else {
+        setRepos([]);
+      }
+    } catch (err: any) {
+      console.warn("[github] Could not fetch repos:", err.message);
+      setGithubError(err.message || "Failed to load GitHub repositories");
+      setRepos([]);
+    } finally {
+      setReposLoading(false);
+    }
+  };
 
   const handleOpenModal = () => {
     if (planTier === "free" && projects.length >= 3) {
@@ -282,6 +152,7 @@ export default function DashboardPage() {
     setRepoSearch("");
     setModalStep(1);
     setIsModalOpen(true);
+    fetchGithubRepos();
   };
 
   const handleSelectRepo = (repo: GitHubRepo) => {
@@ -318,50 +189,28 @@ export default function DashboardPage() {
     if (!projectName.trim()) return;
 
     setSubmitting(true);
-    const newId = `proj_${Date.now()}`;
-    const newProject: ProjectRecord = {
-      id: newId,
-      user_id: user?.id || "local-user",
-      project_name: projectName.trim(),
-      repo_name: selectedRepo?.full_name || projectName.trim(),
-      branch: branchName || "main",
-      render_id: `srv_${newId}`,
-      render_url: `http://127.0.0.1:3001`,
-      status: "ready",
-      agent_limit: agentCount,
-      created_at: new Date().toISOString(),
-    };
+    setCreateError(null);
 
-    // 1. Update React state immediately
-    const updated = [newProject, ...projects];
-    setProjects(updated);
-
-    // 2. Persist to localStorage
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("latch_local_projects", JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-    }
-
-    // 3. Persist to Supabase if table exists
     try {
-      await supabase.from("projects").insert({
-        id: newProject.id,
-        user_id: newProject.user_id,
-        project_name: newProject.project_name,
-        render_id: newProject.render_id,
-        render_url: newProject.render_url,
-        status: newProject.status,
-        agent_limit: newProject.agent_limit,
+      const res = await api.projects.create({
+        projectName: projectName.trim(),
+        repo: selectedRepo?.html_url || (customRepoName.trim() ? `https://github.com/${customRepoName.trim()}` : undefined),
+        branch: branchName || "main",
+        agentLimit: agentCount,
       });
-    } catch {
-      // ignore
-    }
 
-    setSubmitting(false);
-    setIsModalOpen(false);
+      // Add the project directly to UI state with deploying status
+      if (res?.project) {
+        setProjects((prev) => [res.project, ...prev.filter((p) => p.id !== res.project.id)]);
+      }
+
+      setIsModalOpen(false);
+    } catch (err: any) {
+      console.error("[projects] Create project failed:", err.message);
+      setCreateError(err.message || "Failed to create project");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCopyEndpoint = (e: React.MouseEvent, url: string, id: string) => {
@@ -372,10 +221,7 @@ export default function DashboardPage() {
   };
 
   const handleSignOut = async () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("latch_user_session");
-    }
-    await supabase.auth.signOut();
+    await api.auth.logout();
     router.push("/login");
   };
 
@@ -484,22 +330,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Pro Swarm Badge or Upgrade CTA */}
-            {planTier === "pro" ? (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/40 text-[11px] font-mono text-primary font-semibold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Pro Swarm</span>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsUpgradeModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/40 text-primary text-xs font-semibold font-mono transition-colors cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Upgrade to Pro</span>
-              </button>
-            )}
-
             {/* Theme Toggle */}
             <ThemeToggle />
 
@@ -518,6 +348,22 @@ export default function DashboardPage() {
               <BookOpen className="w-3.5 h-3.5" />
               <span>Docs</span>
             </a>
+
+            {/* Pro Swarm Badge or Upgrade CTA */}
+            {planTier === "pro" ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/40 text-[11px] font-mono text-primary font-semibold">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Pro Swarm</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/40 text-primary text-xs font-semibold font-mono transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Upgrade to Pro</span>
+              </button>
+            )}
 
             {/* New Project Button */}
             <button
@@ -662,10 +508,22 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                        <span>ACTIVE</span>
-                      </div>
+                      {proj.status === "deploying" || proj.status === "pending" ? (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-500 shrink-0">
+                          <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                          <span>DEPLOYING</span>
+                        </div>
+                      ) : proj.status === "failed" ? (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[10px] font-mono text-red-500 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          <span>FAILED</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                          <span>ACTIVE</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Stats & Metadata Matrix */}
@@ -766,42 +624,66 @@ export default function DashboardPage() {
                   </div>
 
                   {/* List of Repos */}
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {filteredRepos.map((repo) => (
-                      <div
-                        key={repo.id}
-                        onClick={() => handleSelectRepo(repo)}
-                        className="p-3 rounded-md bg-muted/40 border border-border hover:border-ring hover:bg-muted transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                  {reposLoading ? (
+                    <div className="py-8 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span>Fetching repositories from GitHub…</span>
+                    </div>
+                  ) : githubError ? (
+                    <div className="p-3 rounded-md border border-amber-500/30 bg-amber-500/5 text-xs space-y-2">
+                      <p className="text-muted-foreground">
+                        GitHub account is not connected or token expired. Connect your GitHub account to load your repositories.
+                      </p>
+                      <a
+                        href={api.auth.getGithubOAuthUrl()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 font-medium transition-all"
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors truncate">
-                              {repo.full_name}
-                            </span>
-                            {repo.private && (
-                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border">
-                                Private
+                        <GitBranch className="w-3.5 h-3.5" />
+                        <span>Connect GitHub Account</span>
+                      </a>
+                    </div>
+                  ) : filteredRepos.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-muted-foreground">
+                      {repoSearch ? "No repositories match your search." : "No GitHub repositories found."}
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {filteredRepos.map((repo) => (
+                        <div
+                          key={repo.id}
+                          onClick={() => handleSelectRepo(repo)}
+                          className="p-3 rounded-md bg-muted/40 border border-border hover:border-ring hover:bg-muted transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors truncate">
+                                {repo.full_name}
                               </span>
+                              {repo.private && (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border">
+                                  Private
+                                </span>
+                              )}
+                            </div>
+                            {repo.description && (
+                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                                {repo.description}
+                              </p>
                             )}
                           </div>
-                          {repo.description && (
-                            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                              {repo.description}
-                            </p>
-                          )}
-                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {repo.language && (
-                            <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 rounded bg-primary/10">
-                              {repo.language}
-                            </span>
-                          )}
-                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          <div className="flex items-center gap-2 shrink-0">
+                            {repo.language && (
+                              <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 rounded bg-primary/10">
+                                {repo.language}
+                              </span>
+                            )}
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Custom Repo Manual Entry */}
                   <div className="pt-3 border-t border-border space-y-2">
@@ -936,6 +818,12 @@ export default function DashboardPage() {
                     />
                   </div>
 
+                  {createError && (
+                    <div className="p-2.5 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-mono">
+                      {createError}
+                    </div>
+                  )}
+
                   {/* Modal Footer Actions */}
                   <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
                     <button
@@ -979,4 +867,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

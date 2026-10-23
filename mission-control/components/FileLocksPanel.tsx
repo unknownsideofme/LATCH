@@ -139,8 +139,15 @@ export function FileLocksPanel() {
   }, []);
 
   const connected = dashboard?.agents.filter((a) => a.status === "connected") || [];
-  const locks = dashboard?.locks || [];
-  const reads = dashboard?.reads || [];
+  const projectPath = (dashboard?.project?.path || "").toLowerCase().replace(/\\/g, "/");
+  const projectId = dashboard?.project?.id || "";
+  const belongsToThisProject = (item: { workspaceId?: string | null }): boolean => {
+    if (!item?.workspaceId) return true;
+    const ws = item.workspaceId.toLowerCase().replace(/\\/g, "/");
+    return Boolean(ws === projectId || ws === projectPath || (projectPath && (ws.startsWith(projectPath + "/") || ws === projectPath)));
+  };
+  const locks = (dashboard?.locks || []).filter((l) => belongsToThisProject(l));
+  const reads = (dashboard?.reads || []).filter((r) => belongsToThisProject(r));
 
   const sessionMap = new Map<string, { id: string; label: string; sessionId?: string; ownerLogin?: string }>();
   for (const a of connected) {
@@ -264,6 +271,11 @@ export function FileLocksPanel() {
             >
               <div>
                 <code>{file}</code>
+                {lock.annotation ? (
+                  <div style={{ color: "var(--copper, #f59e0b)", fontSize: 11, fontStyle: "italic", marginTop: 2 }}>
+                    Intent: &ldquo;{lock.annotation}&rdquo;
+                  </div>
+                ) : null}
                 <div style={{ color: "var(--muted)", fontSize: 11 }}>
                   {lock.holder?.label || parsed.label} · {parsed.session || "session"} · {lock.source || "coordinator"}
                   {lock.escalated ? " · escalated" : ""}
