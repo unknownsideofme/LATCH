@@ -100,6 +100,12 @@ export class BillingController {
 
       if (updateError) {
         console.error("[billing] Failed to elevate user plan in database:", updateError);
+        return res.status(500).json({
+          error: "entitlement_update_failed",
+          message: "Payment was captured by PayPal, but failed to elevate account to Pro in the database. Please contact support with your orderId.",
+          orderId: captureResult.orderId,
+          captureId: captureResult.captureId,
+        });
       }
 
       return res.status(200).json({

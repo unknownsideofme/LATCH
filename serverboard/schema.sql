@@ -129,6 +129,11 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ
 
 -- Ensure default project limit (2) and agent limit (7) apply cleanly to existing schemas
 ALTER TABLE public.users ALTER COLUMN project_limit SET DEFAULT 2;
+
+-- Backfill: migrate any legacy free profiles to the new limit of 2 projects
+UPDATE public.users
+SET project_limit = 2
+WHERE (plan_tier IS NULL OR plan_tier = 'free') AND project_limit > 2;
 ALTER TABLE public.projects ALTER COLUMN agent_limit SET DEFAULT 7;
 
 -- D. RLS for Orders
