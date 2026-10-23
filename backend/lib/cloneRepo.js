@@ -28,6 +28,8 @@ function defaultCloneDir(remoteUrl) {
   return path.join(os.homedir(), "Documents", "GitHub", name);
 }
 
+const { updateGitignore } = require("./gitignore");
+
 function registerProject({ name, workspacePath, remoteUrl, mode, agentLimit = 7 }) {
   const reg = loadRegistry();
   const existing = reg.projects.find((p) => p.path === workspacePath);
@@ -35,6 +37,17 @@ function registerProject({ name, workspacePath, remoteUrl, mode, agentLimit = 7 
     if (!Number.isInteger(Number(existing.agent_limit)) || existing.agent_limit < 1) {
       existing.agent_limit = 7;
       saveRegistry(reg);
+    }
+    fs.mkdirSync(path.join(workspacePath, ".latch"), { recursive: true });
+    try {
+      installProjectHooks(workspacePath);
+    } catch {
+      /* hooks are best-effort */
+    }
+    try {
+      updateGitignore(workspacePath);
+    } catch {
+      /* gitignore is best-effort */
     }
     return existing;
   }
@@ -51,11 +64,16 @@ function registerProject({ name, workspacePath, remoteUrl, mode, agentLimit = 7 
     lastSyncAt: Date.now(),
   };
   fs.mkdirSync(path.join(workspacePath, ".latch"), { recursive: true });
-  fs.mkdirSync(path.join(workspacePath, ".relay"), { recursive: true });
+  // Must NOT create .relay folder while .latch is there
   try {
     installProjectHooks(workspacePath);
   } catch {
     /* hooks are best-effort */
+  }
+  try {
+    updateGitignore(workspacePath);
+  } catch {
+    /* gitignore is best-effort */
   }
   reg.projects.push(project);
   saveRegistry(reg);
@@ -98,7 +116,7 @@ function detectRemoteUrl(target) {
 }
 
 function addLocal(workspacePath, name) {
-  const target = path.resolve(workspacePath);
+  const target = path.resolve(workspacePath || process.cwd());
   if (!fs.existsSync(target)) throw new Error(`path not found: ${target}`);
   return registerProject({
     name: name || path.basename(target),

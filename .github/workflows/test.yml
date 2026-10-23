@@ -5,18 +5,8 @@ name: "Tests: Full Suite"
 on:
   push:
     branches: [main]
-    paths:
-      - "vitest.config.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/test.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "vitest.config.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/test.yml"
   workflow_dispatch:
 
 permissions:
@@ -27,8 +17,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      full_suite: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.full_suite == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            full_suite:
+              - "vitest.config.mjs"
+              - "package.json"
+              - "package-lock.json"
+              - ".github/workflows/test.yml"
+
   full-suite:
-    name: Full suite (Node ${{ matrix.node-version }})
+    name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
+    needs: changes
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -38,19 +46,42 @@ jobs:
 
     steps:
       - name: Checkout repository
+        if: needs.changes.outputs.full_suite == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js ${{ matrix.node-version }}
+        if: needs.changes.outputs.full_suite == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Install dependencies
+        if: needs.changes.outputs.full_suite == 'true'
         run: npm ci
 
       - name: Run full test suite
+        if: needs.changes.outputs.full_suite == 'true'
         run: npm test
 
       - name: Verify Mission Control build
+        if: needs.changes.outputs.full_suite == 'true'
         run: npm run build -w mission-control
+
+      - name: Skip full suite
+        if: needs.changes.outputs.full_suite != 'true'
+        run: echo "Skipped full suite because core config did not change"
+
+  full-suite-gate:
+    name: "Tests: Full Suite"
+    needs: [changes, full-suite]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check full suite results
+        run: |
+          if [ "${{ needs.full-suite.result }}" = "failure" ]; then
+            echo "Full suite failed"
+            exit 1
+          fi
+          echo "Full suite passed or was skipped"
