@@ -154,10 +154,12 @@ function ensureLatchDir(workspacePath) {
   const latchDir = path.join(workspacePath, ".latch");
   const relayDir = path.join(workspacePath, ".relay");
   fs.mkdirSync(latchDir, { recursive: true });
-  fs.mkdirSync(relayDir, { recursive: true });
   const bootstrapContent = agentBootstrap(workspacePath);
   writeText(path.join(latchDir, "AGENT_BOOTSTRAP.md"), bootstrapContent);
-  writeText(path.join(relayDir, "AGENT_BOOTSTRAP.md"), bootstrapContent);
+  // Must NOT create .relay folder while .latch is there
+  if (!fs.existsSync(latchDir) && fs.existsSync(relayDir)) {
+    writeText(path.join(relayDir, "AGENT_BOOTSTRAP.md"), bootstrapContent);
+  }
 }
 
 function installProjectLatch(workspacePath) {
@@ -223,6 +225,13 @@ function installProjectLatch(workspacePath) {
     results.mcp[".agents/mcp_config.json"] = "ok";
   } catch (err) {
     results.mcp[".agents/mcp_config.json"] = String(err.message || err);
+  }
+
+  try {
+    const { updateGitignore } = require("./gitignore");
+    results.gitignore = updateGitignore(resolved);
+  } catch (err) {
+    results.gitignore = { ok: false, error: String(err.message || err) };
   }
 
   return { ok: true, workspace: resolved, results };
