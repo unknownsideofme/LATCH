@@ -12,7 +12,7 @@ class PayPalService {
     this.clientId = process.env.PAYPAL_CLIENT_ID || "";
     this.clientSecret = process.env.PAYPAL_CLIENT_SECRET || "";
     this.mode = (process.env.PAYPAL_MODE || "sandbox").toLowerCase();
-    this.proPlanId = process.env.PAYPAL_PRO_PLAN_ID || "";
+    this._proPlanId = process.env.PAYPAL_PRO_PLAN_ID || "";
     this.webhookId = process.env.PAYPAL_WEBHOOK_ID || "";
 
     const environment = this.mode === "live" || this.mode === "production"

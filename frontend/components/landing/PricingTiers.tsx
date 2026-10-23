@@ -115,7 +115,7 @@ export function PricingTiers() {
                   $24
                 </span>
                 <span className="text-xs font-mono text-muted-foreground">
-                  / seat · month
+                  / seat Â· month
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
