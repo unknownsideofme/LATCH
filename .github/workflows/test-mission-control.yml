@@ -56,7 +56,7 @@ jobs:
 
       - name: Run Mission Control unit tests
         if: needs.changes.outputs.mission_control == 'true'
-        run: vitest run tests/mission-control/unit
+        run: npx vitest run tests/mission-control/unit
 
       - name: Skip tests
         if: needs.changes.outputs.mission_control != 'true'
@@ -84,7 +84,7 @@ jobs:
 
       - name: Run Mission Control E2E tests
         if: needs.changes.outputs.mission_control == 'true'
-        run: vitest run tests/mission-control/e2e
+        run: npx vitest run tests/mission-control/e2e
 
       - name: Skip tests
         if: needs.changes.outputs.mission_control != 'true'

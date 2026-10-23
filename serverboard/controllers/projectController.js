@@ -1,3 +1,10 @@
+// Helper to check if user has an active (non-expired) Pro pass
+function isUserActivePro(userProfile) {
+  if (!userProfile || userProfile.plan_tier !== "pro") return false;
+  if (!userProfile.current_period_end) return false;
+  return new Date(userProfile.current_period_end) > new Date();
+}
+
 import { ProjectModel } from "../models/Project.js";
 import { inngest, runProvisioningWorker, runTeardownWorker } from "../services/inngestService.js";
 import { RenderService } from "../services/renderService.js";
@@ -75,11 +82,12 @@ export const ProjectController = {
       // Plan is strictly enforced to 'free' to prevent unauthorized billing
       const selectedPlan = "free";
 
-      // 4. Validate and clamp agent limit (1 to 7)
+      // 4. Validate and clamp agent limit based on tier (Free: max 7, Pro: max 20)
+      const maxAllowedAgents = isUserActivePro(req.userProfile) ? 20 : 7;
       const parsedAgentLimit = parseInt(agentLimitInput, 10);
       const selectedAgentLimit = Number.isFinite(parsedAgentLimit)
-        ? Math.min(Math.max(parsedAgentLimit, 1), 7)
-        : 7;
+        ? Math.min(Math.max(parsedAgentLimit, 1), maxAllowedAgents)
+        : Math.min(7, maxAllowedAgents);
 
       // 5. Create database row (status: pending)
       const project = await ProjectModel.create({
@@ -216,11 +224,12 @@ export const ProjectController = {
 
       const rawLimit = agent_limit !== undefined ? agent_limit : agentLimit;
       if (rawLimit !== undefined) {
+        const maxAllowedAgents = isUserActivePro(req.userProfile) ? 20 : 7;
         const parsedLimit = parseInt(rawLimit, 10);
-        if (!Number.isFinite(parsedLimit) || parsedLimit < 1 || parsedLimit > 7) {
+        if (!Number.isFinite(parsedLimit) || parsedLimit < 1 || parsedLimit > maxAllowedAgents) {
           return res.status(400).json({
             error: "validation_error",
-            message: "agent_limit must be a finite integer between 1 and 7",
+            message: `agent_limit must be a finite integer between 1 and ${maxAllowedAgents}`,
           });
         }
         updates.agent_limit = parsedLimit;

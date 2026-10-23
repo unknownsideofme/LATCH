@@ -120,7 +120,7 @@ describe("requireAuth middleware (serverboard/middleware/auth.js)", () => {
           username: "auto_user",
           email: "auto@example.com",
           name: "Auto User",
-          project_limit: 3,
+          project_limit: 2,
         },
       ]);
       expect(req.userProfile).toEqual(createdProfile);

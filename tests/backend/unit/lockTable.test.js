@@ -492,6 +492,7 @@ test("LockEntry: class structure, validation, sanitization, and lifecycle method
     agentId: "cursor:mac:123",
     mode: "write",
     claimedAt: now,
+    lastHeartbeat: now,
     ttlMs: 15000,
     annotation: "Refactoring auth middleware",
     holder: { label: "Cursor" },

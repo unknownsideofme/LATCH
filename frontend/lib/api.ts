@@ -182,4 +182,70 @@ export const api = {
       );
     },
   },
+
+  billing: {
+    async createOrder(seats: number = 1): Promise<{
+      ok: boolean;
+      orderId: string;
+      seats: number;
+      amount: string;
+      status: string;
+      approveUrl: string | null;
+    }> {
+      return request<{
+        ok: boolean;
+        orderId: string;
+        seats: number;
+        amount: string;
+        status: string;
+        approveUrl: string | null;
+      }>("/api/v1/billing/create-order", {
+        method: "POST",
+        body: JSON.stringify({ seats }),
+      });
+    },
+
+    async captureOrder(orderId: string, seats: number = 1): Promise<{
+      ok: boolean;
+      status: string;
+      planTier: "pro" | "free";
+      projectLimit: number;
+      seats: number;
+      currentPeriodEnd: string;
+      orderId: string;
+      captureId?: string;
+    }> {
+      return request<{
+        ok: boolean;
+        status: string;
+        planTier: "pro" | "free";
+        projectLimit: number;
+        seats: number;
+        currentPeriodEnd: string;
+        orderId: string;
+        captureId?: string;
+      }>("/api/v1/billing/capture-order", {
+        method: "POST",
+        body: JSON.stringify({ orderId, seats }),
+      });
+    },
+
+    async getStatus(): Promise<{
+      planTier: "free" | "pro";
+      projectLimit: number;
+      seats: number;
+      currentPeriodEnd?: string;
+      daysRemaining?: number;
+      expired?: boolean;
+    }> {
+      return request<{
+        planTier: "free" | "pro";
+        projectLimit: number;
+        seats: number;
+        currentPeriodEnd?: string;
+        daysRemaining?: number;
+        expired?: boolean;
+      }>("/api/v1/billing/status");
+    },
+  },
 };

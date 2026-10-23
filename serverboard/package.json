@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
+    "@paypal/paypal-server-sdk": "^2.5.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "inngest": "^4.24.0",

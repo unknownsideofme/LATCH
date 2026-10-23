@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     username TEXT UNIQUE NOT NULL,
     name TEXT,
     email TEXT NOT NULL,
-    project_limit INTEGER NOT NULL DEFAULT 3,
+    project_limit INTEGER NOT NULL DEFAULT 2,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -79,3 +79,106 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;
   END IF;
 END $$;
+
+
+-- ============================================================================
+-- 5. PayPal One-Time Orders & Entitlement Tracking
+-- ============================================================================
+
+-- A. One-Time Orders / Purchases Ledger
+CREATE TABLE IF NOT EXISTS public.orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    paypal_order_id TEXT UNIQUE NOT NULL,
+    paypal_capture_id TEXT,
+    amount NUMERIC(10, 2) NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    seats INTEGER NOT NULL DEFAULT 1 CHECK (seats >= 1),
+    status TEXT NOT NULL DEFAULT 'COMPLETED' CHECK (status IN ('CREATED', 'COMPLETED', 'FAILED', 'REFUNDED')),
+    payer_email TEXT,
+    paypal_payer_id TEXT,
+    period_start TIMESTAMPTZ NOT NULL DEFAULT now(),
+    period_end TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_period_end ON public.orders(period_end);
+
+-- B. Idempotency & Webhook Audit Ledger
+CREATE TABLE IF NOT EXISTS public.billing_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id TEXT UNIQUE NOT NULL,
+    event_type TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    summary TEXT,
+    payload JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'processing', 'processed', 'failed')),
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    processed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_billing_events_event_id ON public.billing_events(event_id);
+
+-- C. User Entitlement Columns
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS plan_tier TEXT NOT NULL DEFAULT 'free' CHECK (plan_tier IN ('free', 'pro'));
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS seats_allocated INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
+
+-- Ensure default project limit (2) and agent limit (7) apply cleanly to existing schemas
+ALTER TABLE public.users ALTER COLUMN project_limit SET DEFAULT 2;
+
+-- Backfill: migrate any legacy free profiles to the new limit of 2 projects
+UPDATE public.users
+SET project_limit = 2
+WHERE (plan_tier IS NULL OR plan_tier = 'free') AND project_limit > 2;
+ALTER TABLE public.projects ALTER COLUMN agent_limit SET DEFAULT 7;
+
+-- D. RLS for Orders
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can read own orders" ON public.orders;
+CREATE POLICY "Users can read own orders" ON public.orders
+    FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Allow service role full access to orders" ON public.orders;
+CREATE POLICY "Allow service role full access to orders" ON public.orders
+    FOR ALL USING (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Allow service role full access to billing_events" ON public.billing_events;
+CREATE POLICY "Allow service role full access to billing_events" ON public.billing_events
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- E. Entitlement Check & Auto-Downgrade RPC Function
+CREATE OR REPLACE FUNCTION public.check_user_entitlement(p_user_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_user public.users%ROWTYPE;
+BEGIN
+    SELECT * INTO v_user FROM public.users WHERE id = p_user_id;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('planTier', 'free', 'projectLimit', 2, 'expired', false);
+    END IF;
+
+    -- If Pro 30-day period expired, automatically reset to free
+    IF v_user.plan_tier = 'pro' AND (v_user.current_period_end IS NULL OR v_user.current_period_end < now()) THEN
+        UPDATE public.users 
+        SET plan_tier = 'free', project_limit = 2, seats_allocated = 1 
+        WHERE id = p_user_id;
+        RETURN jsonb_build_object('planTier', 'free', 'projectLimit', 2, 'expired', true);
+    END IF;
+
+    RETURN jsonb_build_object(
+        'planTier', v_user.plan_tier, 
+        'projectLimit', v_user.project_limit, 
+        'seats', v_user.seats_allocated,
+        'currentPeriodEnd', v_user.current_period_end,
+        'expired', false
+    );
+END;
+$$;

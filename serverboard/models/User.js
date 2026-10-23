@@ -19,7 +19,7 @@ export const UserModel = {
     return data;
   },
 
-  async register({ email, password, username, name, projectLimit = 3 }) {
+  async register({ email, password, username, name, projectLimit = 2 }) {
     const cleanUsername = username.trim().toLowerCase();
 
     if (!USERNAME_REGEX.test(cleanUsername)) {
@@ -72,7 +72,7 @@ export const UserModel = {
         username: candidate,
         email: data.user.email,
         name: data.user.user_metadata?.name || candidate,
-        project_limit: 3,
+        project_limit: 2,
       }]).select().maybeSingle();
       if (insertError) {
         console.error("[auth] Failed to auto-provision user profile in authenticate:", insertError.message);

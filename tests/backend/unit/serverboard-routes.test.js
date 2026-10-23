@@ -69,6 +69,13 @@ vi.mock("../../../serverboard/config/env.js", () => ({
     supabase: {},
     inngest: { eventKey: "key", signingKey: null, isDev: false },
     webhookSecret: null,
+    paypal: {
+      mode: "sandbox",
+      clientId: "test_client_id",
+      clientSecret: "test_client_secret",
+      webhookId: "test_webhook_id",
+      bypassWebhookVerification: false,
+    },
   },
 }));
 
