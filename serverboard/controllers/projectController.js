@@ -1,3 +1,10 @@
+// Helper to check if user has an active (non-expired) Pro pass
+function isUserActivePro(userProfile) {
+  if (!userProfile || userProfile.plan_tier !== "pro") return false;
+  if (!userProfile.current_period_end) return false;
+  return new Date(userProfile.current_period_end) > new Date();
+}
+
 import { ProjectModel } from "../models/Project.js";
 import { inngest, runProvisioningWorker, runTeardownWorker } from "../services/inngestService.js";
 import { RenderService } from "../services/renderService.js";
@@ -76,7 +83,7 @@ export const ProjectController = {
       const selectedPlan = "free";
 
       // 4. Validate and clamp agent limit based on tier (Free: max 7, Pro: max 20)
-      const maxAllowedAgents = req.userProfile?.plan_tier === "pro" ? 20 : 7;
+      const maxAllowedAgents = isUserActivePro(req.userProfile) ? 20 : 7;
       const parsedAgentLimit = parseInt(agentLimitInput, 10);
       const selectedAgentLimit = Number.isFinite(parsedAgentLimit)
         ? Math.min(Math.max(parsedAgentLimit, 1), maxAllowedAgents)
@@ -217,7 +224,7 @@ export const ProjectController = {
 
       const rawLimit = agent_limit !== undefined ? agent_limit : agentLimit;
       if (rawLimit !== undefined) {
-        const maxAllowedAgents = req.userProfile?.plan_tier === "pro" ? 20 : 7;
+        const maxAllowedAgents = isUserActivePro(req.userProfile) ? 20 : 7;
         const parsedLimit = parseInt(rawLimit, 10);
         if (!Number.isFinite(parsedLimit) || parsedLimit < 1 || parsedLimit > maxAllowedAgents) {
           return res.status(400).json({

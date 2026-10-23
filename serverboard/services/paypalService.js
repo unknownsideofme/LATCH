@@ -108,7 +108,7 @@ export class PayPalService {
             items: [
               {
                 name: "LATCH Pro Swarm 30-Day Pass",
-                description: "30-day Pro swarm access with 50 project capacity and sub-ms lock arbitration",
+                description: "30-day Pro swarm access with 10 project capacity and sub-ms lock arbitration",
                 quantity: String(seatCount),
                 unitAmount: {
                   currencyCode: "USD",

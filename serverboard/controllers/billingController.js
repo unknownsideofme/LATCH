@@ -44,12 +44,41 @@ export class BillingController {
         return res.status(401).json({ error: "unauthorized", message: "User session required" });
       }
 
-      const { orderId, seats = 1 } = req.body || {};
+      const { orderId } = req.body || {};
       if (!orderId) {
         return res.status(400).json({ error: "bad_request", message: "orderId is required" });
       }
 
-      const seatCount = Math.max(1, parseInt(seats, 10) || 1);
+      // 1. Idempotency Check: Was this order already processed in database?
+      const { data: existingOrder } = await supabaseAdmin
+        .from("orders")
+        .select("*")
+        .eq("paypal_order_id", orderId)
+        .maybeSingle();
+
+      if (existingOrder) {
+        // Prevent replay attacks by a different user
+        if (existingOrder.user_id !== userId) {
+          return res.status(409).json({
+            error: "order_already_claimed",
+            message: "This PayPal order has already been claimed by another account.",
+          });
+        }
+
+        // Idempotent retry by the same user: return existing entitlement without extending 30-day period
+        return res.status(200).json({
+          ok: true,
+          status: "COMPLETED",
+          planTier: "pro",
+          projectLimit: 10,
+          seats: existingOrder.seats || 1,
+          currentPeriodEnd: existingOrder.period_end,
+          orderId: existingOrder.paypal_order_id,
+          captureId: existingOrder.paypal_capture_id,
+        });
+      }
+
+      // 2. Capture payment with PayPal
       const captureResult = await paypalService.captureOrder({ orderId });
 
       if (captureResult.status !== "COMPLETED") {
@@ -60,32 +89,46 @@ export class BillingController {
         });
       }
 
-      // 30-Day Pro Access Window
+      // 3. User Ownership Verification: check customId in PayPal purchaseUnit
+      const purchaseUnit = captureResult.raw?.purchaseUnits?.[0];
+      const customId = purchaseUnit?.customId;
+      if (customId && customId !== "anonymous" && customId !== String(userId)) {
+        return res.status(403).json({
+          error: "order_owner_mismatch",
+          message: "This order was initialized for a different user account.",
+        });
+      }
+
+      // 4. Derive seat count from actual paid amount ($24/seat) rather than trusting client body
+      const totalPaid = parseFloat(captureResult.amount) || 24.00;
+      const seatCount = Math.max(1, Math.round(totalPaid / 24));
+
+      // 5. 30-Day Pro Access Window
       const periodStart = new Date();
       const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      // 1. Record transaction in orders table
-      try {
-        await supabaseAdmin.from("orders").insert([
-          {
-            user_id: userId,
-            paypal_order_id: captureResult.orderId,
-            paypal_capture_id: captureResult.captureId,
-            amount: parseFloat(captureResult.amount) || seatCount * 24,
-            currency: captureResult.currency || "USD",
-            seats: seatCount,
-            status: "COMPLETED",
-            payer_email: captureResult.payerEmail,
-            paypal_payer_id: captureResult.payerId,
-            period_start: periodStart.toISOString(),
-            period_end: periodEnd.toISOString(),
-          },
-        ]);
-      } catch (dbErr) {
-        console.warn("[billing] Notice: could not record order log (table may need schema migration):", dbErr.message);
+      // 6. Record transaction in orders table
+      const { error: orderInsertError } = await supabaseAdmin.from("orders").insert([
+        {
+          user_id: userId,
+          paypal_order_id: captureResult.orderId,
+          paypal_capture_id: captureResult.captureId,
+          amount: totalPaid,
+          currency: captureResult.currency || "USD",
+          seats: seatCount,
+          status: "COMPLETED",
+          payer_email: captureResult.payerEmail,
+          paypal_payer_id: captureResult.payerId,
+          period_start: periodStart.toISOString(),
+          period_end: periodEnd.toISOString(),
+        },
+      ]);
+
+      if (orderInsertError) {
+        console.error("[billing] Error recording order in database:", orderInsertError);
       }
 
-      // 2. Elevate user profile to Pro Swarm with 10 project limit
+      // 7. Elevate user profile to Pro Swarm with 10 project limit
       const { data: updatedUser, error: updateError } = await supabaseAdmin
         .from("users")
         .update({

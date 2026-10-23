@@ -1,13 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import { useState } from "react";
 import Link from "next/link";
 import { DecoButton } from "@/components/deco/DecoButton";
 import { Check, Sparkles, Terminal, ArrowUpRight } from "lucide-react";
-import { UpgradeModal } from "@/components/billing/UpgradeModal";
 
 export function PricingTiers() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <section className="max-w-5xl mx-auto px-4 sm:px-6 py-10 md:py-16">
@@ -156,7 +157,7 @@ export function PricingTiers() {
               variant="solid"
               size="default"
               className="w-full cursor-pointer"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => router.push("/signup?plan=pro")}
             >
               <span className="inline-flex items-center gap-1">
                 <span>Get 30-Day Pro Pass</span>
@@ -164,19 +165,15 @@ export function PricingTiers() {
               </span>
             </DecoButton>
             <div className="text-center">
-              <Link href="/signup?plan=pro" className="text-[11px] text-muted-foreground hover:text-foreground underline">
-                Or create an account first
+              <Link href="/login" className="text-[11px] text-muted-foreground hover:text-foreground underline">
+                Already have an account? Sign in
               </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Upgrade Modal */}
-      <UpgradeModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+
     </section>
   );
 }
