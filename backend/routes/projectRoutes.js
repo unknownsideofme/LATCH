@@ -424,8 +424,13 @@ function createProjectRoutes({
       try {
         fs.mkdirSync(path.dirname(latchOut), { recursive: true });
         fs.writeFileSync(latchOut, brief.markdown);
-        fs.mkdirSync(path.dirname(relayOut), { recursive: true });
-        fs.writeFileSync(relayOut, brief.markdown);
+        if (fs.existsSync(path.dirname(relayOut))) {
+          try {
+            fs.writeFileSync(relayOut, brief.markdown);
+          } catch {
+            /* ignore */
+          }
+        }
         written = latchOut;
       } catch (err) {
         return res.status(500).json({ error: "write_failed", detail: String(err.message || err) });

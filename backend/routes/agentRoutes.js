@@ -89,10 +89,15 @@ function createAgentRoutes({ sse, watcher, presence, lockTable, lockService, wor
       const latchDir = path.join(project.path, ".latch");
       const relayDir = path.join(project.path, ".relay");
       fs.mkdirSync(latchDir, { recursive: true });
-      fs.mkdirSync(relayDir, { recursive: true });
       const hsFile = `.handshake_${(agent || "agent").replace(/\s+/g, "_")}`;
       fs.writeFileSync(path.join(latchDir, hsFile), token);
-      fs.writeFileSync(path.join(relayDir, hsFile), token);
+      if (fs.existsSync(relayDir)) {
+        try {
+          fs.writeFileSync(path.join(relayDir, hsFile), token);
+        } catch {
+          /* ignore */
+        }
+      }
       updateLatchContextFiles(project.path);
     } catch {
       fs.mkdirSync(path.join(homeLatchDir(), "handshakes"), { recursive: true });

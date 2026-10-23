@@ -57,7 +57,7 @@ class WorkspaceService {
       };
       try {
         fs.mkdirSync(path.join(resolved, ".latch"), { recursive: true });
-        fs.mkdirSync(path.join(resolved, ".relay"), { recursive: true });
+        // Must NOT create .relay folder while .latch is there
         installProjectHooks(resolved);
       } catch {
         /* ignore */

@@ -102,7 +102,7 @@ function seedIfEmpty() {
   };
   try {
     fs.mkdirSync(path.join(cwd, ".latch"), { recursive: true });
-    fs.mkdirSync(path.join(cwd, ".relay"), { recursive: true });
+    // Must NOT create .relay folder while .latch is there
   } catch {
     /* ignore */
   }
