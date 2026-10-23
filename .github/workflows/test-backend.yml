@@ -122,3 +122,17 @@ jobs:
       - name: Skip tests
         if: needs.changes.outputs.backend != 'true'
         run: echo "Skipped because no backend files changed"
+
+  backend-gate:
+    name: "Tests: Backend"
+    needs: [changes, backend-tests, unit, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check backend results
+        run: |
+          if [ "${{ needs.backend-tests.result }}" = "failure" ] || [ "${{ needs.unit.result }}" = "failure" ] || [ "${{ needs.e2e.result }}" = "failure" ]; then
+            echo "One or more backend tests failed"
+            exit 1
+          fi
+          echo "All backend tests passed or were skipped"

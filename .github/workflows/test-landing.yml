@@ -89,3 +89,17 @@ jobs:
       - name: Skip tests
         if: needs.changes.outputs.landing != 'true'
         run: echo "Skipped because no landing files changed"
+
+  landing-gate:
+    name: "Tests: Landing"
+    needs: [changes, unit, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check landing results
+        run: |
+          if [ "${{ needs.unit.result }}" = "failure" ] || [ "${{ needs.e2e.result }}" = "failure" ]; then
+            echo "One or more landing tests failed"
+            exit 1
+          fi
+          echo "All landing tests passed or were skipped"

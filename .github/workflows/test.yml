@@ -71,3 +71,17 @@ jobs:
       - name: Skip full suite
         if: needs.changes.outputs.full_suite != 'true'
         run: echo "Skipped full suite because core config did not change"
+
+  full-suite-gate:
+    name: "Tests: Full Suite"
+    needs: [changes, full-suite]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check full suite results
+        run: |
+          if [ "${{ needs.full-suite.result }}" = "failure" ]; then
+            echo "Full suite failed"
+            exit 1
+          fi
+          echo "Full suite passed or was skipped"

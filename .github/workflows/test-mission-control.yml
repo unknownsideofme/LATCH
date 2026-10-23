@@ -117,3 +117,17 @@ jobs:
       - name: Skip build
         if: needs.changes.outputs.mission_control != 'true'
         run: echo "Skipped because no mission-control files changed"
+
+  mission-control-gate:
+    name: "Tests: Mission Control"
+    needs: [changes, unit, e2e, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check mission control results
+        run: |
+          if [ "${{ needs.unit.result }}" = "failure" ] || [ "${{ needs.e2e.result }}" = "failure" ] || [ "${{ needs.build.result }}" = "failure" ]; then
+            echo "One or more mission control checks failed"
+            exit 1
+          fi
+          echo "All mission control checks passed or were skipped"
