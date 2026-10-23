@@ -50,11 +50,19 @@ export class BillingController {
       }
 
       // 1. Idempotency Check: Was this order already processed in database?
-      const { data: existingOrder } = await supabaseAdmin
+      const { data: existingOrder, error: lookupError } = await supabaseAdmin
         .from("orders")
         .select("*")
         .eq("paypal_order_id", orderId)
         .maybeSingle();
+
+      if (lookupError) {
+        console.error("[billing] Order lookup error:", lookupError);
+        return res.status(500).json({
+          error: "database_error",
+          message: "Failed to verify order status. Please try again.",
+        });
+      }
 
       if (existingOrder) {
         // Prevent replay attacks by a different user
@@ -65,16 +73,54 @@ export class BillingController {
           });
         }
 
-        // Idempotent retry by the same user: return existing entitlement without extending 30-day period
+        // Check if the recorded 30-day period is still active
+        const periodEnd = existingOrder.period_end ? new Date(existingOrder.period_end) : null;
+        const isStillValid = periodEnd && periodEnd > new Date();
+
+        if (isStillValid) {
+          // Reconcile: ensure user profile in users table is actually elevated to Pro
+          // (guards against the edge case where orders.insert succeeded but users.update failed on first attempt)
+          const { error: reconcileError } = await supabaseAdmin
+            .from("users")
+            .update({
+              plan_tier: "pro",
+              project_limit: 10,
+              seats_allocated: existingOrder.seats || 1,
+              current_period_end: existingOrder.period_end,
+            })
+            .eq("id", userId);
+
+          if (reconcileError) {
+            console.error("[billing] Entitlement reconciliation failed:", reconcileError);
+            return res.status(500).json({
+              error: "entitlement_update_failed",
+              message: "Order found, but failed to elevate account to Pro in the database. Please contact support.",
+              orderId: existingOrder.paypal_order_id,
+            });
+          }
+
+          return res.status(200).json({
+            ok: true,
+            status: "COMPLETED",
+            planTier: "pro",
+            projectLimit: 10,
+            seats: existingOrder.seats || 1,
+            currentPeriodEnd: existingOrder.period_end,
+            orderId: existingOrder.paypal_order_id,
+            captureId: existingOrder.paypal_capture_id,
+          });
+        }
+
+        // If the recorded order has expired, return current Free tier status
         return res.status(200).json({
           ok: true,
           status: "COMPLETED",
-          planTier: "pro",
-          projectLimit: 10,
-          seats: existingOrder.seats || 1,
+          planTier: "free",
+          projectLimit: 2,
+          seats: 1,
           currentPeriodEnd: existingOrder.period_end,
           orderId: existingOrder.paypal_order_id,
-          captureId: existingOrder.paypal_capture_id,
+          expired: true,
         });
       }
 
@@ -126,6 +172,13 @@ export class BillingController {
 
       if (orderInsertError) {
         console.error("[billing] Error recording order in database:", orderInsertError);
+        // If unique constraint violation (order was inserted concurrently), reject duplicate grant
+        if (orderInsertError.code === "23505") {
+          return res.status(409).json({
+            error: "order_already_processed",
+            message: "Order was already processed by a concurrent request.",
+          });
+        }
       }
 
       // 7. Elevate user profile to Pro Swarm with 10 project limit
