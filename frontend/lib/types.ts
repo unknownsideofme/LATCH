@@ -4,6 +4,7 @@ export interface UserProfile {
   name: string;
   email: string | null;
   project_limit: number;
+  plan_tier?: "free" | "pro";
   created_at: string;
 }
 

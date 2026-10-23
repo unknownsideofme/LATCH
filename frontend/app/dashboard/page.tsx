@@ -70,7 +70,7 @@ export default function DashboardPage() {
 
   // Billing / Plan Tier
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-  const [planTier, setPlanTier] = useState<"free" | "pro">("free");
+  const [planTier, setPlanTier] = useState<"free" | "pro" | "unknown">("unknown");
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState<boolean>(false);
 
@@ -98,6 +98,9 @@ export default function DashboardPage() {
         const meRes = await api.auth.me();
         if (isSubscribed && meRes?.user) {
           setUser(meRes.user);
+          if (meRes.user.plan_tier) {
+            setPlanTier(meRes.user.plan_tier === "pro" ? "pro" : "free");
+          }
         }
       } catch (err: any) {
         if (isSubscribed) {
@@ -126,6 +129,10 @@ export default function DashboardPage() {
         }
       } catch (err: any) {
         console.warn("[billing] Could not fetch billing status:", err.message);
+        // Do not force "free" if auth profile already verified pro
+        if (isSubscribed && planTier === "unknown") {
+          setPlanTier("free");
+        }
       } finally {
         if (isSubscribed) setLoading(false);
       }
@@ -178,6 +185,7 @@ export default function DashboardPage() {
 
   const handleOpenModal = () => {
     if (loading) return;
+    // Only intercept if confirmed Free tier. If status is unknown, allow attempt and let backend enforce.
     if (planTier === "free" && projects.length >= 2) {
       setIsUpgradeModalOpen(true);
       return;
