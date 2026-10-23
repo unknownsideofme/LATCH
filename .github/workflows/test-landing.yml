@@ -3,20 +3,8 @@ name: "Tests: Landing"
 on:
   push:
     branches: [main]
-    paths:
-      - "landing/**"
-      - "tests/landing/**"
-      - "vitest.config.mjs"
-      - "package.json"
-      - "package-lock.json"
   pull_request:
     branches: [main]
-    paths:
-      - "landing/**"
-      - "tests/landing/**"
-      - "vitest.config.mjs"
-      - "package.json"
-      - "package-lock.json"
   workflow_dispatch:
 
 permissions:
@@ -27,40 +15,77 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      landing: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.landing == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            landing:
+              - "landing/**"
+              - "tests/landing/**"
+              - "vitest.config.mjs"
+              - "package.json"
+              - "package-lock.json"
+              - ".github/workflows/test-landing.yml"
+
   unit:
     name: "Landing unit tests"
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        if: needs.changes.outputs.landing == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22.x
+        if: needs.changes.outputs.landing == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: npm
 
       - name: Install dependencies
+        if: needs.changes.outputs.landing == 'true'
         run: npm ci
 
       - name: Run Landing unit tests
+        if: needs.changes.outputs.landing == 'true'
         run: vitest run tests/landing/unit
+
+      - name: Skip tests
+        if: needs.changes.outputs.landing != 'true'
+        run: echo "Skipped because no landing files changed"
 
   e2e:
     name: "Landing E2E tests"
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        if: needs.changes.outputs.landing == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22.x
+        if: needs.changes.outputs.landing == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: npm
 
       - name: Install dependencies
+        if: needs.changes.outputs.landing == 'true'
         run: npm ci
 
       - name: Run Landing E2E tests
+        if: needs.changes.outputs.landing == 'true'
         run: vitest run tests/landing/e2e
+
+      - name: Skip tests
+        if: needs.changes.outputs.landing != 'true'
+        run: echo "Skipped because no landing files changed"

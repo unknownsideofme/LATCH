@@ -3,20 +3,8 @@ name: "Tests: Mission Control"
 on:
   push:
     branches: [main]
-    paths:
-      - "mission-control/**"
-      - "tests/mission-control/**"
-      - "vitest.config.mjs"
-      - "package.json"
-      - "package-lock.json"
   pull_request:
     branches: [main]
-    paths:
-      - "mission-control/**"
-      - "tests/mission-control/**"
-      - "vitest.config.mjs"
-      - "package.json"
-      - "package-lock.json"
   workflow_dispatch:
 
 permissions:
@@ -27,59 +15,105 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      mission_control: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.mission_control == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mission_control:
+              - "mission-control/**"
+              - "tests/mission-control/**"
+              - "vitest.config.mjs"
+              - "package.json"
+              - "package-lock.json"
+              - ".github/workflows/test-mission-control.yml"
+
   unit:
     name: "Mission Control unit tests"
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        if: needs.changes.outputs.mission_control == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22.x
+        if: needs.changes.outputs.mission_control == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: npm
 
       - name: Install dependencies
+        if: needs.changes.outputs.mission_control == 'true'
         run: npm ci
 
       - name: Run Mission Control unit tests
+        if: needs.changes.outputs.mission_control == 'true'
         run: vitest run tests/mission-control/unit
+
+      - name: Skip tests
+        if: needs.changes.outputs.mission_control != 'true'
+        run: echo "Skipped because no mission-control files changed"
 
   e2e:
     name: "Mission Control E2E tests"
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        if: needs.changes.outputs.mission_control == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22.x
+        if: needs.changes.outputs.mission_control == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: npm
 
       - name: Install dependencies
+        if: needs.changes.outputs.mission_control == 'true'
         run: npm ci
 
       - name: Run Mission Control E2E tests
+        if: needs.changes.outputs.mission_control == 'true'
         run: vitest run tests/mission-control/e2e
+
+      - name: Skip tests
+        if: needs.changes.outputs.mission_control != 'true'
+        run: echo "Skipped because no mission-control files changed"
 
   build:
     name: "Mission Control build"
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        if: needs.changes.outputs.mission_control == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22.x
+        if: needs.changes.outputs.mission_control == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: npm
 
       - name: Install dependencies
+        if: needs.changes.outputs.mission_control == 'true'
         run: npm ci
 
       - name: Verify build
+        if: needs.changes.outputs.mission_control == 'true'
         run: npm run build -w mission-control
+
+      - name: Skip build
+        if: needs.changes.outputs.mission_control != 'true'
+        run: echo "Skipped because no mission-control files changed"

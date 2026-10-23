@@ -3,22 +3,8 @@ name: "Tests: Backend"
 on:
   push:
     branches: [main]
-    paths:
-      - "backend/**"
-      - "serverboard/**"
-      - "tests/backend/**"
-      - "vitest.config.mjs"
-      - "package.json"
-      - "package-lock.json"
   pull_request:
     branches: [main]
-    paths:
-      - "backend/**"
-      - "serverboard/**"
-      - "tests/backend/**"
-      - "vitest.config.mjs"
-      - "package.json"
-      - "package-lock.json"
   workflow_dispatch:
 
 permissions:
@@ -29,40 +15,110 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit:
-    name: "Backend unit tests"
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.backend == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - "backend/**"
+              - "serverboard/**"
+              - "tests/backend/**"
+              - "vitest.config.mjs"
+              - "package.json"
+              - "package-lock.json"
+              - ".github/workflows/test-backend.yml"
+
+  backend-tests:
+    name: "Backend tests (Node 22.x)"
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        if: needs.changes.outputs.backend == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22.x
+        if: needs.changes.outputs.backend == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: npm
 
       - name: Install dependencies
+        if: needs.changes.outputs.backend == 'true'
         run: npm ci
 
       - name: Run backend unit tests
+        if: needs.changes.outputs.backend == 'true'
         run: npm run test:backend:unit
 
-  e2e:
-    name: "Backend E2E tests"
+      - name: Run backend integration tests
+        if: needs.changes.outputs.backend == 'true'
+        run: npm run test:backend:e2e
+
+      - name: Skip tests
+        if: needs.changes.outputs.backend != 'true'
+        run: echo "Skipped because no backend files changed"
+
+  unit:
+    name: "Backend unit tests"
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        if: needs.changes.outputs.backend == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22.x
+        if: needs.changes.outputs.backend == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: npm
 
       - name: Install dependencies
+        if: needs.changes.outputs.backend == 'true'
+        run: npm ci
+
+      - name: Run backend unit tests
+        if: needs.changes.outputs.backend == 'true'
+        run: npm run test:backend:unit
+
+      - name: Skip tests
+        if: needs.changes.outputs.backend != 'true'
+        run: echo "Skipped because no backend files changed"
+
+  e2e:
+    name: "Backend E2E tests"
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        if: needs.changes.outputs.backend == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        if: needs.changes.outputs.backend == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        if: needs.changes.outputs.backend == 'true'
         run: npm ci
 
       - name: Run backend E2E tests
+        if: needs.changes.outputs.backend == 'true'
         run: npm run test:backend:e2e
+
+      - name: Skip tests
+        if: needs.changes.outputs.backend != 'true'
+        run: echo "Skipped because no backend files changed"
