@@ -12,29 +12,6 @@ const {
 const { MAX_HOOK_KEEP_ALIVE_MS } = require("./LockConstants");
 
 class LockArbitrator {
-  resolveWorkspace(workspaceId) {
-    let ws = workspaceRoot(workspaceId) || workspaceId;
-    try {
-      const { loadRegistry, loadSession } = require("../../lib/store");
-      const reg = loadRegistry();
-      const session = loadSession();
-      const current = reg.projects.find((p) => p.id === session.projectId) || reg.projects[0];
-      if (current && current.path) {
-        const normWs = String(ws || "").toLowerCase();
-        if (
-          !normWs ||
-          normWs.includes("appdata\\local\\programs") ||
-          normWs.includes("appdata/local/programs") ||
-          normWs.includes("program files") ||
-          !reg.projects.some((p) => normWs.includes(p.path.toLowerCase()))
-        ) {
-          ws = current.path;
-        }
-      }
-    } catch {}
-    return ws;
-  }
-
   constructor(table) {
     this.table = table;
   }
@@ -84,7 +61,7 @@ class LockArbitrator {
     let ownershipToken = params.ownershipToken;
     let fencingToken = params.fencingToken;
 
-    const ws = this.resolveWorkspace(workspaceId);
+    const ws = workspaceRoot(workspaceId) || workspaceId;
     if (authoritativeLease) {
       ownershipToken = authoritativeLease.ownershipToken;
       fencingToken = authoritativeLease.fencingToken;
@@ -247,7 +224,7 @@ class LockArbitrator {
   }
 
   release({ agentId, file, workspaceId, ownershipToken, fencingToken }) {
-    const ws = this.resolveWorkspace(workspaceId);
+    const ws = workspaceRoot(workspaceId) || workspaceId;
     if (!ws) return { ok: false, reason: "workspace_required" };
     const filePath = canonicalWorkspaceFile(ws, file);
     if (!filePath) return { ok: false, reason: "invalid_path" };
