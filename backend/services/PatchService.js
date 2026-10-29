@@ -1,7 +1,7 @@
 "use strict";
 
 const path = require("path");
-const { computePatch, recordPatch, applyPeerFile, rewindTo } = require("../lib/patches");
+const { computePatch, computePatchAsync, recordPatch, applyPeerFile, rewindTo } = require("../lib/patches");
 const { loadSession, loadMemory, loadRegistry } = require("../lib/store");
 const { pushLocalEdits, pullCentralChanges } = require("../lib/centralSync");
 const { loadRoom } = require("../lib/room");
@@ -22,6 +22,7 @@ class PatchService {
     this.supabaseSyncAdapter = supabaseSyncAdapter || null;
 
     this.applyingRemote = new Set();
+    this.remoteWriteCooldown = new Map();
     this.deferredEdits = new Map();
     this.watchTimers = new Map();
 
@@ -144,26 +145,31 @@ class PatchService {
       }
       return { applied: false, projectId: project.id, ...clash };
     }
-    this.applyingRemote.add(`${project.id}:${patch.file}`);
+    const key = `${project.id}:${patch.file}`;
+    this.remoteWriteCooldown.set(key, Date.now() + 2000);
+    this.applyingRemote.add(key);
     const result = applyPeerFile(project.id, patch, project.path);
-    this.applyingRemote.delete(`${project.id}:${patch.file}`);
+    setTimeout(() => {
+      this.applyingRemote.delete(key);
+    }, 500);
     return { ...result, projectId: project.id };
   }
 
-  fanOutLocalFile(project, file, originAgentId) {
+  async fanOutLocalFile(project, file, originAgentId) {
     if (!project?.path || !file) return { flushed: false };
     const rel = file.replace(/\\/g, "/");
     const session = loadSession();
-    const patch = computePatch({
+    const known = (loadMemory(project.id).patches || []).filter((p) => p.file === rel).pop();
+
+    const patch = await computePatchAsync({
       workspacePath: project.path,
       file: rel,
       agent: "fs.watch",
       ownerLogin: session.login || "local",
       workspaceId: project.id,
+      previousSha: known?.sha256,
     });
-    if (!patch) return { flushed: false };
-    const known = (loadMemory(project.id).patches || []).filter((p) => p.file === rel).pop();
-    if (known && known.sha256 === patch.sha256) return { flushed: false, unchanged: true, file: rel };
+    if (!patch || patch.unchanged) return { flushed: false, unchanged: true, file: rel };
     patch.originId = ContextService.originId();
     patch.originAgentId = originAgentId || ContextService.originId();
     recordPatch(project.id, patch);
@@ -224,7 +230,10 @@ class PatchService {
       loadRegistry().projects.find((p) => p.id === workspaceId || p.path === workspacePath) ||
       (this.workspaceService ? this.workspaceService.ensureWorkspace(workspacePath) : null);
     if (!project) return;
-    if (this.applyingRemote.has(project.id) || this.applyingRemote.has(`${project.id}:${file}`)) return;
+    const cooldownUntil = this.remoteWriteCooldown.get(`${project.id}:${file}`) || 0;
+    if (Date.now() < cooldownUntil || this.applyingRemote.has(project.id) || this.applyingRemote.has(`${project.id}:${file}`)) {
+      return;
+    }
     const rel = file.replace(/\\/g, "/");
     const publish = skipPublish(this.lockTable, project.path, rel);
     if (publish.skip) {

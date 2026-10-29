@@ -3,8 +3,8 @@ import "./globals.css";
 import { LatchProvider } from "@/lib/LatchContext";
 
 export const metadata: Metadata = {
-  title: "./latch",
-  description: "GitHub Desktop for AI agents",
+  title: "./latch - Mission Control",
+  description: "Distributed Mutex Bus & Concurrency Control for AI Agents",
   icons: {
     icon: "/logo_transparent.png",
     shortcut: "/logo_transparent.png",
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" data-theme="dark" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -27,16 +27,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function() {
               try {
                 var saved = localStorage.getItem('latch_theme');
-                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                var theme = saved || (prefersDark ? 'dark' : 'light');
+                var theme = saved || 'dark';
                 document.documentElement.setAttribute('data-theme', theme);
-                if (theme === 'dark') document.documentElement.classList.add('dark');
+                if (theme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
               } catch (e) {}
             })();`,
           }}
         />
       </head>
-      <body suppressHydrationWarning>
+      <body className="bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground" suppressHydrationWarning>
         <LatchProvider>{children}</LatchProvider>
       </body>
     </html>

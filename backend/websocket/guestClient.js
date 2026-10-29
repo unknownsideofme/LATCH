@@ -85,12 +85,17 @@ class GuestClient {
 
     this.hostSocket.on("open", () => {
       this.hostBackoffMs = 200;
+      // Single Socket Authority: unified socket handles both patches and control RPCs
+      this.roomService.roomControl.attach(this.hostSocket);
       try {
         this.hostSocket.send(JSON.stringify({ type: "join" }));
       } catch {
         /* ignore */
       }
-      console.log(`[latch-room] streaming room from ${room.url}`);
+      console.log(`[latch-room] streaming unified room socket from ${room.url}`);
+      if (this.roomService.roomControl.queued) {
+        this.roomService.roomControl.flush().catch(() => undefined);
+      }
     });
 
     this.hostSocket.on("error", (err) => {
@@ -101,6 +106,9 @@ class GuestClient {
     this.hostSocket.on("message", (raw) => {
       try {
         const msg = JSON.parse(String(raw));
+        if (msg.type === "rpc-ok" || msg.type === "rpc-err") {
+          if (this.roomService.roomControl.handle(msg)) return;
+        }
         if (msg.type === "pong" || msg.type === "ping") {
           if (msg.type === "ping") {
             try {
@@ -187,6 +195,11 @@ class GuestClient {
 
   connectHostControl(room) {
     if (!room?.url || room.role !== "guest") return;
+    // If unified hostSocket is already open, roomControl is already attached to it
+    if (this.hostWireOpen()) {
+      this.roomService.roomControl.attach(this.hostSocket);
+      return;
+    }
     if (this.controlRetryTimer) {
       clearTimeout(this.controlRetryTimer);
       this.controlRetryTimer = null;

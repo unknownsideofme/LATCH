@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-antigravity-pre-tool.js\"",
+            "command": "node ../hooks/latch-antigravity-pre-tool.js",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-antigravity-pre-read.js\"",
+            "command": "node ../hooks/latch-antigravity-pre-read.js",
             "timeout": 10
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-antigravity-post-tool.js\"",
+            "command": "node ../hooks/latch-antigravity-post-tool.js",
             "timeout": 10
           }
         ]
@@ -37,7 +37,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "node \"/Users/debanjan/Desktop/CodeBook/relayBrain/hooks/latch-antigravity-stop.js\"",
+        "command": "node ../hooks/latch-antigravity-stop.js",
         "timeout": 120
       }
     ]

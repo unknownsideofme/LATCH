@@ -8,7 +8,7 @@ class LockScopeResolver {
     const reg = loadRegistry();
     const current = ContextService.currentProject();
     const project =
-      reg.projects.find((p) => p.id === projectId || normalizeCompare(p.path) === normalizeCompare(projectId)) ||
+      reg.projects.find((p) => p.id === projectId || p.id.toLowerCase() === String(projectId||'').toLowerCase() || (projectId && p.name && p.name.toLowerCase() === String(projectId).toLowerCase()) || (projectId && p.remoteUrl && p.remoteUrl.toLowerCase().includes(String(projectId).toLowerCase())) || normalizeCompare(p.path) === normalizeCompare(projectId)) ||
       (projectId ? null : current);
     if (!project) return null;
     const room = loadRoom(project.path) || loadRoom();

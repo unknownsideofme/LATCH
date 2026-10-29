@@ -114,6 +114,23 @@ async function main() {
   });
   lockService.roomLocks = roomService.roomLocks;
 
+  const broadcastAllLocks = () => {
+    try {
+      const reg = loadRegistry();
+      for (const project of reg.projects) {
+        const scope = lockService.lockScope(project.id);
+        if (!scope) continue;
+        const locks = lockService.locksFor(scope);
+        const reads = lockService.readsFor(scope);
+        sse.emit("locks", { workspaceId: project.id, locks, reads });
+      }
+    } catch (err) {
+      console.warn("[latch] broadcastAllLocks:", err.message || err);
+    }
+  };
+  lockTable.on("change", broadcastAllLocks);
+  if (roomService.roomLocks) roomService.roomLocks.on("change", broadcastAllLocks);
+
   const transcriptService = new TranscriptService({
     sse,
     lockTable,
@@ -212,12 +229,43 @@ async function main() {
   const port = parsePort(process.argv);
   const server = hardenHttpServer(http.createServer(app));
 
-  // Attach WebSockets
-  wssPatches = createPatchesServer({ server, roomService, patchService });
-  wssControl = createControlServer({
-    server,
+  // Attach WebSockets with unified upgrade handler (Single Socket Authority)
+  wssPatches = createPatchesServer({
+    noServer: true,
+    roomService,
+    patchService,
     lockService,
     ensureWorkspaceFn: (p) => workspaceService.ensureWorkspace(p),
+  });
+  wssControl = createControlServer({
+    noServer: true,
+    lockService,
+    ensureWorkspaceFn: (p) => workspaceService.ensureWorkspace(p),
+  });
+
+  server.on("upgrade", (request, socket, head) => {
+    socket.on("error", (err) => {
+      console.warn("[latch-ws] upgrade socket error:", err.message || err);
+    });
+
+    let pathname;
+    try {
+      pathname = new URL(request.url, "http://" + (request.headers.host || "127.0.0.1")).pathname;
+    } catch {
+      pathname = (request.url || "").split("?")[0];
+    }
+
+    if (pathname === "/ws/room" || pathname === "/ws" || pathname === "/ws/patches") {
+      wssPatches.handleUpgrade(request, socket, head, (ws) => {
+        wssPatches.emit("connection", ws, request);
+      });
+    } else if (pathname === "/ws/control") {
+      wssControl.handleUpgrade(request, socket, head, (ws) => {
+        wssControl.emit("connection", ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
   });
 
   // EADDRINUSE is the only server error that should kill the process;

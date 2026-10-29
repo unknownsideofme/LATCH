@@ -12,7 +12,15 @@ function createAuthRoutes({ sse }) {
   router.get("/api/session", (_req, res) => {
     const reg = loadRegistry();
     const session = loadSession();
-    const user = session.userId ? reg.users.find((u) => u.id === session.userId) || null : null;
+    if (!reg.users || reg.users.length === 0) {
+      reg.users = [
+        { id: "u_dev", login: "dev", name: "Dev Operator", role: "admin", avatar: "" },
+        { id: "u_swarm", login: "swarm", name: "AI Swarm Coordinator", role: "coordinator", avatar: "" },
+        { id: "u_architect", login: "architect", name: "Lead Architect", role: "engineer", avatar: "" }
+      ];
+      saveRegistry(reg);
+    }
+    const user = session.userId ? reg.users.find((u) => u.id === session.userId) || reg.users[0] : null;
     res.json({
       user,
       users: reg.users,
@@ -23,8 +31,20 @@ function createAuthRoutes({ sse }) {
 
   router.post("/api/auth/login", (req, res) => {
     const reg = loadRegistry();
-    const login = req.body?.login;
-    const user = reg.users.find((u) => u.login === login) || reg.users[0];
+    const login = req.body?.login || "dev";
+    if (!reg.users) reg.users = [];
+    let user = reg.users.find((u) => u.login === login);
+    if (!user) {
+      user = {
+        id: "u_" + (login.toLowerCase().replace(/[^a-z0-9_-]/g, "") || "dev"),
+        login,
+        name: req.body?.name || (login === "dev" ? "Dev Operator" : login),
+        avatar: req.body?.avatar || "",
+        role: "admin",
+      };
+      reg.users.push(user);
+      saveRegistry(reg);
+    }
     const session = { ...loadSession(), userId: user.id, login: user.login };
     saveSession(session);
     if (sse) sse.emit("presence", { workspaceId: ContextService.currentProject()?.id, user });

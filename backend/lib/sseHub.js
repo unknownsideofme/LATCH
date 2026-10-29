@@ -1,6 +1,21 @@
 class SseHub {
   constructor() {
     this.clients = new Set();
+    // Heartbeat every 15s to keep proxy and client connections alive (prevents ECONNRESET)
+    this._heartbeat = setInterval(() => {
+      for (const client of this.clients) {
+        if (client.res.destroyed || client.res.writableEnded) {
+          this.clients.delete(client);
+          continue;
+        }
+        try {
+          client.res.write(": ping\n\n");
+        } catch {
+          this.clients.delete(client);
+        }
+      }
+    }, 15000);
+    if (this._heartbeat.unref) this._heartbeat.unref();
   }
 
   subscribe(res, filter = {}) {
@@ -24,6 +39,10 @@ class SseHub {
   emit(event, payload) {
     const data = `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
     for (const client of this.clients) {
+      if (client.res.destroyed || client.res.writableEnded) {
+        this.clients.delete(client);
+        continue;
+      }
       const { workspaceId } = client.filter;
       if (
         event !== "notice" &&

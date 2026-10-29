@@ -23,6 +23,20 @@ const { requireRoomMember } = require("../middleware/authMiddleware");
 const { ContextService } = require("../services/ContextService");
 const { SEED_TIMEOUT_MS } = require("../config/constants");
 
+function findProject(projects, idOrName) {
+  if (!idOrName) return null;
+  const norm = String(idOrName).toLowerCase().trim();
+  return (
+    projects.find(
+      (p) =>
+        p.id === idOrName ||
+        p.id.toLowerCase() === norm ||
+        (p.name && p.name.toLowerCase() === norm) ||
+        (p.remoteUrl && p.remoteUrl.toLowerCase().includes(norm))
+    ) || null
+  );
+}
+
 function createProjectRoutes({
   sse,
   watcher,
@@ -68,14 +82,14 @@ function createProjectRoutes({
   });
 
   router.get("/api/projects/:id", (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+    const project = findProject(loadRegistry().projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     res.json({ project });
   });
 
   router.patch("/api/projects/:id", (req, res) => {
     const reg = loadRegistry();
-    const project = reg.projects.find((p) => p.id === req.params.id);
+    const project = findProject(reg.projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     if (req.body?.name) project.name = req.body.name;
     saveRegistry(reg);
@@ -145,14 +159,14 @@ function createProjectRoutes({
   });
 
   router.post("/api/projects/:id/select", (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+    const project = findProject(loadRegistry().projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     saveSession({ ...loadSession(), projectId: project.id });
     res.json({ project, dashboard: buildDashboard(project) });
   });
 
   router.post("/api/projects/:id/sync", async (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+    const project = findProject(loadRegistry().projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     const memory = await syncTranscriptsQueued(project, {
       ownerLogin: loadSession().login || "local",
@@ -179,7 +193,7 @@ function createProjectRoutes({
 
   router.get("/api/projects/:id/dashboard", async (req, res) => {
     try {
-      const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+      const project = findProject(loadRegistry().projects, req.params.id);
       if (!project) return res.status(404).json({ error: "not_found" });
     const room = loadRoom(project.path);
     if (room?.url) {
@@ -300,7 +314,7 @@ function createProjectRoutes({
   });
 
   router.get("/api/projects/:id/graph", requireRoomMember, (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+    const project = findProject(loadRegistry().projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     const g = graphFor(project.path) || rebuild(project.path);
     const lockedFiles = lockTable.list({ id: project.id, path: project.path }).map((l) =>
@@ -310,7 +324,7 @@ function createProjectRoutes({
   });
 
   router.get("/api/projects/:id/history", (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+    const project = findProject(loadRegistry().projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     const memory = loadMemory(project.id);
     delete memory.ir;
@@ -322,20 +336,20 @@ function createProjectRoutes({
   });
 
   router.get("/api/projects/:id/conflicts", (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+    const project = findProject(loadRegistry().projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     res.json({ conflicts: detectConflicts(loadMemory(project.id)) });
   });
 
   router.get("/api/projects/:id/patches", (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+    const project = findProject(loadRegistry().projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     const memory = loadMemory(project.id);
     res.json({ patches: memory.patches || [], lastAppliedLamport: memory.lastAppliedLamport || 0 });
   });
 
   router.post("/api/projects/:id/rewind", (req, res) => {
-    const project = loadRegistry().projects.find((p) => p.id === req.params.id);
+    const project = findProject(loadRegistry().projects, req.params.id);
     if (!project) return res.status(404).json({ error: "not_found" });
     const lamport = Number(req.body?.lamport || 0);
     patchService.applyingRemote.add(project.id);

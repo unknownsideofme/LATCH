@@ -2,13 +2,13 @@
   "mcpServers": {
     "relay": {
       "type": "local",
-      "command": "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node",
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
       "args": [
-        "/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"
+        "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH\\backend\\mcp\\server.js"
       ],
       "env": {
-        "LATCH_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain",
-        "RELAY_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain"
+        "LATCH_WORKSPACE_PATH": "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH",
+        "RELAY_WORKSPACE_PATH": "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH"
       },
       "tools": [
         "*"
@@ -16,13 +16,13 @@
     },
     "latch": {
       "type": "local",
-      "command": "/Users/debanjan/.nvm/versions/node/v24.13.1/bin/node",
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
       "args": [
-        "/Users/debanjan/Desktop/CodeBook/relayBrain/backend/mcp/server.js"
+        "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH\\backend\\mcp\\server.js"
       ],
       "env": {
-        "LATCH_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain",
-        "RELAY_WORKSPACE_PATH": "/Users/debanjan/Desktop/CodeBook/relayBrain"
+        "LATCH_WORKSPACE_PATH": "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH",
+        "RELAY_WORKSPACE_PATH": "C:\\Users\\saumya\\Desktop\\Projects 2026\\LATCH"
       },
       "tools": [
         "*"

@@ -4,11 +4,21 @@ function hardenHttpServer(server) {
   server.headersTimeout = 66_000;
   server.requestTimeout = 0;
   server.timeout = 0;
+  server.maxConnections = 500;
   server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") return;
     console.error("[latch-api] server error:", err.message || err);
   });
   server.on("clientError", (err, socket) => {
-    if (err?.code === "ECONNRESET" || !socket || socket.destroyed) return;
+    if (
+      err?.code === "ECONNRESET" ||
+      err?.code === "ECONNABORTED" ||
+      err?.code === "EPIPE" ||
+      !socket ||
+      socket.destroyed
+    ) {
+      return;
+    }
     try {
       socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
     } catch {
