@@ -40,7 +40,7 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
             project.render_url.includes("127.0.0.1:3001")
           ) {
             base = project.render_url.replace(":3001", ":3002");
-          } else if (project.render_url.includes("onrender.com")) {
+          } else if ((typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) ? false : project.render_url.includes("onrender.com")) {
             base = project.render_url;
           } else {
             base = "http://localhost:3002";
@@ -56,6 +56,13 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
         url.searchParams.set("tab", "locks");
         url.searchParams.set("view", view === "ast-graph" ? "ast" : "swarm");
         url.searchParams.set("theme", theme);
+        url.searchParams.set("projectId", project.id);
+        if (project.project_name) {
+          url.searchParams.set("projectName", project.project_name);
+          url.searchParams.set("project", project.project_name);
+        } else {
+          url.searchParams.set("project", project.id);
+        }
         return url.toString();
       } catch {
         return `${base}?embed=true&tab=locks&view=${view === "ast-graph" ? "ast" : "swarm"}&theme=${theme}`;

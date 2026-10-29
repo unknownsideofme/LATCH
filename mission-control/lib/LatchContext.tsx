@@ -190,9 +190,31 @@ export function LatchProvider({ children }: { children: ReactNode }) {
       if (proj?.projects) {
         setProjects(dedupeProjects(proj.projects));
       }
+      const projectList = proj?.projects ? dedupeProjects(proj.projects) : [];
+      let queryProject: string | null = null;
+      if (typeof window !== 'undefined') {
+        const sp = new URLSearchParams(window.location.search);
+        queryProject = sp.get('projectName') || sp.get('project') || sp.get('projectId');
+      }
       const alreadyPicked = selectedRef.current;
-      const selected = id || alreadyPicked || session?.projectId || proj?.projects?.[0]?.id;
-      if (selected && !alreadyPicked) applySelection(selected);
+      const matchProject = (cand?: string | null) => {
+        if (!cand) return null;
+        const norm = cand.toLowerCase().trim();
+        const found = projectList.find(
+          (p) =>
+            p.id.toLowerCase() === norm ||
+            p.name.toLowerCase() === norm ||
+            (p.remoteUrl && p.remoteUrl.toLowerCase().includes(norm))
+        );
+        return found ? found.id : null;
+      };
+      const selected =
+        matchProject(queryProject) ||
+        matchProject(id) ||
+        matchProject(alreadyPicked) ||
+        matchProject(session?.projectId) ||
+        projectList[0]?.id;
+      if (selected && (!alreadyPicked || alreadyPicked !== selected)) applySelection(selected);
       const target = selectedRef.current || selected;
       if (target) await fetchDash(target);
       try {

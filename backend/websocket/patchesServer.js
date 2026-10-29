@@ -7,8 +7,8 @@ const { sendSocket } = require("../lib/roomControl");
 const { authorizeRoomSocket, sessionValid } = require("./sessionAuth");
 const { ContextService } = require("../services/ContextService");
 
-function createPatchesServer({ server, roomService, patchService }) {
-  const wss = new WebSocketServer({ server, path: "/ws/patches" });
+function createPatchesServer({ server, noServer = false, roomService, patchService, lockService, ensureWorkspaceFn }) {
+  const wss = new WebSocketServer(noServer ? { noServer: true } : { server, path: "/ws/patches" });
 
   wss.on("error", (err) => {
     if (err.code === "EADDRINUSE") return;
@@ -30,7 +30,18 @@ function createPatchesServer({ server, roomService, patchService }) {
     if (room?.role === "host" && room.url) {
       const project = ContextService.currentProject();
       if (project) {
-        setImmediate(() => sendSocket(socket, roomService.roomStatePayload(project, "hello")));
+        setImmediate(() => {
+          sendSocket(socket, roomService.roomStatePayload(project, "hello"));
+          if (lockService) {
+            const shared = lockService.lockScope(project.id) || { id: project.id, path: project.path };
+            sendSocket(socket, {
+              type: "locks",
+              workspaceId: room.hostProjectId || shared.id,
+              locks: lockService.locksFor(shared),
+              reads: lockService.readsFor(shared),
+            });
+          }
+        });
       }
     }
     const beat = setInterval(() => {
@@ -65,7 +76,7 @@ function createPatchesServer({ server, roomService, patchService }) {
       }
     });
 
-    socket.on("message", (raw) => {
+    socket.on("message", async (raw) => {
       try {
         if (!sessionValid(session)) {
           socket.close(4401, "membership_revoked");
@@ -80,6 +91,24 @@ function createPatchesServer({ server, roomService, patchService }) {
           const project = ContextService.currentProject();
           if (project && loadRoom()?.role === "host") {
             sendSocket(socket, roomService.roomStatePayload(project, "hello"));
+            if (lockService) {
+              const shared = lockService.lockScope(project.id) || { id: project.id, path: project.path };
+              sendSocket(socket, {
+                type: "locks",
+                workspaceId: loadRoom()?.hostProjectId || shared.id,
+                locks: lockService.locksFor(shared),
+                reads: lockService.readsFor(shared),
+              });
+            }
+          }
+          return;
+        }
+        if (msg.type === "rpc" && lockService) {
+          try {
+            const result = await lockService.runLockRpc(msg.op, msg.body, session, ensureWorkspaceFn);
+            sendSocket(socket, { type: "rpc-ok", id: msg.id, result });
+          } catch (err) {
+            sendSocket(socket, { type: "rpc-err", id: msg.id, error: err.message || "rpc_failed" });
           }
           return;
         }

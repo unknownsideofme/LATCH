@@ -17,9 +17,10 @@ function sha256(buf) {
 
 function gitDiff(workspacePath, file) {
   try {
+    // Fast diff with 500ms timeout so main thread never stalls
     return execFileSync("git", ["-C", workspacePath, "diff", "--", file], {
       encoding: "utf8",
-      timeout: 2000,
+      timeout: 500,
       stdio: ["ignore", "pipe", "ignore"],
       windowsHide: true,
     });
@@ -28,12 +29,28 @@ function gitDiff(workspacePath, file) {
   }
 }
 
+async function gitDiffAsync(workspacePath, file) {
+  return new Promise((resolve) => {
+    const { execFile } = require("child_process");
+    execFile(
+      "git",
+      ["-C", workspacePath, "diff", "--", file],
+      { encoding: "utf8", timeout: 800, windowsHide: true },
+      (err, stdout) => {
+        if (err || !stdout) resolve("");
+        else resolve(stdout);
+      }
+    );
+  });
+}
+
 function computePatch({ workspacePath, file, agent, ownerLogin, workspaceId }) {
   const abs = path.join(workspacePath, file);
   if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) return null;
   const buf = fs.readFileSync(abs);
   const binary = isBinary(buf);
   const lamport = tick(workspaceId || workspacePath);
+  const hash = sha256(buf);
   const patch = {
     id: id("patch"),
     file: file.replace(/\\/g, "/"),
@@ -42,8 +59,37 @@ function computePatch({ workspacePath, file, agent, ownerLogin, workspaceId }) {
     lamport,
     ts: Date.now(),
     binary,
-    sha256: sha256(buf),
+    sha256: hash,
     diff: binary ? "" : gitDiff(workspacePath, file) || buf.toString("utf8").slice(0, 4000),
+    content: binary ? null : undefined,
+  };
+  if (binary) patch.replace = true;
+  else if (buf.length < 1_000_000) patch.content = buf.toString("utf8");
+  return patch;
+}
+
+async function computePatchAsync({ workspacePath, file, agent, ownerLogin, workspaceId, previousSha }) {
+  const abs = path.join(workspacePath, file);
+  if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) return null;
+  const buf = fs.readFileSync(abs);
+  const hash = sha256(buf);
+  // Fast bail: if sha hasn't changed from previous known patch, skip diff!
+  if (previousSha && previousSha === hash) return { unchanged: true, sha256: hash, file };
+
+  const binary = isBinary(buf);
+  const lamport = tick(workspaceId || workspacePath);
+  const diffStr = binary ? "" : await gitDiffAsync(workspacePath, file);
+
+  const patch = {
+    id: id("patch"),
+    file: file.replace(/\\/g, "/"),
+    agent,
+    ownerLogin,
+    lamport,
+    ts: Date.now(),
+    binary,
+    sha256: hash,
+    diff: binary ? "" : diffStr || buf.toString("utf8").slice(0, 4000),
     content: binary ? null : undefined,
   };
   if (binary) patch.replace = true;
@@ -204,6 +250,7 @@ function rewindTo(projectId, workspacePath, lamport) {
 
 module.exports = {
   computePatch,
+  computePatchAsync,
   recordPatch,
   applyIncoming,
   applyPeerFile,

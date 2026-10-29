@@ -34,7 +34,7 @@ function PaneHandle({ side }: { side: "left" | "right" }) {
       aria-orientation="vertical"
       aria-label={side === "left" ? "Resize workspace panel" : "Resize details panel"}
       tabIndex={0}
-      title="Drag to resize · double-click to reset"
+      title="Drag to resize • double-click to reset"
     />
   );
 }
@@ -48,7 +48,7 @@ function ShellInner() {
 
   return (
     <div
-      className={`${ui.app} ${leftOpen ? "" : ui.paneLeftClosed} ${rightOpen ? "" : ui.paneRightClosed} ${dragging ? ui.paneDragging : ""}`}
+      className={`${ui.app} bg-background text-foreground ${leftOpen ? "" : ui.paneLeftClosed} ${rightOpen ? "" : ui.paneRightClosed} ${dragging ? ui.paneDragging : ""}`}
       style={style}
     >
       <TopNavbar />
@@ -71,7 +71,7 @@ function ShellInner() {
 export function Shell({ isEmbed }: { isEmbed?: boolean }) {
   if (isEmbed) {
     return (
-      <div className="w-full h-full min-h-screen bg-[var(--bg,#F2EEE8)] overflow-y-auto p-2 sm:p-4">
+      <div className="w-full h-full min-h-screen bg-background text-foreground overflow-y-auto p-2 sm:p-4">
         <ProjectDashboard isEmbed={true} />
       </div>
     );

@@ -7,8 +7,8 @@ const { authorizeRoomSocket, sessionValid } = require("./sessionAuth");
 const { ContextService } = require("../services/ContextService");
 const { MAX_FRAME_BYTES, RPC_BURST } = require("../config/constants");
 
-function createControlServer({ server, lockService, ensureWorkspaceFn }) {
-  const wssControl = new WebSocketServer({ server, path: "/ws/control" });
+function createControlServer({ server, noServer = false, lockService, ensureWorkspaceFn }) {
+  const wssControl = new WebSocketServer(noServer ? { noServer: true } : { server, path: "/ws/control" });
 
   wssControl.on("error", (err) => {
     if (err.code === "EADDRINUSE") return;

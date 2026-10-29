@@ -93,7 +93,7 @@ function ProjectDashboardContent() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "swarm-graph" | "ast-graph" | "locks" | "logs" | "settings"
   >("swarm-graph");
-  const [locks, setLocks] = useState<LiveLock[]>(defaultLocks);
+  const [locks, setLocks] = useState<LiveLock[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Health, Logs, Deploys state
@@ -132,8 +132,9 @@ function ProjectDashboardContent() {
         branch: res.project.branch || "main",
         agentLimit: res.project.agent_limit || 4,
       });
-    } catch {
-      setProject(null);
+    } catch (err) {
+      console.warn("fetchProject transient poll error:", err);
+      setProject((prev) => prev);
     } finally {
       setLoading(false);
     }
@@ -181,6 +182,64 @@ function ProjectDashboardContent() {
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  // Live coordinator locks sync
+  useEffect(() => {
+    if (!project) return;
+    let es: EventSource | null = null;
+    let pollId: any = null;
+
+    const fetchLiveLocks = async () => {
+      try {
+        const coordRes = await fetch("http://127.0.0.1:3001/api/projects/" + encodeURIComponent(project.project_name) + "/dashboard").then(r => r.json()).catch(() => null);
+        if (coordRes?.locks && Array.isArray(coordRes.locks)) {
+          const mapped: LiveLock[] = coordRes.locks.map((l: any, i: number) => ({
+            id: l.fencingToken ? "lck_" + l.fencingToken : "lck_" + (i + 1),
+            file_path: l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath,
+            agent_id: l.agentId,
+            agent_name: l.holder?.label || l.agentId.split(":")[0] || "AI Agent",
+            acquired_at: "active now",
+            expires_in_sec: Math.max(0, Math.ceil(((l.expiresAt || 0) - Date.now()) / 1000)),
+            status: coordRes.locks.filter((o: any) => o.filePath === l.filePath).length > 1 ? "CONTESTED" : "ACTIVE",
+          }));
+          setLocks(mapped);
+        } else {
+          setLocks([]);
+        }
+      } catch {
+        // Coordinator standby
+      }
+    };
+
+    fetchLiveLocks();
+    pollId = setInterval(fetchLiveLocks, 2500);
+
+    try {
+      es = new EventSource("http://127.0.0.1:3001/api/locks/stream?projectId=" + encodeURIComponent(project.project_name));
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (Array.isArray(data.locks)) {
+            const mapped: LiveLock[] = data.locks.map((l: any, i: number) => ({
+              id: l.fencingToken ? "lck_" + l.fencingToken : "lck_" + (i + 1),
+              file_path: l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath,
+              agent_id: l.agentId,
+              agent_name: l.holder?.label || l.agentId.split(":")[0] || "AI Agent",
+              acquired_at: "active now",
+              expires_in_sec: Math.max(0, Math.ceil(((l.expiresAt || 0) - Date.now()) / 1000)),
+              status: data.locks.filter((o: any) => o.filePath === l.filePath).length > 1 ? "CONTESTED" : "ACTIVE",
+            }));
+            setLocks(mapped);
+          }
+        } catch {}
+      };
+    } catch {}
+
+    return () => {
+      if (pollId) clearInterval(pollId);
+      if (es) es.close();
+    };
+  }, [project?.project_name]);
 
   // Auto-poll project status if pending or deploying
   useEffect(() => {
@@ -1058,7 +1117,17 @@ function ProjectDashboardContent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {locks.map((lock) => (
+                    {locks.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-muted-foreground font-mono">
+                          <div className="flex flex-col items-center justify-center gap-1.5">
+                            <Lock className="w-5 h-5 text-muted-foreground/60" />
+                            <span className="text-xs">No active file locks held � 5 AI swarm agents on standby</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      locks.map((lock) => (
                       <tr key={lock.id} className="hover:bg-muted/40 transition-colors">
                         <td className="py-3 px-4 text-muted-foreground">{lock.id}</td>
                         <td className="py-3 px-4 font-semibold text-foreground">
@@ -1086,7 +1155,7 @@ function ProjectDashboardContent() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
               </div>

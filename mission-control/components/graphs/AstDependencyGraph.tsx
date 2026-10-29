@@ -25,6 +25,7 @@ import {
   ArrowRight,
   Code2,
   X,
+  Radio,
 } from "lucide-react";
 import { useLatch } from "@/lib/LatchContext";
 import { apiUrl } from "@/lib/api";
@@ -48,263 +49,213 @@ function ModuleNode({ data }: NodeProps) {
 
   return (
     <div
-      className={`w-64 p-3.5 rounded-[var(--radius,8px)] bg-[var(--card,#FFFCF8)] border text-[var(--card-foreground,#302925)] transition-all shadow-sm select-none ${
+      className={`w-64 p-3.5 rounded-xl bg-[#18181b] border text-white transition-all shadow-xl select-none ${
         isLocked
-          ? "border-[var(--primary,#7A3438)] shadow-[0_0_12px_rgba(122,52,56,0.2)] bg-[var(--card,#FFFCF8)]"
+          ? "border-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.25)] bg-[#18181b]"
           : isBounded
-          ? "border-[var(--red,#B53F3F)] shadow-[0_0_12px_rgba(181,63,63,0.25)] bg-[var(--card,#FFFCF8)]"
-          : "border-[var(--border,#DDD3C9)] hover:border-[var(--primary,#7A3438)]"
+          ? "border-red-500/60 shadow-[0_0_16px_rgba(239,68,68,0.25)] bg-[#18181b]"
+          : "border-[#27272a] hover:border-[#ffe0c2]/50"
       }`}
     >
       <Handle
         type="target"
         position={Position.Top}
-        className="!bg-[var(--primary,#7A3438)] !w-2.5 !h-2.5 !border-2 !border-[var(--card,#FFFCF8)]"
+        className="!bg-[#ffe0c2] !w-3 !h-3 !border-2 !border-[#18181b]"
       />
 
-      <div className="flex items-start justify-between pb-2 border-b border-[var(--border,#DDD3C9)]/60">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-start justify-between pb-2.5 border-b border-[#27272a]">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div
             className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
               isLocked
-                ? "bg-[var(--accent-hover,#64292D)] text-[var(--accent-ink,#FFFFFF)]"
+                ? "bg-amber-500/15 text-amber-400"
                 : isBounded
-                ? "bg-[var(--red-dim,#FBEBED)] text-[var(--red,#B53F3F)]"
-                : "bg-[var(--sunken,#EAE3DA)] text-[var(--muted,#776F67)]"
+                ? "bg-red-500/15 text-red-400"
+                : "bg-neutral-800 text-neutral-300"
             }`}
           >
             {isLocked ? (
-              <Lock className="w-3.5 h-3.5" />
+              <Lock className="w-4 h-4" />
             ) : isBounded ? (
-              <AlertTriangle className="w-3.5 h-3.5" />
+              <AlertTriangle className="w-4 h-4" />
             ) : (
-              <Code2 className="w-3.5 h-3.5" />
+              <Code2 className="w-4 h-4" />
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-semibold text-[var(--card-foreground,#302925)] font-mono truncate" title={d.label}>
+            <h4 className="text-xs font-semibold text-white font-mono truncate" title={d.label}>
               {d.label}
             </h4>
-            <span className="text-[10px] text-[var(--muted,#776F67)] font-mono truncate block">
+            <span className="text-[10px] text-[#a1a1aa] font-mono truncate block">
               {d.path}
             </span>
           </div>
         </div>
 
         <span
-          className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 ${
+          className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded border uppercase shrink-0 ${
             isLocked
-              ? "bg-[var(--primary,#7A3438)] text-[var(--primary-foreground,#FFFFFF)] border-[var(--primary,#7A3438)]"
+              ? "bg-amber-500/15 text-amber-400 border-amber-500/40"
               : isBounded
-              ? "bg-[var(--red-dim,#FBEBED)] text-[var(--red,#B53F3F)] border-[var(--red,#B53F3F)]"
-              : "bg-[var(--sunken,#EAE3DA)] text-[var(--card-foreground,#302925)] border-[var(--border,#DDD3C9)]"
+              ? "bg-red-500/15 text-red-400 border-red-500/40 animate-pulse"
+              : "bg-neutral-800 text-neutral-400 border-neutral-700"
           }`}
         >
           {isLocked ? "LOCKED" : isBounded ? "BOUNDED" : "SAFE"}
         </span>
       </div>
 
-      <div className="pt-2 space-y-1.5 text-[10px] font-mono">
-        <div className="flex items-center justify-between text-[var(--muted,#776F67)]">
+      <div className="pt-2.5 space-y-1.5 text-[11px] font-mono">
+        <div className="flex items-center justify-between text-[#a1a1aa]">
           <span>AST Contract:</span>
-          <span className="text-[var(--card-foreground,#302925)] font-semibold">{d.language}</span>
+          <span className="text-white font-semibold">{d.language}</span>
         </div>
 
-        {isLocked && (
-          <div className="flex items-center justify-between text-[var(--accent-ink,#FFFFFF)] bg-[var(--primary,#7A3438)] px-2 py-1 rounded font-medium">
-            <span>Locked by:</span>
-            <span className="font-bold">{d.lockedBy || "Agent"}</span>
+        <div className="flex items-center justify-between text-[#a1a1aa]">
+          <span>Inbound Imports:</span>
+          <span className="text-[#ffe0c2] font-semibold">{d.importsCount} references</span>
+        </div>
+
+        <div className="flex items-center justify-between text-[#a1a1aa]">
+          <span>Export Symbols:</span>
+          <span className="text-[#ffe0c2] font-semibold">{d.exportsCount} symbols</span>
+        </div>
+
+        {isLocked && d.lockedBy && (
+          <div className="pt-1.5 border-t border-[#27272a] flex items-center justify-between text-amber-400 font-semibold">
+            <span>Locked Lease:</span>
+            <span className="truncate max-w-[130px]">{d.lockedBy}</span>
           </div>
         )}
 
         {isBounded && (
-          <div className="flex items-center justify-between text-[var(--red,#B53F3F)] bg-[var(--red-dim,#FBEBED)] px-2 py-1 rounded">
-            <span>Blast Radius:</span>
-            <span className="font-bold">Wait for upstream</span>
+          <div className="pt-1.5 border-t border-[#27272a] text-[10px] text-red-400 font-semibold">
+            Included in Lock Blast Radius
           </div>
         )}
-
-        <div className="flex items-center justify-between text-[var(--muted,#776F67)] pt-0.5 border-t border-[var(--border,#DDD3C9)]/40">
-          <span>{d.importsCount} imports</span>
-          <span>·</span>
-          <span>{d.exportsCount} dependents</span>
-        </div>
       </div>
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!bg-[var(--primary,#7A3438)] !w-2.5 !h-2.5 !border-2 !border-[var(--card,#FFFCF8)]"
+        className="!bg-[#ffe0c2] !w-3 !h-3 !border-2 !border-[#18181b]"
       />
     </div>
   );
-}
-
-/* ------------------------------- Helper Functions ------------------------------- */
-
-function detectLanguage(filePath: string): string {
-  const ext = (filePath.split(".").pop() || "").toLowerCase();
-  switch (ext) {
-    case "ts":
-    case "tsx":
-      return "TypeScript";
-    case "js":
-    case "jsx":
-    case "mjs":
-    case "cjs":
-      return "JavaScript";
-    case "rs":
-      return "Rust";
-    case "py":
-      return "Python";
-    case "go":
-      return "Go";
-    case "json":
-      return "JSON";
-    case "md":
-      return "Markdown";
-    default:
-      return ext.toUpperCase() || "Source";
-  }
 }
 
 /* ------------------------------- Main Component ------------------------------- */
 
 export function AstDependencyGraph() {
   const { dashboard, selectedProjectId } = useLatch();
+  const [graphData, setGraphData] = useState<Dashboard["graph"] | null>(dashboard?.graph || null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [fetchedGraph, setFetchedGraph] = useState<NonNullable<Dashboard["graph"]> | null>(null);
+  const [activeLocks, setActiveLocks] = useState<string[]>([]);
 
-  // Fallback fetch if dashboard graph is empty
+  // Sync graph data from context or fallback fetch
   useEffect(() => {
-    const id = selectedProjectId || dashboard?.project?.id;
-    if (!id || dashboard?.graph?.nodes?.length) return;
+    if (dashboard?.graph?.nodes?.length) {
+      setGraphData(dashboard.graph);
+    }
+  }, [dashboard?.graph]);
+
+  useEffect(() => {
+    const id = selectedProjectId || dashboard?.project.id;
+    if (!id) return;
+    if (graphData?.nodes?.length) return;
 
     fetch(apiUrl(`/api/projects/${id}/graph`))
       .then((r) => (r.ok ? r.json() : null))
       .then((g) => {
-        if (g?.nodes) setFetchedGraph(g);
+        if (g?.nodes?.length) setGraphData(g);
       })
       .catch(() => undefined);
-  }, [selectedProjectId, dashboard?.project?.id, dashboard?.graph?.nodes?.length]);
+  }, [selectedProjectId, dashboard?.project.id, graphData?.nodes?.length]);
 
-  const liveGraph = dashboard?.graph?.nodes?.length ? dashboard.graph : fetchedGraph;
+  // Track active file locks from dashboard
+  useEffect(() => {
+    if (!dashboard?.locks) return;
+    const lockedFiles = dashboard.locks
+      .filter((l) => !l.released)
+      .map((l) => (l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath));
+    setActiveLocks(lockedFiles);
+  }, [dashboard?.locks]);
 
-  // Build nodes and edges from live AST
-  const { nodes, edges, blastRadiusCount, lockedContractsCount } = useMemo(() => {
-    const rawNodes = liveGraph?.nodes || [];
-    const rawEdges = liveGraph?.edges || [];
-    const activeLocks = dashboard?.locks || [];
-
-    // Map locked files
-    const lockMap = new Map<string, string>();
-    activeLocks.forEach((l) => {
-      const p = (l.filePath || "").toLowerCase().replace(/\\/g, "/");
-      const holderLabel = l.holder?.label || l.agentId;
-      lockMap.set(p, holderLabel);
-    });
-
-    // Check bounded nodes (blast radius)
-    const lockedNodeIds = new Set<string>();
-    rawNodes.forEach((n) => {
-      const p = n.id.toLowerCase().replace(/\\/g, "/");
-      if (n.locked || lockMap.has(p)) {
-        lockedNodeIds.add(n.id);
-      }
-    });
-
-    // Find all downstream dependents of locked nodes
-    const boundedNodeIds = new Set<string>();
-    const queue = Array.from(lockedNodeIds);
-    const visited = new Set<string>(lockedNodeIds);
-
-    // Build adjacency list for dependents
-    const adj = new Map<string, string[]>();
-    rawEdges.forEach((e) => {
-      const list = adj.get(e.from) || [];
-      list.push(e.to);
-      adj.set(e.from, list);
-    });
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      const dependents = adj.get(current) || [];
-      for (const dep of dependents) {
-        if (!visited.has(dep)) {
-          visited.add(dep);
-          boundedNodeIds.add(dep);
-          queue.push(dep);
-        }
-      }
+  const { nodes, edges, blastRadiusCount, cycleCount, lockDepth } = useMemo(() => {
+    if (!graphData?.nodes?.length) {
+      return { nodes: [], edges: [], blastRadiusCount: 0, cycleCount: 0, lockDepth: 0 };
     }
 
-    // Layout nodes into a topological/grid arrangement
-    const generatedNodes: Node[] = [];
-    const cols = Math.max(1, Math.min(4, Math.ceil(Math.sqrt(rawNodes.length || 1))));
+    const rawNodes = graphData.nodes;
+    const rawEdges = graphData.edges || [];
+    const cycles = graphData.cycles || [];
+    const lockDepthVal = graphData.lockDepth ?? 1;
 
-    rawNodes.forEach((n, idx) => {
-      const p = n.id.toLowerCase().replace(/\\/g, "/");
-      const isLocked = lockedNodeIds.has(n.id) || n.locked || lockMap.has(p);
-      const isBounded = !isLocked && boundedNodeIds.has(n.id);
-      const lockedBy = lockMap.get(p) || (n.locked ? "Active Agent" : undefined);
+    // Identify bounded nodes within lock depth
+    const lockedSet = new Set(activeLocks);
+    const boundedSet = new Set<string>();
 
-      const col = idx % cols;
-      const row = Math.floor(idx / cols);
-
-      generatedNodes.push({
-        id: `ast-${n.id}`,
-        type: "module",
-        position: { x: 50 + col * 310, y: 50 + row * 220 },
-        data: {
-          label: n.id.split("/").pop() || n.id,
-          path: n.id,
-          language: detectLanguage(n.id),
-          importsCount: n.imports?.length || 0,
-          exportsCount: n.dependents?.length || 0,
-          status: isLocked ? "locked" : isBounded ? "bounded" : "safe",
-          lockedBy,
-        },
-      });
+    rawNodes.forEach((n) => {
+      if (lockedSet.has(n.id) || n.locked) {
+        lockedSet.add(n.id);
+        (n.dependents || []).forEach((dep) => boundedSet.add(dep));
+      }
     });
 
-    // Generate edges
-    const generatedEdges: Edge[] = [];
-    rawEdges.forEach((e, idx) => {
-      const isFromLocked = lockedNodeIds.has(e.from);
-      const isToBounded = boundedNodeIds.has(e.to);
-      const isBlastRadius = isFromLocked && isToBounded;
+    // Layout configuration
+    const cols = Math.max(1, Math.min(4, Math.ceil(Math.sqrt(rawNodes.length))));
+    const spacingX = 320;
+    const spacingY = 220;
 
-      generatedEdges.push({
+    const generatedNodes: Node[] = rawNodes.map((n, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const isLocked = lockedSet.has(n.id) || Boolean(n.locked);
+      const isBounded = !isLocked && boundedSet.has(n.id);
+
+      const shortLabel = n.id.split("/").pop() || n.id;
+
+      return {
+        id: n.id,
+        type: "module",
+        position: { x: 40 + col * spacingX, y: 40 + row * spacingY },
+        data: {
+          label: shortLabel,
+          path: n.id,
+          language: n.id.endsWith(".ts") || n.id.endsWith(".tsx") ? "TypeScript" : n.id.endsWith(".js") ? "JavaScript" : n.id.endsWith(".rs") ? "Rust" : "Source",
+          importsCount: (n.dependents || []).length,
+          exportsCount: 4,
+          status: isLocked ? "locked" : isBounded ? "bounded" : "safe",
+          lockedBy: isLocked ? "Latch Mutex Holder" : undefined,
+        },
+      };
+    });
+
+    const generatedEdges: Edge[] = rawEdges.map((e, idx) => {
+      const isSourceLocked = lockedSet.has(e.from);
+      const isTargetLocked = lockedSet.has(e.to);
+      const isAffected = isSourceLocked || isTargetLocked;
+
+      return {
         id: `ast-edge-${idx}-${e.from}-${e.to}`,
-        source: `ast-${e.from}`,
-        target: `ast-${e.to}`,
-        animated: isBlastRadius,
-        label: isBlastRadius ? "BLAST RADIUS" : undefined,
-        labelStyle: {
-          fill: "var(--red,#B53F3F)",
-          fontSize: 9,
-          fontFamily: "var(--mono)",
-        },
-        labelBgStyle: {
-          fill: "var(--card,#FFFCF8)",
-          fillOpacity: 0.95,
-          stroke: "var(--red,#B53F3F)",
-        },
+        source: e.from,
+        target: e.to,
+        animated: isAffected,
         style: {
-          stroke: isBlastRadius ? "var(--red,#B53F3F)" : isFromLocked ? "var(--primary,#7A3438)" : "var(--border,#DDD3C9)",
-          strokeWidth: isBlastRadius ? 2 : 1.5,
-          strokeDasharray: isBlastRadius ? "4 4" : undefined,
+          stroke: isSourceLocked && isTargetLocked ? "#ef4444" : isAffected ? "#ffe0c2" : "#3f3f46",
+          strokeWidth: isAffected ? 2.5 : 1.2,
         },
-      });
+      };
     });
 
     return {
       nodes: generatedNodes,
       edges: generatedEdges,
-      blastRadiusCount: boundedNodeIds.size,
-      lockedContractsCount: lockedNodeIds.size,
+      blastRadiusCount: boundedSet.size,
+      cycleCount: cycles.length,
+      lockDepth: lockDepthVal,
     };
-  }, [liveGraph, dashboard?.locks]);
+  }, [graphData, activeLocks]);
 
   const nodeTypes = useMemo(
     () => ({
@@ -313,95 +264,94 @@ export function AstDependencyGraph() {
     []
   );
 
-  const fileCount = liveGraph?.fileCount ?? liveGraph?.nodes?.length ?? 0;
-  const cycleCount = liveGraph?.cycles?.length || 0;
-  const lockDepth = liveGraph?.lockDepth ?? 2;
-
   return (
-    <div className="w-full space-y-4">
-      {/* Top Telemetry & Summary Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
-        <div className="p-3 rounded-[var(--radius,8px)] bg-[var(--card,#FFFCF8)] border border-[var(--border,#DDD3C9)] flex items-center justify-between shadow-sm">
+    <div className="space-y-4">
+      {/* High-Contrast KPI Summary Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-4 rounded-xl bg-[#18181b] border border-[#27272a] shadow-lg flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[var(--muted,#776F67)] uppercase tracking-wider block">
-              AST Modules
+            <span className="text-[11px] font-mono text-[#a1a1aa] uppercase tracking-wider block">
+              Source Modules
             </span>
-            <span className="text-lg font-bold text-[var(--text,#302925)]">
-              {fileCount} Files
+            <span className="text-2xl font-bold text-white tracking-tight">
+              {graphData?.fileCount ?? nodes.length} Files
             </span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-[var(--sunken,#EAE3DA)] border border-[var(--border,#DDD3C9)] flex items-center justify-center text-[var(--primary,#7A3438)]">
-            <Network className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-lg bg-[#ffe0c2]/10 border border-[#ffe0c2]/20 flex items-center justify-center text-[#ffe0c2]">
+            <FileCode className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-3 rounded-[var(--radius,8px)] bg-[var(--card,#FFFCF8)] border border-[var(--border,#DDD3C9)] flex items-center justify-between shadow-sm">
+        <div className="p-4 rounded-xl bg-[#18181b] border border-[#27272a] shadow-lg flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[var(--muted,#776F67)] uppercase tracking-wider block">
-              Active Leases
+            <span className="text-[11px] font-mono text-[#a1a1aa] uppercase tracking-wider block">
+              Import Graph Edges
             </span>
-            <span className="text-lg font-bold text-[var(--text,#302925)]">
-              {lockedContractsCount} Contract Lock{lockedContractsCount === 1 ? "" : "s"}
+            <span className="text-2xl font-bold text-emerald-400 tracking-tight">
+              {graphData?.edgeCount ?? edges.length} Edges
             </span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-[var(--sunken,#EAE3DA)] border border-[var(--border,#DDD3C9)] flex items-center justify-center text-[var(--primary,#7A3438)]">
-            <Lock className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <GitBranch className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-3 rounded-[var(--radius,8px)] bg-[var(--card,#FFFCF8)] border border-[var(--border,#DDD3C9)] flex items-center justify-between shadow-sm">
+        <div className="p-4 rounded-xl bg-[#18181b] border border-[#27272a] shadow-lg flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[var(--muted,#776F67)] uppercase tracking-wider block">
+            <span className="text-[11px] font-mono text-[#a1a1aa] uppercase tracking-wider block">
               Blast Radius
             </span>
-            <span className="text-lg font-bold text-[var(--red,#B53F3F)]">
+            <span className="text-2xl font-bold text-red-400 tracking-tight">
               {blastRadiusCount} Bounded
             </span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-[var(--red-dim,#FBEBED)] border border-[var(--red,#B53F3F)]/30 flex items-center justify-center text-[var(--red,#B53F3F)]">
-            <AlertTriangle className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+            <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-3 rounded-[var(--radius,8px)] bg-[var(--card,#FFFCF8)] border border-[var(--border,#DDD3C9)] flex items-center justify-between shadow-sm">
+        <div className="p-4 rounded-xl bg-[#18181b] border border-[#27272a] shadow-lg flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[var(--muted,#776F67)] uppercase tracking-wider block">
+            <span className="text-[11px] font-mono text-[#a1a1aa] uppercase tracking-wider block">
               AST Depth / Cycles
             </span>
-            <span className="text-lg font-bold text-[var(--text,#302925)]">
-              Depth {lockDepth} · {cycleCount} Cycles
+            <span className="text-2xl font-bold text-[#ffe0c2] tracking-tight">
+              Depth {lockDepth} &bull; {cycleCount} Cycles
             </span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-[var(--sunken,#EAE3DA)] border border-[var(--border,#DDD3C9)] flex items-center justify-center text-[var(--primary,#7A3438)]">
-            <Layers className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-lg bg-[#ffe0c2]/10 border border-[#ffe0c2]/20 flex items-center justify-center text-[#ffe0c2]">
+            <Layers className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      {/* Main Canvas Container with Scoped Canvas Theme */}
-      <div className="relative w-full h-[620px] rounded-[var(--radius,8px)] border border-[var(--border,#DDD3C9)] overflow-hidden shadow-sm bg-[var(--bg,#F2EEE8)]">
+      {/* Main Canvas Container */}
+      <div className="relative w-full h-[650px] rounded-xl border border-[#27272a] overflow-hidden shadow-2xl bg-[#111111]">
         {/* Graph Legend Overlay */}
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-[var(--card,#FFFCF8)]/95 backdrop-blur-md px-3.5 py-2 rounded-[var(--radius,8px)] border border-[var(--border,#DDD3C9)] text-[11px] font-mono text-[var(--muted,#776F67)] shadow-sm">
-          <span className="text-[var(--text,#302925)] font-semibold">AST Boundary:</span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[var(--primary,#7A3438)]" />
-            Locked Contract
+        <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 bg-[#18181b]/95 backdrop-blur-md px-3.5 py-2 rounded-lg border border-[#27272a] text-xs font-mono text-[#a1a1aa] shadow-xl">
+          <span className="text-white font-semibold flex items-center gap-1.5">
+            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span>AST Boundary:</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[var(--red,#B53F3F)]" />
-            Bounded (Blast Radius)
+            <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
+            <span className="text-neutral-200">Locked Contract</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[var(--green,#34734B)]" />
-            Safe / Invariant
+            <span className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.6)]" />
+            <span className="text-neutral-200">Bounded (Blast Radius)</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+            <span className="text-neutral-200">Safe / Invariant</span>
           </span>
         </div>
 
         {nodes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 text-[var(--muted,#776F67)] font-mono text-xs">
+          <div className="flex flex-col items-center justify-center h-full text-center p-6 text-[#a1a1aa] font-mono text-xs">
             <Network className="w-8 h-8 mb-2 opacity-50" />
-            <p>No Tree-sitter AST nodes mapped yet for this workspace.</p>
-            <p className="text-[11px] opacity-75 mt-1">Files will automatically populate once inspected or edited by an agent.</p>
+            <p className="text-white font-semibold">Tree-sitter AST Mapping...</p>
+            <p className="text-[11px] opacity-75 mt-1">Files automatically populate as code changes occur.</p>
           </div>
         ) : (
           <ReactFlow
@@ -409,53 +359,53 @@ export function AstDependencyGraph() {
             edges={edges}
             nodeTypes={nodeTypes}
             fitView
-            fitViewOptions={{ padding: 0.2 }}
-            minZoom={0.25}
+            fitViewOptions={{ padding: 0.15 }}
+            minZoom={0.2}
             maxZoom={1.5}
             onNodeClick={(_, node) => setSelectedNode(node)}
-            className="bg-[var(--bg,#F2EEE8)]"
+            className="bg-[#111111]"
           >
-            <Background color="var(--border,#DDD3C9)" gap={24} size={1.2} />
+            <Background color="#27272a" gap={20} size={1} />
             <Controls
-              className="!bg-[var(--card,#FFFCF8)] !border-[var(--border,#DDD3C9)] !rounded-[var(--radius,8px)] !overflow-hidden [&>button]:!bg-[var(--card,#FFFCF8)] [&>button]:!border-b-[var(--border,#DDD3C9)] [&>button]:!fill-[var(--text,#302925)] [&>button:hover]:!bg-[var(--sunken,#EAE3DA)]"
+              className="!bg-[#18181b] !border-[#27272a] !rounded-lg !overflow-hidden [&>button]:!bg-[#18181b] [&>button]:!border-b-[#27272a] [&>button]:!fill-white [&>button:hover]:!bg-[#27272a]"
             />
             <MiniMap
               nodeColor={(node) => {
-                const d = node.data as any;
-                if (d?.status === "locked") return "var(--primary,#7A3438)";
-                if (d?.status === "bounded") return "var(--red,#B53F3F)";
-                return "var(--green,#34734B)";
+                const d = node.data as { status?: string };
+                if (d?.status === "locked") return "#f59e0b";
+                if (d?.status === "bounded") return "#ef4444";
+                return "#22c55e";
               }}
-              maskColor="rgba(0, 0, 0, 0.15)"
-              className="!bg-[var(--card,#FFFCF8)] !border-[var(--border,#DDD3C9)] !rounded-[var(--radius,8px)]"
+              maskColor="rgba(0, 0, 0, 0.7)"
+              className="!bg-[#18181b] !border-[#27272a] !rounded-lg"
             />
           </ReactFlow>
         )}
 
         {/* Selected Node Details Drawer */}
         {selectedNode && (
-          <div className="absolute bottom-4 right-4 z-10 w-80 p-4 rounded-[var(--radius,8px)] bg-[var(--card,#FFFCF8)]/95 backdrop-blur-md border border-[var(--border,#DDD3C9)] text-xs font-mono space-y-2 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150 text-[var(--card-foreground,#302925)]">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--border,#DDD3C9)]/60">
-              <span className="text-[var(--primary,#7A3438)] font-bold uppercase tracking-wider text-[10px]">
+          <div className="absolute bottom-4 right-4 z-10 w-80 p-4 rounded-xl bg-[#18181b]/95 backdrop-blur-md border border-[#27272a] text-xs font-mono space-y-2 shadow-2xl text-white">
+            <div className="flex items-center justify-between pb-2 border-b border-[#27272a]">
+              <span className="text-[#ffe0c2] font-bold uppercase tracking-wider text-[10.5px]">
                 AST Contract Inspector
               </span>
               <button
                 onClick={() => setSelectedNode(null)}
-                className="text-[var(--muted,#776F67)] hover:text-[var(--card-foreground,#302925)] cursor-pointer p-0.5 rounded hover:bg-[var(--sunken,#EAE3DA)] transition-colors"
+                className="text-[#a1a1aa] hover:text-white cursor-pointer p-1 rounded hover:bg-[#27272a] transition-colors"
                 aria-label="Close inspector"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
             <div>
-              <span className="text-[var(--muted,#776F67)] block text-[10px]">MODULE ID</span>
-              <span className="text-[var(--card-foreground,#302925)] font-semibold">
+              <span className="text-[#a1a1aa] block text-[10px] uppercase">Module ID</span>
+              <span className="text-white font-semibold">
                 {selectedNode.id}
               </span>
             </div>
             <div>
-              <span className="text-[var(--muted,#776F67)] block text-[10px]">AST METADATA</span>
-              <pre className="text-[10px] text-[var(--card-foreground,#302925)] overflow-x-auto bg-[var(--bg,#F2EEE8)] p-2 rounded border border-[var(--border,#DDD3C9)]">
+              <span className="text-[#a1a1aa] block text-[10px] uppercase">AST Metadata</span>
+              <pre className="text-[10.5px] text-[#ffe0c2] overflow-x-auto bg-[#111111] p-2.5 rounded-lg border border-[#27272a] mt-1 max-h-48">
                 {JSON.stringify(selectedNode.data, null, 2)}
               </pre>
             </div>

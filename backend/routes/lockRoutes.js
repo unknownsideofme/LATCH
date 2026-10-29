@@ -44,11 +44,13 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
 
   router.get("/api/locks/stream", (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders?.();
     const workspaceId = req.query.projectId;
     const send = () => {
+      if (res.destroyed || res.writableEnded) return;
       try {
         const scope = lockService.lockScope(workspaceId);
         const payload = {
@@ -65,10 +67,20 @@ function createLockRoutes({ lockTable, lockService, roomService, sse, workspaceS
     const listener = () => send();
     lockTable.on("change", listener);
     roomService.roomLocks.on("change", listener);
-    req.on("close", () => {
+
+    const pingTimer = setInterval(() => {
+      if (res.destroyed || res.writableEnded) return;
+      try { res.write(": ping\n\n"); } catch {}
+    }, 15000);
+    if (pingTimer.unref) pingTimer.unref();
+
+    const cleanup = () => {
+      clearInterval(pingTimer);
       lockTable.off("change", listener);
       roomService.roomLocks.off("change", listener);
-    });
+    };
+    req.on("close", cleanup);
+    req.on("error", cleanup);
   });
 
   router.post("/api/coord/claim", requireRoomMember, async (req, res) => {

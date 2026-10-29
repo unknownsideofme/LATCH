@@ -1,15 +1,15 @@
-const DEFAULT_TTL_MS = 15_000;
+const DEFAULT_TTL_MS = 60_000;
 const MIN_TTL_MS = 5_000;
 const MAX_TTL_MS = 300_000;
 const CLEANUP_MS = 5_000;
 const MAX_HOOK_KEEP_ALIVE_MS = 5 * 60_000;
 
 // How long a released lock stays on the board, and how many to keep around.
-const RECENT_TTL_MS = 45_000;
+const RECENT_TTL_MS = 60_000;
 const RECENT_MAX = 200;
 
 // Reads are presence, not claims: they decay on their own and are capped.
-const READ_TTL_MS = 30_000;
+const READ_TTL_MS = 60_000;
 const READ_MAX = 300;
 
 // How long an agent that was refused a file stays interested in its next patch.

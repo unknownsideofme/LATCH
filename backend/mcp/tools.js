@@ -118,7 +118,23 @@ function resolveProjectId(workspace) {
 
 /** The context a stdio server runs with: this machine, full access. */
 function defaultCtx(overrides = {}) {
-  const workspace = process.env.RELAY_WORKSPACE_PATH || process.cwd();
+  let workspace = process.env.RELAY_WORKSPACE_PATH || process.env.LATCH_WORKSPACE_PATH;
+  const cwd = process.cwd();
+  if (!workspace) {
+    try {
+      const { loadRegistry } = require("../lib/store");
+      const { normalizeCompare } = require("../lib/transcripts/util");
+      const reg = loadRegistry();
+      const matchingCwd = reg.projects.find((p) => p.path && normalizeCompare(p.path) === normalizeCompare(cwd));
+      if (matchingCwd?.path) {
+        workspace = matchingCwd.path;
+      } else {
+        workspace = cwd;
+      }
+    } catch {
+      workspace = cwd;
+    }
+  }
   return {
     workspace,
     projectId: resolveProjectId(workspace),
@@ -283,13 +299,33 @@ async function callTool(rawName, args = {}, context = {}) {
       const next = await syncTranscriptsQueued(project, { ownerLogin: ctx.owner });
       return { ok: true, events: (next.history || []).length, chats: (next.chats || []).length };
     }
-    case "latch_claim_file":
-      return client.claimFile(ctx.workspace, ctx.agentId, args.file, args.ttl_ms, {
-        dependsOn: dependsOn(ctx.workspace, args.file),
+    case "latch_claim_file": {
+      let ws = ctx.workspace;
+      const fileArg = String(args.file || "");
+      if (path.isAbsolute(fileArg)) {
+        const { loadRegistry } = require("../lib/store");
+        const reg = loadRegistry();
+        const normFile = fileArg.replace(/\\/g, "/").toLowerCase();
+        const matched = reg.projects.find((p) => p.path && normFile.startsWith(p.path.replace(/\\/g, "/").toLowerCase()));
+        if (matched) ws = matched.path;
+      }
+      return client.claimFile(ws, ctx.agentId, args.file, args.ttl_ms, {
+        dependsOn: dependsOn(ws, args.file),
         annotation: args.annotation || args.reason || args.intent,
       });
-    case "latch_release_file":
-      return client.releaseFile(ctx.workspace, ctx.agentId, args.file);
+    }
+    case "latch_release_file": {
+      let ws = ctx.workspace;
+      const fileArg = String(args.file || "");
+      if (path.isAbsolute(fileArg)) {
+        const { loadRegistry } = require("../lib/store");
+        const reg = loadRegistry();
+        const normFile = fileArg.replace(/\\/g, "/").toLowerCase();
+        const matched = reg.projects.find((p) => p.path && normFile.startsWith(p.path.replace(/\\/g, "/").toLowerCase()));
+        if (matched) ws = matched.path;
+      }
+      return client.releaseFile(ws, ctx.agentId, args.file);
+    }
     case "latch_status":
       return client.status(ctx.workspace);
     case "latch_get_recent_changes": {
