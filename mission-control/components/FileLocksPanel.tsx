@@ -15,6 +15,16 @@ const LockGraphCanvas = dynamic(() => import("./lockgraph/LockGraphCanvas"), {
   loading: () => <div className={ui.empty}>Loading board…</div>,
 });
 
+const SwarmLockGraph = dynamic(() => import("./graphs/SwarmLockGraph").then((m) => m.SwarmLockGraph), {
+  ssr: false,
+  loading: () => <div className={ui.empty}>Loading swarm graph…</div>,
+});
+
+const AstDependencyGraph = dynamic(() => import("./graphs/AstDependencyGraph").then((m) => m.AstDependencyGraph), {
+  ssr: false,
+  loading: () => <div className={ui.empty}>Loading AST dependency tree…</div>,
+});
+
 function parseAgent(agentId: string) {
   const [label, machine, session] = String(agentId || "").split(":");
   return { label: label || "agent", machine, session };
@@ -111,11 +121,24 @@ function GraphView({ graph }: { graph: NonNullable<Dashboard["graph"]> }) {
   );
 }
 
+type ViewMode = "swarm" | "ast" | "board" | "list";
+
 export function FileLocksPanel() {
   const { dashboard, selectedProjectId } = useLatch();
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<ViewMode>("swarm");
   const [graph, setGraph] = useState(dashboard?.graph || null);
   const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const v = sp.get("view");
+    if (v === "swarm" || v === "ast" || v === "board" || v === "list") {
+      setView(v);
+    } else if (v === "table") {
+      setView("list");
+    }
+  }, []);
 
   useEffect(() => {
     setGraph(dashboard?.graph || null);
@@ -206,14 +229,30 @@ export function FileLocksPanel() {
 
       <div className={ui.rowBetween} style={{ marginBottom: 10 }}>
         <div className={ui.kicker}>Ongoing Sessions</div>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <Button
+            variant={view === "swarm" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-3 font-semibold"
+            onClick={() => setView("swarm")}
+          >
+            Swarm Topology
+          </Button>
+          <Button
+            variant={view === "ast" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-3 font-semibold"
+            onClick={() => setView("ast")}
+          >
+            AST Blast-Radius
+          </Button>
           <Button
             variant={view === "board" ? "default" : "outline"}
             size="sm"
             className="h-7 text-xs px-3 font-semibold"
             onClick={() => setView("board")}
           >
-            Board
+            Classic Board
           </Button>
           <Button
             variant={view === "list" ? "default" : "outline"}
@@ -221,11 +260,13 @@ export function FileLocksPanel() {
             className="h-7 text-xs px-3 font-semibold"
             onClick={() => setView("list")}
           >
-            List
+            Matrix Table
           </Button>
         </div>
       </div>
 
+      {view === "swarm" && <SwarmLockGraph />}
+      {view === "ast" && <AstDependencyGraph />}
       {view === "board" && <LockGraphCanvas />}
 
       {view === "list" && (

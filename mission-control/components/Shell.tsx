@@ -68,7 +68,15 @@ function ShellInner() {
   );
 }
 
-export function Shell() {
+export function Shell({ isEmbed }: { isEmbed?: boolean }) {
+  if (isEmbed) {
+    return (
+      <div className="w-full h-full min-h-screen bg-[var(--bg,#F2EEE8)] overflow-y-auto p-2 sm:p-4">
+        <ProjectDashboard isEmbed={true} />
+      </div>
+    );
+  }
+
   return (
     <PanesProvider>
       <ShellInner />

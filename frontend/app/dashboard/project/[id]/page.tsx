@@ -28,8 +28,7 @@ import {
 } from "lucide-react";
 import type { ProjectRecord, ProjectLog, ProjectDeploy } from "@/lib/types";
 import { api, ApiError } from "@/lib/api";
-import { SwarmLockGraph } from "@/components/graphs/SwarmLockGraph";
-import { AstDependencyGraph } from "@/components/graphs/AstDependencyGraph";
+import { MissionControlCast } from "@/components/MissionControlCast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ThinkingOrb } from "thinking-orbs";
 
@@ -748,7 +747,7 @@ function ProjectDashboardContent() {
                 </div>
               </div>
 
-              <SwarmLockGraph />
+              <MissionControlCast tab="swarm-graph" project={project} />
             </div>
           )}
 
@@ -771,7 +770,7 @@ function ProjectDashboardContent() {
                 </div>
               </div>
 
-              <AstDependencyGraph />
+              <MissionControlCast tab="ast-graph" project={project} />
             </div>
           )}
 
@@ -1377,3 +1376,4 @@ export default function ProjectDashboardPage() {
     </Suspense>
   );
 }
+

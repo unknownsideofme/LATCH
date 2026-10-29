@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useLatch } from "@/lib/LatchContext";
 import type { TabId } from "@/lib/types";
 import { CodeEdits } from "./CodeEdits";
@@ -22,26 +23,38 @@ const TAB_TITLES: Partial<Record<TabId, { title: string; subtitle: string }>> = 
   settings: { title: "Settings", subtitle: "Workspace configuration & credentials" },
 };
 
-export function ProjectDashboard() {
-  const { tab } = useLatch();
+export function ProjectDashboard({ isEmbed }: { isEmbed?: boolean }) {
+  const { tab, setTab } = useLatch();
   const current = TAB_TITLES[tab] || { title: "Dashboard", subtitle: "" };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const qTab = sp.get("tab") as TabId;
+      if (qTab && ["chat", "edits", "locks", "locktable", "team", "memory", "settings"].includes(qTab)) {
+        setTab(qTab);
+      }
+    }
+  }, [setTab]);
 
   return (
     <div className={ui.workspace}>
-      <div className={ui.tabsBar}>
-        <div className="flex items-center gap-3">
-          <h1 className="text-[15.5px] font-bold tracking-tight text-[var(--text)] font-[var(--font-display)] m-0 leading-none">
-            {current.title}
-          </h1>
-          <span className="text-[12px] text-[var(--muted)] font-[var(--font-warm)] hidden sm:inline">
-            · {current.subtitle}
-          </span>
+      {!isEmbed && (
+        <div className={ui.tabsBar}>
+          <div className="flex items-center gap-3">
+            <h1 className="text-[15.5px] font-bold tracking-tight text-[var(--text)] font-[var(--font-display)] m-0 leading-none">
+              {current.title}
+            </h1>
+            <span className="text-[12px] text-[var(--muted)] font-[var(--font-warm)] hidden sm:inline">
+              · {current.subtitle}
+            </span>
+          </div>
+          <div className={ui.tabsBarEnd}>
+            <ConnectedAgentsDropdown />
+            <LayoutSwitcher />
+          </div>
         </div>
-        <div className={ui.tabsBarEnd}>
-          <ConnectedAgentsDropdown />
-          <LayoutSwitcher />
-        </div>
-      </div>
+      )}
       <div className={ui.panelWrap}>
         <div className={ui.panelScroll}>
           {tab === "edits" && <CodeEdits />}
