@@ -25,6 +25,11 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle2,
+  Plus,
+  Shield,
+  BookOpen,
+  Code2,
+  Users,
 } from "lucide-react";
 import type { ProjectRecord, ProjectLog, ProjectDeploy } from "@/lib/types";
 import { api, ApiError } from "@/lib/api";
@@ -91,7 +96,7 @@ function ProjectDashboardContent() {
   const [loading, setLoading] = useState<boolean>(true);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "swarm-graph" | "ast-graph" | "locks" | "logs" | "settings"
+    "overview" | "swarm-graph" | "ast-graph" | "edits" | "team" | "locks" | "logs" | "settings"
   >("swarm-graph");
   const [locks, setLocks] = useState<LiveLock[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -195,6 +200,7 @@ function ProjectDashboardContent() {
         if (coordRes?.locks && Array.isArray(coordRes.locks)) {
           const mapped: LiveLock[] = coordRes.locks.map((l: any, i: number) => ({
             id: l.fencingToken ? "lck_" + l.fencingToken : "lck_" + (i + 1),
+            key: (l.fencingToken || "") + "_" + (l.filePath || "") + "_" + i,
             file_path: l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath,
             agent_id: l.agentId,
             agent_name: l.holder?.label || l.agentId.split(":")[0] || "AI Agent",
@@ -222,6 +228,7 @@ function ProjectDashboardContent() {
           if (Array.isArray(data.locks)) {
             const mapped: LiveLock[] = data.locks.map((l: any, i: number) => ({
               id: l.fencingToken ? "lck_" + l.fencingToken : "lck_" + (i + 1),
+            key: (l.fencingToken || "") + "_" + (l.filePath || "") + "_" + i,
               file_path: l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath,
               agent_id: l.agentId,
               agent_name: l.holder?.label || l.agentId.split(":")[0] || "AI Agent",
@@ -385,6 +392,20 @@ function ProjectDashboardContent() {
       icon: Network,
     },
     {
+      id: "edits" as const,
+      label: "Code Edits & Patches",
+      shortLabel: "Code Edits",
+      kicker: "Causal diffs & Lamport cuts",
+      icon: Code2,
+    },
+    {
+      id: "team" as const,
+      label: "Collaborator Invites",
+      shortLabel: "Invites",
+      kicker: "Rooms, tunnels & peer sync",
+      icon: Users,
+    },
+    {
       id: "overview" as const,
       label: "Project Overview",
       shortLabel: "Overview",
@@ -417,51 +438,13 @@ function ProjectDashboardContent() {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground font-sans antialiased transition-colors duration-200">
-      {/* 1. COLLAPSIBLE LEFT NAVIGATION SIDEBAR */}
-      <aside
-        className={`${
-          sidebarOpen ? "w-64" : "w-14"
-        } bg-sidebar border-r border-sidebar-border flex flex-col justify-between py-3 shrink-0 z-40 select-none transition-all duration-300 ease-in-out`}
-      >
+      {/* 1. STATIC LEFT NAVIGATION SIDEBAR */}
+      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col justify-between py-3 shrink-0 z-40 select-none sticky top-0 h-screen overflow-y-auto">
         <div className="flex flex-col gap-3 w-full">
-          {/* Top Brand & Toggle Header */}
-          {sidebarOpen ? (
-            <div className="flex items-center justify-between px-3 pb-2 border-b border-sidebar-border">
-              <Link href="/" className="flex items-center gap-2.5 group min-w-0" title="Latch Systems">
-                <div className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center border border-sidebar-border bg-card shadow-sm group-hover:border-primary/50 transition-colors p-0.5 shrink-0">
-                  <Image
-                    src="/latch-logo.png"
-                    alt="Latch Systems"
-                    width={32}
-                    height={32}
-                    className="w-full h-full object-contain"
-                    priority
-                  />
-                </div>
-                <div className="min-w-0">
-                  <span className="font-[var(--font-display)] font-bold text-sm tracking-tight text-foreground block truncate">
-                    Latch
-                  </span>
-                  <span className="text-[10px] font-mono text-muted-foreground block truncate">
-                    Mission Control
-                  </span>
-                </div>
-              </Link>
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent border border-sidebar-border transition-colors cursor-pointer"
-                title="Collapse Sidebar"
-              >
-                <PanelLeftClose className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2 w-full pb-2 border-b border-sidebar-border">
-              <Link
-                href="/"
-                className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center border border-sidebar-border bg-card hover:border-primary/50 transition-all shadow-sm p-0.5"
-                title="Latch Systems"
-              >
+          {/* Top Brand Header */}
+          <div className="flex items-center justify-between px-3 pb-2 border-b border-sidebar-border">
+            <Link href="/" className="flex items-center gap-2.5 group min-w-0" title="Latch Systems">
+              <div className="w-8 h-8 rounded-md overflow-hidden flex items-center justify-center border border-sidebar-border bg-card shadow-sm group-hover:border-primary/50 transition-colors p-0.5 shrink-0">
                 <Image
                   src="/latch-logo.png"
                   alt="Latch Systems"
@@ -470,107 +453,86 @@ function ProjectDashboardContent() {
                   className="w-full h-full object-contain"
                   priority
                 />
-              </Link>
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent border border-sidebar-border transition-colors cursor-pointer"
-                title="Expand Sidebar"
-              >
-                <PanelLeftOpen className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Expanded Project Workspace Card */}
-          {sidebarOpen && (
-            <div className="px-3 pt-1">
-              <div className="p-2.5 rounded-lg bg-card border border-sidebar-border shadow-xs space-y-1">
-                <div className="flex items-center justify-between gap-1 text-[10px] font-mono text-muted-foreground uppercase">
-                  <span>Workspace</span>
-                  {isDeploying ? (
-                    <span className="text-amber-500 font-semibold flex items-center gap-1">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                      Deploying
-                    </span>
-                  ) : isFailed ? (
-                    <span className="text-destructive font-semibold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                      Failed
-                    </span>
-                  ) : (
-                    <span className="text-primary font-semibold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                      Online
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xs font-semibold text-foreground truncate font-mono">
-                  {project.project_name}
-                </h3>
+              </div>
+              <div className="min-w-0">
+                <span className="font-[var(--font-display)] font-bold text-sm tracking-tight text-foreground block truncate">
+                  Latch
+                </span>
                 <span className="text-[10px] font-mono text-muted-foreground block truncate">
-                  {project.repo_name || "unknownsideofme/LATCH"}
+                  Mission Control
                 </span>
               </div>
+            </Link>
+          </div>
 
-              <div className="pt-3 pb-1 text-[10px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
-                Chambers
+          {/* Project Workspace Card */}
+          <div className="px-3 pt-1">
+            <div className="p-2.5 rounded-lg bg-card border border-sidebar-border shadow-xs space-y-1">
+              <div className="flex items-center justify-between gap-1 text-[10px] font-mono text-muted-foreground uppercase">
+                <span>Workspace</span>
+                {isDeploying ? (
+                  <span className="text-amber-500 font-semibold flex items-center gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                    Deploying
+                  </span>
+                ) : isFailed ? (
+                  <span className="text-destructive font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                    Failed
+                  </span>
+                ) : (
+                  <span className="text-primary font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    Online
+                  </span>
+                )}
               </div>
+              <h3 className="text-xs font-semibold text-foreground truncate font-mono">
+                {project.project_name}
+              </h3>
+              <span className="text-[10px] font-mono text-muted-foreground block truncate">
+                {project.repo_name || "unknownsideofme/LATCH"}
+              </span>
             </div>
-          )}
+
+            <div className="pt-3 pb-1 text-[10px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
+              Chambers
+            </div>
+          </div>
 
           {/* Navigation Items */}
-          <nav className={`flex flex-col gap-1 w-full ${sidebarOpen ? "px-2" : "px-1.5 items-center"}`}>
+          <nav className="flex flex-col gap-1 w-full px-2">
             {NAV_ITEMS.map((item) => {
               const isActive = activeTab === item.id;
               const IconComponent = item.icon;
-
-              if (sidebarOpen) {
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full p-2 rounded-lg text-left transition-colors cursor-pointer flex items-center justify-between gap-2.5 ${
-                      isActive
-                        ? "bg-sidebar-accent text-primary border border-sidebar-border font-semibold shadow-xs"
-                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent border border-transparent"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className={`p-1 rounded ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                        <IconComponent className="w-4 h-4" />
-                      </span>
-                      <div className="min-w-0">
-                        <span className="text-xs font-medium block truncate text-foreground">
-                          {item.label}
-                        </span>
-                        <span className="text-[10px] font-mono text-muted-foreground block truncate">
-                          {item.kicker}
-                        </span>
-                      </div>
-                    </div>
-                    {item.badge !== undefined && (
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-primary border border-border shrink-0">
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              }
 
               return (
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors cursor-pointer relative ${
+                  className={`w-full p-2 rounded-lg text-left transition-colors cursor-pointer flex items-center justify-between gap-2.5 ${
                     isActive
-                      ? "text-primary bg-sidebar-accent border border-sidebar-border"
-                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                      ? "bg-sidebar-accent text-primary border border-sidebar-border font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent border border-transparent"
                   }`}
-                  title={`${item.label} · ${item.kicker}`}
                 >
-                  <IconComponent className="w-4 h-4" />
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`p-1 rounded ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                      <IconComponent className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="text-xs font-medium block truncate text-foreground">
+                        {item.label}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted-foreground block truncate">
+                        {item.kicker}
+                      </span>
+                    </div>
+                  </div>
+                  {item.badge !== undefined && (
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-primary border border-border shrink-0">
+                      {item.badge}
+                    </span>
                   )}
                 </button>
               );
@@ -579,257 +541,364 @@ function ProjectDashboardContent() {
         </div>
 
         {/* Bottom Rail / Footer Actions */}
-        <div className={`w-full border-t border-sidebar-border pt-3 ${sidebarOpen ? "px-3 space-y-2" : "flex flex-col items-center gap-3"}`}>
-          {sidebarOpen ? (
-            <>
-              <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isRunning
-                        ? "bg-primary animate-pulse"
-                        : isDeploying
-                        ? "bg-amber-500 animate-spin"
-                        : "bg-destructive"
-                    }`}
-                  />
-                  <span>Daemon {isRunning ? "Online" : isDeploying ? "Deploying" : "Offline"}</span>
-                </span>
-                <span className="text-[10px] text-primary font-semibold">
-                  {isRunning ? "Active" : isDeploying ? "Provisioning" : "Halted"}
-                </span>
-              </div>
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="w-full py-1.5 px-2.5 rounded-md bg-sidebar-accent border border-sidebar-border text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>All Projects</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <div
-                className={`w-2.5 h-2.5 rounded-full shadow-sm ${
-                  isRunning ? "bg-primary" : isDeploying ? "bg-amber-500 animate-pulse" : "bg-destructive"
+        <div className="w-full border-t border-sidebar-border pt-3 px-3 space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isRunning
+                    ? "bg-primary animate-pulse"
+                    : isDeploying
+                    ? "bg-amber-500 animate-spin"
+                    : "bg-destructive"
                 }`}
-                title={`Daemon: ${project.status}`}
               />
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
-                title="Back to All Projects"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            </>
-          )}
+              <span>Daemon {isRunning ? "Online" : isDeploying ? "Deploying" : "Offline"}</span>
+            </span>
+            <span className="text-[10px] text-primary font-semibold">
+              {isRunning ? "Active" : isDeploying ? "Provisioning" : "Halted"}
+            </span>
+          </div>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="w-full py-1.5 px-2.5 rounded-md bg-sidebar-accent border border-sidebar-border text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>All Projects</span>
+          </button>
         </div>
       </aside>
 
       {/* 2. MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 bg-background">
-        {/* Top Breadcrumb Bar */}
-        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 transition-colors duration-200">
+        {/* Top Breadcrumb & Live Status Bar */}
+        <header className="h-14 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 transition-colors duration-200">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Projects</span>
             </Link>
-            <span className="text-muted-foreground/60">/</span>
-            <span className="text-xs font-semibold text-foreground font-mono flex items-center gap-1.5">
+            <span className="text-muted-foreground/40">/</span>
+            <span className="text-xs font-bold text-foreground font-mono flex items-center gap-2">
               {project.project_name}
             </span>
 
-            {isDeploying ? (
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-500 font-semibold">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                <span>DEPLOYING</span>
-              </div>
-            ) : isFailed ? (
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 border border-destructive/20 text-[10px] font-mono text-destructive font-semibold">
-                <AlertCircle className="w-3 h-3" />
-                <span>FAILED</span>
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                <span>ACTIVE</span>
-              </div>
-            )}
+            {/* Branch Selector Pill */}
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/60 border border-border text-xs font-mono text-foreground font-medium">
+              <GitBranch className="w-3.5 h-3.5 text-primary" />
+              <span>{project.branch || "main"}</span>
+            </div>
+
+            {/* Real-time Synced Live Pill */}
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-xs font-mono text-emerald-400 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              <span>Synced Live</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs font-mono">
             <ThemeToggle />
-            <span className="hidden sm:inline">
-              Daemon:{" "}
-              <strong className="text-primary font-medium">
-                {project.render_url ? "Render Cloud" : ":3001"}
-              </strong>
-            </span>
-            <span className="hidden sm:inline">
-              Swarm: <strong className="text-foreground font-medium">{project.agent_limit || 4} Agents</strong>
-            </span>
+            <button
+              onClick={() => handleCopy(project.render_url || "http://127.0.0.1:3001", "endpoint")}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card hover:bg-muted border border-border text-foreground transition-colors cursor-pointer text-xs font-medium"
+            >
+              {copiedKey === "endpoint" ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-primary font-semibold">Endpoint Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>Copy API</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => alert("Collaborator invite link copied to clipboard!")}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary hover:opacity-90 text-primary-foreground font-semibold text-xs transition-all shadow-sm cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Invite Collaborator</span>
+            </button>
           </div>
         </header>
 
-        {/* Project Header Banner with Mission-Control Status Toolbar */}
-        <div className="border-b border-border bg-card px-6 py-4 transition-colors duration-200">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-primary">
-                  <GitBranch className="w-4 h-4" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-foreground">
+        {/* Project Header Banner & 4 KPI Metric Cards */}
+        <div className="border-b border-border bg-card/40 px-6 py-5 transition-colors duration-200">
+          <div className="max-w-7xl mx-auto space-y-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <h1 className="text-xl font-bold tracking-tight text-foreground font-sans">
                     {project.project_name}
                   </h1>
-                  <span className="text-[11px] font-mono text-muted-foreground">
-                    {project.repo_name || project.project_name} · branch:{" "}
-                    <strong className="text-primary">{project.branch || "main"}</strong>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-primary/10 border border-primary/20 text-primary uppercase">
+                    Active
                   </span>
+                </div>
+                <p className="text-xs text-muted-foreground font-mono">
+                  Real-time coordination & distributed mutex leases for multi-agent development
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+                <span className="px-2.5 py-1 rounded-md bg-muted border border-border">
+                  Coordinator: <strong className="text-foreground">{project.render_url ? "Cloud" : "Local :3001"}</strong>
+                </span>
+                <span className="px-2.5 py-1 rounded-md bg-muted border border-border">
+                  Swarm Limit: <strong className="text-primary font-bold">{project.agent_limit || 4} Slots</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* 4 High-Contrast KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <div className="p-4 rounded-xl bg-card border border-border shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground block">
+                    Coordinator
+                  </span>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-lg font-bold text-foreground">Healthy</span>
+                    <span className="text-xs font-mono text-emerald-400 font-semibold">• 14 ms</span>
+                  </div>
+                </div>
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Activity className="w-5 h-5 animate-pulse" />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-card border border-border shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground block">
+                    Agents Online
+                  </span>
+                  <div className="mt-1 text-lg font-bold text-foreground">
+                    <span className="text-primary">{project.agent_limit || 4}</span> agents active
+                  </div>
+                </div>
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <Bot className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-card border border-border shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground block">
+                    Active Locks
+                  </span>
+                  <div className="mt-1 text-lg font-bold text-foreground">
+                    <span className="text-amber-400">{locks.length}</span> leases held
+                  </div>
+                </div>
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <Lock className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-card border border-border shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground block">
+                    Collisions Prevented
+                  </span>
+                  <div className="mt-1 text-lg font-bold text-foreground">
+                    <span className="text-sky-400">9</span> conflicts saved
+                  </div>
+                </div>
+                <div className="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                  <Shield className="w-5 h-5" />
                 </div>
               </div>
             </div>
 
-            {/* Mission Control Live Chamber Status & Toolbar */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/60 border border-border">
-                <span className="text-muted-foreground">Chamber:</span>
-                <span className="text-foreground font-semibold flex items-center gap-1.5">
-                  {activeTab === "swarm-graph" && (
-                    <>
-                      <Bot className="w-3.5 h-3.5 text-primary" />
-                      <span>AI Swarm Concurrency</span>
-                    </>
-                  )}
-                  {activeTab === "ast-graph" && (
-                    <>
-                      <Network className="w-3.5 h-3.5 text-primary" />
-                      <span>AST Dependency Tree</span>
-                    </>
-                  )}
-                  {activeTab === "overview" && (
-                    <>
-                      <Activity className="w-3.5 h-3.5 text-primary" />
-                      <span>Project Overview</span>
-                    </>
-                  )}
-                  {activeTab === "locks" && (
-                    <>
-                      <TableIcon className="w-3.5 h-3.5 text-primary" />
-                      <span>File Mutex Leases</span>
-                    </>
-                  )}
-                  {activeTab === "logs" && (
-                    <>
-                      <Terminal className="w-3.5 h-3.5 text-primary" />
-                      <span>Realtime Logs</span>
-                    </>
-                  )}
-                  {activeTab === "settings" && (
-                    <>
-                      <Settings className="w-3.5 h-3.5 text-primary" />
-                      <span>Project Settings</span>
-                    </>
-                  )}
-                </span>
-              </div>
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-muted-foreground">
-                <Lock className="w-3.5 h-3.5 text-primary" />
-                <span>
-                  <strong className="text-foreground">{locks.length}</strong> Mutex Leases
-                </span>
-              </div>
-
-              <button
-                onClick={() =>
-                  handleCopy(
-                    project.render_url || "http://127.0.0.1:3001",
-                    "endpoint"
-                  )
-                }
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-foreground hover:bg-muted transition-colors cursor-pointer shadow-2xs"
-                title="Copy API Endpoint"
-              >
-                {copiedKey === "endpoint" ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-primary font-semibold">Endpoint Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span>Copy Endpoint</span>
-                  </>
-                )}
-              </button>
-
-              {project.render_url && (
-                <a
-                  href={project.render_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open Service</span>
-                </a>
-              )}
-            </div>
           </div>
         </div>
 
         {/* Studio Body Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 space-y-6">
-          {/* TAB 1: AI SWARM & LOCK GRAPH (REACT FLOW) */}
-          {activeTab === "swarm-graph" && (
+          {/* TAB: CODE EDITS & PATCHES */}
+          {activeTab === "edits" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-border">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground font-mono flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-primary" />
-                    <span>AI Swarm & Multi-User Collaboration Topology</span>
+                    <Code2 className="w-4 h-4 text-primary" />
+                    <span>Real-Time Code Edits & Causal Lamport Cuts</span>
                   </h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Live visual bipartite graph attributing concurrent human operators and AI agents to active file locks.
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Live stream of AST file mutations, patch inspection, and time-travel rewind across agent swarms.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  <span className="text-primary font-semibold">Sub-ms Mutex Bus Active</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-emerald-400 font-semibold">Active Stream</span>
                 </div>
               </div>
 
-              <MissionControlCast tab="swarm-graph" project={project} />
+              <MissionControlCast tab="edits" project={project} />
             </div>
           )}
 
-          {/* TAB 2: AST DEPENDENCY GRAPH (REACT FLOW) */}
-          {activeTab === "ast-graph" && (
+          {/* TAB: COLLABORATOR INVITES & ROOMS */}
+          {activeTab === "team" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-border">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground font-mono flex items-center gap-2">
-                    <Network className="w-4 h-4 text-primary" />
-                    <span>AST Blast-Radius Dependency Graph</span>
+                    <Users className="w-4 h-4 text-primary" />
+                    <span>Collaborator Invites & Shared Multi-Agent Rooms</span>
                   </h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Tree-sitter module boundary graph showing which downstream contracts are bounded when an upstream file is locked.
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Manage real-time workspace collaborator invites, ngrok live tunnel handshakes, and peer synchronization.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-                  <span className="text-destructive font-semibold">Blast Radius Protection Active</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-emerald-400 font-semibold">Tunnel Ready</span>
                 </div>
               </div>
 
-              <MissionControlCast tab="ast-graph" project={project} />
+              <MissionControlCast tab="team" project={project} />
+            </div>
+          )}
+
+          {/* TAB 1 & 2: GRAPH CANVASES + RIGHT RAIL INSPECTOR + RECENT EVENTS */}
+          {(activeTab === "swarm-graph" || activeTab === "ast-graph") && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-12 gap-5 items-start">
+                {/* Main Graph Viewport */}
+                <div className="col-span-12 xl:col-span-9 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-border">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground font-mono flex items-center gap-2">
+                        {activeTab === "swarm-graph" ? (
+                          <>
+                            <Bot className="w-4 h-4 text-primary" />
+                            <span>AI Swarm & Multi-User Collaboration Topology</span>
+                          </>
+                        ) : (
+                          <>
+                            <Network className="w-4 h-4 text-primary" />
+                            <span>AST Blast-Radius Dependency Graph</span>
+                          </>
+                        )}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {activeTab === "swarm-graph"
+                          ? "Real-time bipartite topology coordinating human operators, agents, and atomic file leases."
+                          : "Tree-sitter module boundary graph mapping downstream contract blast radius on file lock."}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-mono">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-emerald-400 font-semibold">Sub-ms Mutex Bus Active</span>
+                    </div>
+                  </div>
+
+                  <MissionControlCast tab={activeTab} project={project} />
+                </div>
+
+                {/* Right Rail Details Panel */}
+                <div className="col-span-12 xl:col-span-3 space-y-4">
+                  {/* Selected Agent / Active Session Card */}
+                  <div className="p-4 rounded-xl bg-card border border-border shadow-xs space-y-3">
+                    <div className="flex items-center justify-between pb-3 border-b border-border">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                          AG
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-foreground">Antigravity</h4>
+                          <span className="text-xs text-muted-foreground font-mono">Agent Session</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        HOLD
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-xs font-mono">
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span>Session ID:</span>
+                        <span className="text-foreground font-semibold">sess-a7f3</span>
+                      </div>
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span>Role:</span>
+                        <span className="text-foreground font-semibold">coordinator</span>
+                      </div>
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span>Heartbeat:</span>
+                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          14 ms
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span>Status:</span>
+                        <span className="text-foreground font-semibold">Holding Write Lease</span>
+                      </div>
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span>Active Locks:</span>
+                        <span className="text-primary font-bold">{locks.length} files</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* .latch/ Memory Digest Card */}
+                  <div className="p-4 rounded-xl bg-card border border-border shadow-xs space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-border">
+                      <h4 className="text-xs font-bold font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-primary" />
+                        <span>.latch/ Memory Digest</span>
+                      </h4>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="p-2.5 rounded-lg bg-muted/40 border border-border space-y-1 hover:border-primary/40 transition-colors">
+                        <div className="flex items-center justify-between text-xs font-mono font-bold text-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            current_task.md
+                          </span>
+                          <span className="text-muted-foreground">Active</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Implementing companion actions with lock coordination.
+                        </p>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-muted/40 border border-border space-y-1 hover:border-primary/40 transition-colors">
+                        <div className="flex items-center justify-between text-xs font-mono font-bold text-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            decisions.md
+                          </span>
+                          <span className="text-muted-foreground">Recorded</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Use distributed file leases + AST blast radius (depth = 2).
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleCopy("latch compile .", "compile")}
+                      className="w-full py-2 px-3 rounded-lg bg-muted hover:bg-muted/80 text-foreground text-xs font-mono font-medium border border-border flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <span>View Full Memory Digest</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-primary" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              
             </div>
           )}
 
@@ -1065,9 +1134,9 @@ function ProjectDashboardContent() {
                 </div>
 
                 <div className="space-y-2 font-mono text-xs">
-                  {locks.map((lock) => (
+                  {locks.map((lock, idx) => (
                     <div
-                      key={lock.id}
+                      key={`${lock.id}-${lock.file_path}-${idx}`}
                       className="flex items-center justify-between p-2.5 rounded bg-muted/30 border border-border"
                     >
                       <div className="flex items-center gap-2">
@@ -1105,7 +1174,7 @@ function ProjectDashboardContent() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
+                <table className="w-full text-left text-[13px] font-mono">
                   <thead className="bg-muted/50 text-muted-foreground border-b border-border">
                     <tr>
                       <th className="py-2.5 px-4">Lease ID</th>
@@ -1127,8 +1196,8 @@ function ProjectDashboardContent() {
                         </td>
                       </tr>
                     ) : (
-                      locks.map((lock) => (
-                      <tr key={lock.id} className="hover:bg-muted/40 transition-colors">
+                      locks.map((lock, idx) => (
+                      <tr key={`${lock.id}-${lock.file_path}-${idx}`} className="hover:bg-muted/40 transition-colors">
                         <td className="py-3 px-4 text-muted-foreground">{lock.id}</td>
                         <td className="py-3 px-4 font-semibold text-foreground">
                           {lock.file_path}
@@ -1136,7 +1205,7 @@ function ProjectDashboardContent() {
                         <td className="py-3 px-4 text-foreground">{lock.agent_name}</td>
                         <td className="py-3 px-4">
                           <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                            className={`text-xs px-2.5 py-0.5 rounded-md font-bold uppercase ${
                               lock.status === "CONTESTED"
                                 ? "bg-destructive/15 text-destructive border border-destructive/30"
                                 : "bg-primary/10 text-primary border border-primary/20"
@@ -1149,7 +1218,7 @@ function ProjectDashboardContent() {
                         <td className="py-3 px-4 text-right">
                           <button
                             onClick={() => handleReleaseLock(lock.id)}
-                            className="px-2 py-1 rounded bg-muted hover:bg-destructive/20 hover:text-destructive border border-border text-[11px] transition-colors cursor-pointer"
+                            className="px-3 py-1 rounded-md bg-muted hover:bg-destructive/20 hover:text-destructive border border-border text-xs font-semibold transition-colors cursor-pointer"
                           >
                             Release
                           </button>

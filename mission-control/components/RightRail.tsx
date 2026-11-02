@@ -33,14 +33,21 @@ export function RightRail() {
     return { totalTokens: tokens, avgTokens: avg };
   }, [dashboard?.history, dashboard?.chats, dashboard?.edits]);
 
-  if (!dashboard) return <aside className={ui.right} />;
+  if (!dashboard) return <aside className={`${ui.right} nowheel`} />;
 
   const activeLocks = (dashboard.locks || []).filter((l) => !l.released).length;
   const conflictsCount = (dashboard.conflicts || []).length;
   const collisionsPrevented = dashboard.stats?.collisions?.totalSaved ?? 0;
 
+  const handleRailWheel = (e: React.WheelEvent) => {
+    const panel = document.getElementById("latch-panel-scroll");
+    if (panel) {
+      panel.scrollBy({ top: e.deltaY, behavior: "auto" });
+    }
+  };
+
   return (
-    <aside className={ui.right}>
+    <aside className={`${ui.right} nowheel`} onWheel={handleRailWheel}>
       {/* 1. PEOPLE */}
       <section>
         <div className={ui.kicker}>People</div>

@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
+  useReactFlow,
   Background,
   Controls,
-  MiniMap,
   Handle,
   Position,
   type Node,
@@ -49,7 +49,7 @@ function ModuleNode({ data }: NodeProps) {
 
   return (
     <div
-      className={`w-64 p-3.5 rounded-xl bg-[#18181b] border text-white transition-all shadow-xl select-none ${
+      className={`graph-node-enter w-72 p-4 rounded-xl bg-[#161619] border text-white transition-all shadow-xl select-none ${
         isLocked
           ? "border-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.25)] bg-[#18181b]"
           : isBounded
@@ -83,17 +83,17 @@ function ModuleNode({ data }: NodeProps) {
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-semibold text-white font-mono truncate" title={d.label}>
+            <h4 className="text-sm font-bold text-white font-mono truncate" title={d.label}>
               {d.label}
             </h4>
-            <span className="text-[10px] text-[#a1a1aa] font-mono truncate block">
+            <span className="text-xs text-[#a1a1aa] font-mono truncate block">
               {d.path}
             </span>
           </div>
         </div>
 
         <span
-          className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded border uppercase shrink-0 ${
+          className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border uppercase shrink-0 ${
             isLocked
               ? "bg-amber-500/15 text-amber-400 border-amber-500/40"
               : isBounded
@@ -105,7 +105,7 @@ function ModuleNode({ data }: NodeProps) {
         </span>
       </div>
 
-      <div className="pt-2.5 space-y-1.5 text-[11px] font-mono">
+      <div className="pt-2.5 space-y-2 text-xs font-mono">
         <div className="flex items-center justify-between text-[#a1a1aa]">
           <span>AST Contract:</span>
           <span className="text-white font-semibold">{d.language}</span>
@@ -146,7 +146,27 @@ function ModuleNode({ data }: NodeProps) {
 
 /* ------------------------------- Main Component ------------------------------- */
 
-export function AstDependencyGraph() {
+
+function AutoResizeHelper() {
+  const { fitView } = useReactFlow();
+
+  useEffect(() => {
+    const handleResize = () => {
+      fitView({ padding: 0.18, duration: 350 });
+    };
+
+    const timer = setTimeout(handleResize, 120);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [fitView]);
+
+  return null;
+}
+
+export function AstDependencyGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
   const { dashboard, selectedProjectId } = useLatch();
   const [graphData, setGraphData] = useState<Dashboard["graph"] | null>(dashboard?.graph || null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -217,8 +237,8 @@ export function AstDependencyGraph() {
 
     // Layout configuration
     const cols = Math.max(1, Math.min(4, Math.ceil(Math.sqrt(rawNodes.length))));
-    const spacingX = 320;
-    const spacingY = 220;
+    const spacingX = 380;
+    const spacingY = 260;
 
     const generatedNodes: Node[] = rawNodes.map((n, i) => {
       const col = i % cols;
@@ -339,7 +359,8 @@ export function AstDependencyGraph() {
       </div>
 
       {/* Main Canvas Container */}
-      <div className="relative w-full h-[650px] rounded-xl border border-[#27272a] overflow-hidden shadow-2xl bg-[#111111]">
+      <div className="relative w-full h-[640px] rounded-xl border border-[#27272a] overflow-hidden shadow-2xl bg-[#0f0f11]">
+
         {/* Graph Legend Overlay */}
         <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 bg-[#18181b]/95 backdrop-blur-md px-3.5 py-2 rounded-lg border border-[#27272a] text-xs font-mono text-[#a1a1aa] shadow-xl">
           <span className="text-white font-semibold flex items-center gap-1.5">
@@ -375,22 +396,19 @@ export function AstDependencyGraph() {
             fitViewOptions={{ padding: 0.15 }}
             minZoom={0.2}
             maxZoom={1.5}
+                        zoomOnScroll={true}
+            panOnScroll={false}
+            preventScrolling={true}
+            zoomOnPinch={true}
+            zoomOnDoubleClick={true}
+            panOnDrag={true}
             onNodeClick={(_, node) => setSelectedNode(node)}
             className="bg-[#111111]"
           >
+            <AutoResizeHelper />
             <Background color="#27272a" gap={20} size={1} />
             <Controls
               className="!bg-[#18181b] !border-[#27272a] !rounded-lg !overflow-hidden [&>button]:!bg-[#18181b] [&>button]:!border-b-[#27272a] [&>button]:!fill-white [&>button:hover]:!bg-[#27272a]"
-            />
-            <MiniMap
-              nodeColor={(node) => {
-                const d = node.data as { status?: string };
-                if (d?.status === "locked") return "#f59e0b";
-                if (d?.status === "bounded") return "#ef4444";
-                return "#22c55e";
-              }}
-              maskColor="rgba(0, 0, 0, 0.7)"
-              className="!bg-[#18181b] !border-[#27272a] !rounded-lg"
             />
           </ReactFlow>
         )}

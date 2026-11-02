@@ -9,8 +9,9 @@
   --card: #191919;
   --ring: #ffe0c2;
   --input: #484848;
-  --muted: #222222;
-  --accent: #2a2a2a;
+  --muted: #a1a1aa;
+  --muted-bg: #1e1e24;
+  --accent: #ffe0c2;
   --border: #201e18;
   --radius: 0.5rem;
   --popover: #191919;
@@ -26,7 +27,7 @@
   --card-foreground: #eeeeee;
   --sidebar-primary: #1d4ed8;
   --muted-foreground: #b4b4b4;
-  --accent-foreground: #eeeeee;
+  --accent-foreground: #081a1b;
   --popover-foreground: #eeeeee;
   --primary-foreground: #081a1b;
   --sidebar-foreground: #f4f4f5;
@@ -111,12 +112,14 @@
 html.light {
   color-scheme: light;
 
-  /* Light mode palette */
+  /* Light mode palette strictly aligned with frontend */
   --card: #fcfcfc;
   --ring: #644a40;
   --input: #d8d8d8;
-  --muted: #efefef;
-  --accent: #e8e8e8;
+  --muted: #64748b;
+  --muted-bg: #f1f5f9;
+  --accent: #644a40;
+  --accent-foreground: #ffffff;
   --border: #d8d8d8;
   --primary: #644a40;
   --sidebar: #fbfbfb;
@@ -127,6 +130,9 @@ html.light {
   --card-foreground: #202020;
   --muted-foreground: #646464;
   --primary-foreground: #ffffff;
+  --surface: #fcfcfc;
+  --surface-elevated: #f4f4f4;
+  --surface-hover: #e8e8e8;
 
   --bg: #f9f9f9;
   --bg-rail: #f0ede8;
@@ -342,3 +348,46 @@ a { color: var(--primary); }
   margin-right: 6px;
 }
 .md ul.contains-task-list { list-style: none; padding-left: 1em; }
+
+
+/* Smooth Graph Node Animations */
+@keyframes nodeEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes nodePulseBorder {
+  0%, 100% {
+    border-color: rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    border-color: rgba(245, 158, 11, 0.85);
+  }
+}
+
+.graph-node-enter {
+  animation: nodeEnter 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Sleek minimalist scrollbar */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-soft, #27272a);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted, #71717a);
+}

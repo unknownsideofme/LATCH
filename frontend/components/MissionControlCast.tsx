@@ -11,11 +11,14 @@ import {
   Network,
   Radio,
   Loader2,
+  Code2,
+  Users,
+  Table,
 } from "lucide-react";
 import type { ProjectRecord } from "@/lib/types";
 
 interface MissionControlCastProps {
-  tab: "swarm-graph" | "ast-graph" | "locks";
+  tab: "swarm-graph" | "ast-graph" | "locks" | "edits" | "team" | "memory";
   project: ProjectRecord;
   className?: string;
 }
@@ -53,8 +56,16 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
       try {
         const url = new URL(base);
         url.searchParams.set("embed", "true");
-        url.searchParams.set("tab", "locks");
-        url.searchParams.set("view", view === "ast-graph" ? "ast" : "swarm");
+        if (view === "edits") {
+          url.searchParams.set("tab", "edits");
+        } else if (view === "team") {
+          url.searchParams.set("tab", "team");
+        } else if (view === "memory") {
+          url.searchParams.set("tab", "memory");
+        } else {
+          url.searchParams.set("tab", "locks");
+          url.searchParams.set("view", view === "ast-graph" ? "ast" : view === "locks" ? "list" : "swarm");
+        }
         url.searchParams.set("theme", theme);
         url.searchParams.set("projectId", project.id);
         if (project.project_name) {
@@ -86,6 +97,31 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
     }
   }, [activeTheme]);
 
+  // Sync container size changes & fullscreen toggles live to iframe
+  useEffect(() => {
+    const notifyResize = () => {
+      iframeRef.current?.contentWindow?.postMessage({ type: "LATCH_RESIZE" }, "*");
+    };
+
+    const timer1 = setTimeout(notifyResize, 150);
+    const timer2 = setTimeout(notifyResize, 450);
+
+    const container = iframeRef.current?.parentElement;
+    let ro: ResizeObserver | null = null;
+    if (container) {
+      ro = new ResizeObserver(() => {
+        notifyResize();
+      });
+      ro.observe(container);
+    }
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      if (ro) ro.disconnect();
+    };
+  }, [fullscreen, reloadKey]);
+
   const handleReload = () => {
     setLoading(true);
     setReloadKey((k) => k + 1);
@@ -105,17 +141,33 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-card border border-border shadow-2xs font-mono text-xs">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/20 text-primary">
-            {isAst ? (
+            {tab === "ast-graph" ? (
               <Network className="w-3.5 h-3.5 animate-pulse" />
+            ) : tab === "edits" ? (
+              <Code2 className="w-3.5 h-3.5 text-primary" />
+            ) : tab === "team" ? (
+              <Users className="w-3.5 h-3.5 text-primary" />
+            ) : tab === "locks" ? (
+              <Table className="w-3.5 h-3.5 text-primary" />
             ) : (
               <Bot className="w-3.5 h-3.5 text-primary" />
             )}
-            <span className="font-semibold uppercase text-[10.5px] tracking-wide">
-              {isAst ? "AST Blast Radius Graph" : "Swarm Concurrency Topology"}
+            <span className="font-bold uppercase text-xs tracking-wider">
+              {tab === "ast-graph"
+                ? "AST Blast Radius Graph"
+                : tab === "edits"
+                ? "Live Code Edits & Patches"
+                : tab === "team"
+                ? "Collaborator Invites & Shared Rooms"
+                : tab === "locks"
+                ? "File Mutex Registry Table"
+                : tab === "memory"
+                ? ".latch/ Context Digest"
+                : "Swarm Concurrency Topology"}
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground text-[11px]">
+          <div className="hidden sm:flex items-center gap-2 text-muted-foreground text-xs font-mono">
             <Radio className="w-3 h-3 text-emerald-500 animate-pulse" />
             <span className="text-foreground font-semibold">Live Cast</span>
             <span className="text-muted-foreground/70">| Sub-ms Mutex Bus</span>
@@ -127,7 +179,7 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
           <button
             onClick={handleReload}
             title="Refresh stream"
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-card hover:bg-muted border border-border text-foreground transition-colors cursor-pointer text-[11px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card hover:bg-muted border border-border text-foreground hover:border-primary/40 transition-colors cursor-pointer text-xs font-medium"
           >
             <RefreshCw className={`w-3 h-3 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
             <span>Reload</span>
@@ -138,7 +190,7 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
             target="_blank"
             rel="noopener noreferrer"
             title="Open Full Mission Control Studio in New Window"
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-card hover:bg-muted border border-border text-foreground transition-colors text-[11px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card hover:bg-muted border border-border text-foreground hover:border-primary/40 transition-colors text-xs font-medium"
           >
             <ExternalLink className="w-3 h-3 text-muted-foreground" />
             <span>Pop-out Studio</span>
@@ -147,7 +199,7 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
           <button
             onClick={() => setFullscreen((f) => !f)}
             title={fullscreen ? "Exit Fullscreen" : "Fullscreen View"}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-card hover:bg-muted border border-border text-foreground transition-colors cursor-pointer text-[11px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card hover:bg-muted border border-border text-foreground hover:border-primary/40 transition-colors cursor-pointer text-xs font-medium"
           >
             {fullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -166,7 +218,7 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
             <span className="tracking-wide text-foreground font-semibold">
               Connecting to Coordinator Stream on Port 3002...
             </span>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               Direct WebSocket RPC and SSE Synchronization
             </span>
           </div>
@@ -178,7 +230,9 @@ export function MissionControlCast({ tab, project, className }: MissionControlCa
           src={castUrl}
           title="Latch Mission Control Cast"
           onLoad={() => setLoading(false)}
-          className="w-full h-full border-0 bg-background"
+          className="w-full h-full border-0 bg-background block overflow-hidden"
+          scrolling="no"
+          style={{ overflow: "hidden" }}
           allow="clipboard-write; clipboard-read"
         />
       </div>

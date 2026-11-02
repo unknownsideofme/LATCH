@@ -281,7 +281,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen flex bg-background text-foreground font-sans antialiased transition-colors duration-200">
       {/* 1. SUPABASE-STYLE SLIM LEFT ICON RAIL (56px) */}
-      <aside className="w-14 bg-sidebar border-r border-sidebar-border flex flex-col items-center justify-between py-3 shrink-0 z-40 select-none transition-colors duration-200">
+      <aside className="w-14 bg-sidebar border-r border-sidebar-border flex flex-col items-center justify-between py-3 shrink-0 z-40 select-none sticky top-0 h-screen overflow-y-auto">
         <div className="flex flex-col items-center gap-4 w-full">
           {/* Logo */}
           <Link

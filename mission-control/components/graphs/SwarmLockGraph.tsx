@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   ReactFlow,
+  useReactFlow,
   Background,
   Controls,
-  MiniMap,
   Handle,
   Position,
   type Node,
@@ -26,6 +26,7 @@ import {
   Radio,
   Eye,
   CheckCircle2,
+  Maximize2,
 } from "lucide-react";
 import { useLatch } from "@/lib/LatchContext";
 
@@ -42,14 +43,14 @@ function HumanNode({ data }: NodeProps) {
   };
 
   return (
-    <div className="w-64 p-3.5 rounded-xl bg-[#18181b] border border-[#27272a] hover:border-[#ffe0c2]/50 text-white shadow-xl transition-all select-none">
-      <div className="flex items-center justify-between pb-2.5 border-b border-[#27272a]">
+    <div className="graph-node-enter w-72 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--primary)]/60 text-[var(--foreground)] shadow-xl transition-all select-none">
+      <div className="flex items-center justify-between pb-2.5 border-b border-[var(--border)]">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#27272a] border border-[#3f3f46] flex items-center justify-center text-[#ffe0c2] font-bold text-xs">
+          <div className="w-8 h-8 rounded-full bg-[var(--elev)] border border-[var(--border)] flex items-center justify-center text-[var(--primary)] font-bold text-xs">
             {(d.name || d.login || "OP").slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <div className="text-xs font-semibold text-white flex items-center gap-1.5 font-sans">
+            <div className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2 font-sans">
               <span>{d.name || d.login}</span>
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -57,17 +58,17 @@ function HumanNode({ data }: NodeProps) {
                 }`}
               />
             </div>
-            <span className="text-[10.5px] font-mono text-[#a1a1aa]">@{d.login}</span>
+            <span className="text-xs font-mono text-[var(--muted-foreground)]">@{d.login}</span>
           </div>
         </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#222222] text-[#ffe0c2] border border-[#333333]">
+        <span className="text-xs font-mono px-2.5 py-0.5 rounded-md bg-[var(--elev)] text-[var(--primary)] border border-[var(--border)]">
           {d.agentsCount} active
         </span>
       </div>
 
-      <div className="pt-2 flex items-center justify-between text-[11px] font-mono">
-        <span className="text-[#a1a1aa]">Session:</span>
-        <span className="text-[#ffe0c2] font-semibold">{d.role || "Operator"}</span>
+      <div className="pt-2.5 flex items-center justify-between text-xs font-mono">
+        <span className="text-[var(--muted-foreground)]">Session:</span>
+        <span className="text-[var(--primary)] font-semibold">{d.role || "Operator"}</span>
       </div>
 
       <Handle
@@ -122,16 +123,16 @@ function AgentNode({ data }: NodeProps) {
   };
 
   return (
-    <div className="w-64 p-3.5 rounded-xl bg-[#18181b] border border-[#27272a] hover:border-[#ffe0c2]/50 text-white shadow-xl transition-all select-none relative">
+    <div className="graph-node-enter w-72 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--primary)]/60 text-[var(--foreground)] shadow-xl transition-all select-none relative">
       <Handle
         type="target"
         position={Position.Left}
         className="!bg-[#a1a1aa] !w-3 !h-3 !border-2 !border-[#18181b]"
       />
 
-      <div className="flex items-center justify-between pb-2.5 border-b border-[#27272a]">
+      <div className="flex items-center justify-between pb-2.5 border-b border-[var(--border)]">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#27272a] border border-[#3f3f46] p-1.5 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-[var(--elev)] border border-[var(--border)] p-1.5 flex items-center justify-center shrink-0">
             {d.img ? (
               <Image
                 src={d.img}
@@ -141,24 +142,24 @@ function AgentNode({ data }: NodeProps) {
                 className="object-contain"
               />
             ) : (
-              <Bot className="w-4 h-4 text-[#ffe0c2]" />
+              <Bot className="w-4 h-4 text-[var(--primary)]" />
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-semibold text-white font-sans truncate">{d.label}</h4>
-            <span className="text-[10px] font-mono text-[#a1a1aa] truncate block">
+            <h4 className="text-sm font-bold text-[var(--foreground)] font-sans truncate">{d.label}</h4>
+            <span className="text-xs font-mono text-[var(--muted-foreground)] truncate block">
               {d.model}
             </span>
           </div>
         </div>
 
-        <span className={`text-[9.5px] font-mono px-2 py-0.5 rounded border uppercase flex items-center gap-1 ${statusConfig.badge}`}>
+        <span className={`text-xs font-mono px-2.5 py-0.5 rounded-md border uppercase flex items-center gap-1.5 font-semibold ${statusConfig.badge}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
           <span>{d.status.toUpperCase()}</span>
         </span>
       </div>
 
-      <div className="pt-2 text-[10.5px] font-mono text-[#a1a1aa] flex items-center justify-between">
+      <div className="pt-2.5 text-xs font-mono text-[var(--muted-foreground)] flex items-center justify-between">
         <span className="truncate">{statusConfig.text}</span>
       </div>
 
@@ -188,7 +189,7 @@ function FileNode({ data }: NodeProps) {
 
   return (
     <div
-      className={`w-72 p-3.5 rounded-xl bg-[#18181b] border transition-all shadow-xl select-none text-white ${
+      className={`graph-node-enter w-80 p-4 rounded-xl bg-[#161619] border transition-all shadow-xl select-none text-white ${
         isContested
           ? "border-red-500/60 shadow-[0_0_16px_rgba(239,68,68,0.25)]"
           : isLocked
@@ -204,7 +205,7 @@ function FileNode({ data }: NodeProps) {
         className="!bg-[#ffe0c2] !w-3 !h-3 !border-2 !border-[#18181b]"
       />
 
-      <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[#27272a]">
+      <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[var(--border)]">
         <div className="flex items-center gap-2.5 min-w-0">
           <div
             className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
@@ -228,10 +229,10 @@ function FileNode({ data }: NodeProps) {
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-semibold text-white font-mono truncate" title={d.path}>
+            <h4 className="text-sm font-bold text-[var(--foreground)] font-mono truncate" title={d.path}>
               {d.path.split("/").pop()}
             </h4>
-            <span className="text-[10px] text-[#a1a1aa] font-mono truncate block" title={d.path}>
+            <span className="text-xs text-[var(--muted-foreground)] font-mono truncate block" title={d.path}>
               {d.path}
             </span>
           </div>
@@ -252,10 +253,10 @@ function FileNode({ data }: NodeProps) {
         </span>
       </div>
 
-      <div className="pt-2.5 space-y-1.5 text-[11px] font-mono">
-        <div className="flex items-center justify-between text-[#a1a1aa]">
+      <div className="pt-2.5 space-y-2 text-xs font-mono">
+        <div className="flex items-center justify-between text-[var(--muted-foreground)]">
           <span>Holder:</span>
-          <span className="text-white font-semibold truncate max-w-[150px]">
+          <span className="text-[var(--foreground)] font-semibold truncate max-w-[150px]">
             {d.holder ? d.holder : "None (Unlocked)"}
           </span>
         </div>
@@ -281,12 +282,12 @@ function FileNode({ data }: NodeProps) {
         )}
 
         {d.annotation && (
-          <div className="text-[10px] text-[#ffe0c2] italic truncate pt-1 border-t border-[#27272a]" title={d.annotation}>
+          <div className="text-[10px] text-[var(--primary)] italic truncate pt-1 border-t border-[#27272a]" title={d.annotation}>
             &ldquo;{d.annotation}&rdquo;
           </div>
         )}
 
-        <div className="flex items-center justify-between text-[#a1a1aa] pt-1 border-t border-[#27272a]">
+        <div className="flex items-center justify-between text-[var(--muted-foreground)] pt-1 border-t border-[#27272a]">
           <span>AST Readers:</span>
           <span className="text-white">{d.readersCount} agent{d.readersCount === 1 ? "" : "s"}</span>
         </div>
@@ -321,7 +322,116 @@ function getAgentLogo(label: string): string {
 
 /* ------------------------------- Main Component ------------------------------- */
 
-export function SwarmLockGraph() {
+
+/* Auto-resizes and re-centers the graph when container or window changes dimensions */
+function AutoResizeHelper({ nodes }: { nodes: Node[] }) {
+  const { fitView } = useReactFlow();
+
+  // Trigger fitView whenever nodes length changes
+  useEffect(() => {
+    if (!nodes.length) return;
+    const t1 = setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 100);
+    const t2 = setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 350);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [nodes.length, fitView]);
+
+  // Attach ResizeObserver to the ReactFlow DOM container
+  useEffect(() => {
+    const rfEl = document.querySelector(".react-flow");
+    if (!rfEl) return;
+
+    let rafId: any;
+    let lastW = rfEl.clientWidth;
+    let lastH = rfEl.clientHeight;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (Math.abs(width - lastW) > 6 || Math.abs(height - lastH) > 6) {
+          lastW = width;
+          lastH = height;
+          cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
+            fitView({ padding: 0.2, duration: 300 });
+          });
+        }
+      }
+    });
+
+    ro.observe(rfEl);
+
+    // Listen to resize messages from parent window/iframe
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data?.type === "LATCH_RESIZE") {
+        fitView({ padding: 0.2, duration: 300 });
+      }
+    };
+
+    const handleWinResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        fitView({ padding: 0.2, duration: 300 });
+      });
+    };
+
+    window.addEventListener("message", handleMessage);
+    window.addEventListener("resize", handleWinResize);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("resize", handleWinResize);
+    };
+  }, [fitView]);
+
+  return null;
+}
+
+/* Floating interactive canvas control bar */
+function CanvasToolbar() {
+  const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
+
+  return (
+    <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-[var(--card)]/95 backdrop-blur-md border-[var(--border)] text-[var(--foreground)] px-2.5 py-1.5 rounded-lg border border-[#27272a] text-xs font-mono text-[var(--muted-foreground)] shadow-xl">
+      <button
+        onClick={() => fitView({ padding: 0.2, duration: 400 })}
+        className="px-2.5 py-1 rounded bg-[#222226] hover:bg-[#2a2a30] text-[var(--primary)] hover:text-white border border-[#333338] transition-colors flex items-center gap-1.5 cursor-pointer font-semibold"
+        title="Auto-fit all nodes to screen"
+      >
+        <Maximize2 className="w-3.5 h-3.5 text-[var(--primary)]" />
+        <span>Auto Fit</span>
+      </button>
+      <div className="w-[1px] h-4 bg-[#27272a]" />
+      <button
+        onClick={() => zoomIn({ duration: 250 })}
+        className="w-7 h-7 rounded flex items-center justify-center hover:bg-[#27272a] text-white transition-colors cursor-pointer text-sm font-bold"
+        title="Zoom In"
+      >
+        +
+      </button>
+      <button
+        onClick={() => zoomOut({ duration: 250 })}
+        className="w-7 h-7 rounded flex items-center justify-center hover:bg-[#27272a] text-white transition-colors cursor-pointer text-sm font-bold"
+        title="Zoom Out"
+      >
+        −
+      </button>
+      <button
+        onClick={() => zoomTo(1, { duration: 250 })}
+        className="px-2 py-1 rounded hover:bg-[#27272a] text-xs text-[var(--muted-foreground)] hover:text-white transition-colors cursor-pointer font-mono"
+        title="Reset Zoom to 100%"
+      >
+        100%
+      </button>
+    </div>
+  );
+}
+
+export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
   const { dashboard, user, users } = useLatch();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -412,7 +522,7 @@ export function SwarmLockGraph() {
     generatedNodes.push({
       id: humanNodeId,
       type: "human",
-      position: { x: 40, y: 120 },
+      position: { x: 50, y: 140 },
       data: {
         login: operatorLogin,
         name: operatorName,
@@ -427,7 +537,7 @@ export function SwarmLockGraph() {
       generatedNodes.push({
         id: ag.id,
         type: "agent",
-        position: { x: 360, y: 40 + idx * 160 },
+        position: { x: 460, y: 60 + idx * 260 },
         data: {
           label: ag.label,
           model: ag.model,
@@ -498,7 +608,7 @@ export function SwarmLockGraph() {
       generatedNodes.push({
         id: fileNodeId,
         type: "file",
-        position: { x: 700, y: 30 + fIdx * 165 },
+        position: { x: 920, y: 40 + fIdx * 340 },
         data: {
           path: file.path,
           holder: file.holder,
@@ -544,10 +654,11 @@ export function SwarmLockGraph() {
   return (
     <div className="space-y-4">
       {/* High-Contrast KPI Summary Bar */}
+      {!isEmbed && (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="p-4 rounded-xl bg-[#18181b] border border-[#27272a] shadow-lg flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-lg flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono text-[#a1a1aa] uppercase tracking-wider block">
+            <span className="text-[11px] font-mono text-[var(--muted-foreground)] uppercase tracking-wider block">
               Human Operators
             </span>
             <span className="text-2xl font-bold text-white tracking-tight">
@@ -559,23 +670,23 @@ export function SwarmLockGraph() {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#18181b] border border-[#27272a] shadow-lg flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-lg flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono text-[#a1a1aa] uppercase tracking-wider block">
+            <span className="text-[11px] font-mono text-[var(--muted-foreground)] uppercase tracking-wider block">
               AI Agents Connected
             </span>
-            <span className="text-2xl font-bold text-[#ffe0c2] tracking-tight">
+            <span className="text-2xl font-bold text-[var(--primary)] tracking-tight">
               {activeAgents.length} Swarm
             </span>
           </div>
-          <div className="w-9 h-9 rounded-lg bg-[#ffe0c2]/10 border border-[#ffe0c2]/20 flex items-center justify-center text-[#ffe0c2]">
+          <div className="w-9 h-9 rounded-lg bg-[#ffe0c2]/10 border border-[#ffe0c2]/20 flex items-center justify-center text-[var(--primary)]">
             <Bot className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#18181b] border border-[#27272a] shadow-lg flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-lg flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono text-[#a1a1aa] uppercase tracking-wider block">
+            <span className="text-[11px] font-mono text-[var(--muted-foreground)] uppercase tracking-wider block">
               Active Locks
             </span>
             <span className="text-2xl font-bold text-amber-400 tracking-tight">
@@ -587,9 +698,9 @@ export function SwarmLockGraph() {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#18181b] border border-[#27272a] shadow-lg flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-lg flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono text-[#a1a1aa] uppercase tracking-wider block">
+            <span className="text-[11px] font-mono text-[var(--muted-foreground)] uppercase tracking-wider block">
               Collisions Saved
             </span>
             <span className="text-2xl font-bold text-sky-400 tracking-tight">
@@ -601,12 +712,14 @@ export function SwarmLockGraph() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Main Graph Canvas Container */}
-      <div className="relative w-full h-[650px] rounded-xl border border-[#27272a] overflow-hidden shadow-2xl bg-[#111111]">
+      <div className={`relative w-full rounded-xl border border-[#27272a] overflow-hidden shadow-2xl bg-[var(--background)] ${isEmbed ? "h-[700px] flex-1 min-h-[580px]" : "h-[680px]"}`}>
+
         {/* Graph Legend Overlay */}
-        <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 bg-[#18181b]/95 backdrop-blur-md px-3.5 py-2 rounded-lg border border-[#27272a] text-xs font-mono text-[#a1a1aa] shadow-xl">
-          <span className="text-white font-semibold flex items-center gap-1.5">
+        <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-3 bg-[var(--card)]/95 backdrop-blur-md border-[var(--border)] text-[var(--foreground)] px-3.5 py-2 rounded-lg border border-[#27272a] text-xs font-mono text-[var(--muted-foreground)] shadow-xl">
+          <span className="text-[var(--foreground)] font-semibold flex items-center gap-1.5">
             <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
             <span>Live Swarm:</span>
           </span>
@@ -632,48 +745,48 @@ export function SwarmLockGraph() {
             fitViewOptions={{ padding: 0.15 }}
             minZoom={0.2}
             maxZoom={1.5}
+                        zoomOnScroll={true}
+            panOnScroll={false}
+            preventScrolling={true}
+            zoomOnPinch={true}
+            zoomOnDoubleClick={true}
+            panOnDrag={true}
             onNodeClick={(_, node) => setSelectedNode(node)}
-            className="bg-[#111111]"
+            style={{ width: "100%", height: "100%" }}
+            className="bg-[var(--background)] w-full h-full"
           >
-            <Background color="#27272a" gap={20} size={1} />
+            <AutoResizeHelper nodes={nodes} />
+            <CanvasToolbar />
+            <Background color="var(--border)" gap={20} size={1} />
             <Controls
               className="!bg-[#18181b] !border-[#27272a] !rounded-lg !overflow-hidden [&>button]:!bg-[#18181b] [&>button]:!border-b-[#27272a] [&>button]:!fill-white [&>button:hover]:!bg-[#27272a]"
-            />
-            <MiniMap
-              nodeColor={(node) => {
-                if (node.type === "human") return "#ffe0c2";
-                if (node.type === "agent") return "#22c55e";
-                return "#38bdf8";
-              }}
-              maskColor="rgba(0, 0, 0, 0.7)"
-              className="!bg-[#18181b] !border-[#27272a] !rounded-lg"
             />
           </ReactFlow>
 
         {/* Selected Node Details Drawer */}
         {selectedNode && (
-          <div className="absolute bottom-4 right-4 z-10 w-80 p-4 rounded-xl bg-[#18181b]/95 backdrop-blur-md border border-[#27272a] text-xs font-mono space-y-2 shadow-2xl text-white">
-            <div className="flex items-center justify-between pb-2 border-b border-[#27272a]">
-              <span className="text-[#ffe0c2] font-bold uppercase tracking-wider text-[10.5px]">
+          <div className="absolute bottom-4 right-4 z-10 w-80 p-4 rounded-xl bg-[var(--card)]/95 backdrop-blur-md border-[var(--border)] text-[var(--foreground)] border border-[#27272a] text-xs font-mono space-y-2 shadow-2xl text-white">
+            <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+              <span className="text-[var(--primary)] font-bold uppercase tracking-wider text-[10.5px]">
                 Node Inspector
               </span>
               <button
                 onClick={() => setSelectedNode(null)}
-                className="text-[#a1a1aa] hover:text-white cursor-pointer p-1 rounded hover:bg-[#27272a] transition-colors"
+                className="text-[var(--muted-foreground)] hover:text-white cursor-pointer p-1 rounded hover:bg-[#27272a] transition-colors"
                 aria-label="Close inspector"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
             <div>
-              <span className="text-[#a1a1aa] block text-[10px] uppercase">Node Identifier</span>
-              <span className="text-white font-semibold">
+              <span className="text-[var(--muted-foreground)] block text-[10px] uppercase">Node Identifier</span>
+              <span className="text-[var(--foreground)] font-semibold">
                 {selectedNode.type?.toUpperCase()} &bull; {selectedNode.id}
               </span>
             </div>
             <div>
-              <span className="text-[#a1a1aa] block text-[10px] uppercase">Telemetry Payload</span>
-              <pre className="text-[10.5px] text-[#ffe0c2] overflow-x-auto bg-[#111111] p-2.5 rounded-lg border border-[#27272a] mt-1 max-h-48">
+              <span className="text-[var(--muted-foreground)] block text-[10px] uppercase">Telemetry Payload</span>
+              <pre className="text-[10.5px] text-[var(--primary)] overflow-x-auto bg-[#111111] p-2.5 rounded-lg border border-[#27272a] mt-1 max-h-48">
                 {JSON.stringify(selectedNode.data, null, 2)}
               </pre>
             </div>

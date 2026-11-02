@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
+  ReactFlow, ReactFlowProvider, Background, Controls,
   Handle, Position, getBezierPath, useReactFlow,
   type Node, type Edge, type NodeProps, type EdgeProps,
 } from "@xyflow/react";
@@ -256,7 +256,7 @@ function Board() {
   }
 
   return (
-    <div className={g.wrap}>
+    <div className={`${g.wrap} !h-full !flex-1 !min-h-0 !flex !flex-col !overflow-hidden`}>
       <div className={g.caption}>
         {holder ? <><b>{holder.holder}</b> is editing <b>{holder.path.split("/").pop()}</b>{holder.annotation ? ` ("${holder.annotation}")` : ""} right now. </>
           : reader ? <><b>{reader.reader}</b> is reading <b>{reader.path.split("/").pop()}</b>. </>
@@ -283,18 +283,22 @@ function Board() {
         </div>
       </div>
 
-      <div className={g.canvas}>
+      <div className={`${g.canvas} !flex-1 !h-full !min-h-0 !w-full`}>
         <ReactFlow
           nodes={nodes} edges={edges}
           nodeTypes={nodeTypes} edgeTypes={edgeTypes}
           fitView proOptions={{ hideAttribution: true }}
           minZoom={0.15} maxZoom={1.8}
+                    zoomOnScroll={true}
+          panOnScroll={false}
+          preventScrolling={true}
+          zoomOnPinch={true}
+          zoomOnDoubleClick={true}
+          panOnDrag={true}
           nodesDraggable={false} nodesConnectable={false} elementsSelectable
         >
           <Background color="#161616" gap={22} size={1} />
           <Controls showInteractive={false} />
-          <MiniMap pannable zoomable maskColor="rgba(0,0,0,.78)"
-            nodeColor={(n) => (n.type === "file" ? "#333" : n.type === "user" ? "#1c1c1c" : "#3a3a3a")} />
         </ReactFlow>
       </div>
     </div>

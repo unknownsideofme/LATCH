@@ -1,3 +1,4 @@
+const path = require('path');
 /**
  * The MCP tool surface, with no transport attached.
  *

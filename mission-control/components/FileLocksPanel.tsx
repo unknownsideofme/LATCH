@@ -116,9 +116,8 @@ function GraphView({ graph }: { graph: NonNullable<Dashboard["graph"]> }) {
 
 type ViewMode = "swarm" | "ast" | "board" | "list";
 
-export function FileLocksPanel() {
-  const { dashboard, selectedProjectId } = useLatch();
-  const [view, setView] = useState<ViewMode>("swarm");
+export function FileLocksPanel({ isEmbed }: { isEmbed?: boolean } = {}) {
+  const { dashboard, selectedProjectId, graphView: view, setGraphView: setView } = useLatch();
   const [graph, setGraph] = useState(dashboard?.graph || null);
   const [now, setNow] = useState(Date.now());
 
@@ -203,104 +202,42 @@ export function FileLocksPanel() {
       : "";
 
   return (
-    <div className="space-y-4">
-      {/* Collisions Stat Card */}
-      <article className="p-4 rounded-xl bg-card border border-border shadow-xs font-sans">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs uppercase tracking-wider font-mono font-semibold text-muted-foreground flex items-center gap-1.5">
-            <ShieldAlert className="w-3.5 h-3.5 text-primary" />
-            <span>Collisions Prevented {roomScope ? "(Room Distributed)" : ""}</span>
-          </h3>
-          <span className="text-[10.5px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Active Mutex Guard</span>
-          </span>
-        </div>
+    <div className={isEmbed ? "w-full h-full flex flex-col overflow-hidden" : "space-y-4"}>
+      {!isEmbed && (
+        <article className="p-4 rounded-xl bg-card border border-border shadow-xs font-sans">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs uppercase tracking-wider font-mono font-semibold text-muted-foreground flex items-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-primary" />
+              <span>Collisions Prevented {roomScope ? "(Room Distributed)" : ""}</span>
+            </h3>
+            <span className="text-[10.5px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Active Mutex Guard</span>
+            </span>
+          </div>
 
-        <div className="text-2xl font-extrabold tracking-tight font-display my-2 text-foreground flex items-baseline gap-2">
-          <span className="text-primary text-3xl font-black">{saved}</span>
-          <span className="text-sm font-medium text-muted-foreground">conflicts averted by Latch Engine</span>
-        </div>
+          <div className="text-2xl font-extrabold tracking-tight font-display my-2 text-foreground flex items-baseline gap-2">
+            <span className="text-primary text-3xl font-black">{saved}</span>
+            <span className="text-sm font-medium text-muted-foreground">conflicts averted by Latch Engine</span>
+          </div>
 
-        {memberLine ? (
-          <p className="text-xs text-muted-foreground font-mono mb-2">{memberLine}</p>
-        ) : null}
-
-        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground font-mono pt-2 border-t border-border/50">
-          <span>Blocked claims: <strong className="text-foreground">{collisions?.claimsBlocked ?? 0}</strong></span>
-          <span>Held-back patches: <strong className="text-foreground">{(collisions?.patchesBlocked ?? 0) + (collisions?.patchesSkipped ?? 0)}</strong></span>
-          <span>Merge flags: <strong className="text-foreground">{collisions?.mergesFlagged ?? 0}</strong></span>
-          {(collisions?.patchesDeferred ?? 0) > 0 ? (
-            <span>Deferred: <strong className="text-foreground">{collisions?.patchesDeferred}</strong></span>
+          {memberLine ? (
+            <p className="text-xs text-muted-foreground font-mono mb-2">{memberLine}</p>
           ) : null}
-        </div>
-      </article>
 
-      {/* View Switcher Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-card border border-border shadow-xs">
-        <div className="flex items-center gap-2">
-          <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-          <span className="text-xs font-mono uppercase tracking-wider font-semibold text-foreground">
-            Ongoing Sessions
-          </span>
-          <span className="text-xs text-muted-foreground font-mono">
-            ({sessions.length} agents &bull; {locks.length} active locks)
-          </span>
-        </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground font-mono pt-2 border-t border-border/50">
+            <span>Blocked claims: <strong className="text-foreground">{collisions?.claimsBlocked ?? 0}</strong></span>
+            <span>Held-back patches: <strong className="text-foreground">{(collisions?.patchesBlocked ?? 0) + (collisions?.patchesSkipped ?? 0)}</strong></span>
+            <span>Merge flags: <strong className="text-foreground">{collisions?.mergesFlagged ?? 0}</strong></span>
+            {(collisions?.patchesDeferred ?? 0) > 0 ? (
+              <span>Deferred: <strong className="text-foreground">{collisions?.patchesDeferred}</strong></span>
+            ) : null}
+          </div>
+        </article>
+      )}
 
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-              view === "swarm"
-                ? "bg-primary/15 text-primary border border-primary/30 font-semibold shadow-xs"
-                : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
-            }`}
-            onClick={() => setView("swarm")}
-          >
-            <Bot className="w-3.5 h-3.5" />
-            <span>Swarm Topology</span>
-          </button>
-
-          <button
-            className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-              view === "ast"
-                ? "bg-primary/15 text-primary border border-primary/30 font-semibold shadow-xs"
-                : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
-            }`}
-            onClick={() => setView("ast")}
-          >
-            <Network className="w-3.5 h-3.5" />
-            <span>AST Blast-Radius</span>
-          </button>
-
-          <button
-            className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-              view === "board"
-                ? "bg-primary/15 text-primary border border-primary/30 font-semibold shadow-xs"
-                : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
-            }`}
-            onClick={() => setView("board")}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Classic Board</span>
-          </button>
-
-          <button
-            className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-              view === "list"
-                ? "bg-primary/15 text-primary border border-primary/30 font-semibold shadow-xs"
-                : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
-            }`}
-            onClick={() => setView("list")}
-          >
-            <Table className="w-3.5 h-3.5" />
-            <span>Matrix Table</span>
-          </button>
-        </div>
-      </div>
-
-      {view === "swarm" && <SwarmLockGraph />}
-      {view === "ast" && <AstDependencyGraph />}
+      {view === "swarm" && <SwarmLockGraph isEmbed={isEmbed} />}
+      {view === "ast" && <AstDependencyGraph isEmbed={isEmbed} />}
       {view === "board" && <LockGraphCanvas />}
 
       {view === "list" && (

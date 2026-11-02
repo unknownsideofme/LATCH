@@ -24,7 +24,8 @@ const TAB_TITLES: Partial<Record<TabId, { title: string; subtitle: string }>> = 
 };
 
 export function ProjectDashboard({ isEmbed }: { isEmbed?: boolean }) {
-  const { tab, setTab } = useLatch();
+  const { tab, setTab, graphView } = useLatch();
+  const isGraph = tab === "locks" && graphView !== "list";
   const current = TAB_TITLES[tab] || { title: "Dashboard", subtitle: "" };
 
   useEffect(() => {
@@ -38,9 +39,18 @@ export function ProjectDashboard({ isEmbed }: { isEmbed?: boolean }) {
   }, [setTab]);
 
   return (
-    <div className={ui.workspace}>
+    <div className={`${ui.workspace} ${isEmbed ? "!h-full !w-full !overflow-hidden flex flex-col" : ""}`}>
+
       {!isEmbed && (
-        <div className={ui.tabsBar}>
+        <div
+          className={`${ui.tabsBar} nowheel`}
+          onWheel={(e) => {
+            const panel = document.getElementById('latch-panel-scroll');
+            if (panel) {
+              panel.scrollBy({ top: e.deltaY, behavior: 'auto' });
+            }
+          }}
+        >
           <div className="flex items-center gap-3">
             <h1 className="text-[15.5px] font-bold tracking-tight text-[var(--text)] font-[var(--font-display)] m-0 leading-none">
               {current.title}
@@ -55,10 +65,12 @@ export function ProjectDashboard({ isEmbed }: { isEmbed?: boolean }) {
           </div>
         </div>
       )}
-      <div className={ui.panelWrap}>
-        <div className={ui.panelScroll}>
+      <div className={`${ui.panelWrap} ${isEmbed ? "!h-full !flex-1 !overflow-hidden flex flex-col" : ""}`}>
+
+        <div id="latch-panel-scroll" className={`${ui.panelScroll} ${isEmbed ? "!p-0 !overflow-hidden !h-full flex flex-col" : ""}`}>
+
           {tab === "edits" && <CodeEdits />}
-          {tab === "locks" && <FileLocksPanel />}
+          {tab === "locks" && <FileLocksPanel isEmbed={isEmbed} />}
           {tab === "locktable" && <LockTablePanel />}
           {tab === "team" && <TeamPanel />}
           {tab === "memory" && <MemoryPanel />}

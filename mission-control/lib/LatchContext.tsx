@@ -20,12 +20,14 @@ type LatchState = {
   dashboard: Dashboard | null;
   selectedProjectId: string | null;
   tab: TabId;
+  graphView: "swarm" | "ast" | "board" | "list";
   addOpen: boolean;
   drawerOpen: boolean;
   loading: boolean;
   syncing: boolean;
   lastFetchedAt: number | null;
   setTab: (tab: TabId) => void;
+  setGraphView: (view: "swarm" | "ast" | "board" | "list") => void;
   setAddOpen: (open: boolean) => void;
   setDrawerOpen: (open: boolean) => void;
   login: (loginName: string) => Promise<void>;
@@ -85,6 +87,17 @@ export function LatchProvider({ children }: { children: ReactNode }) {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("locks");
+  const [graphView, setGraphView] = useState<"swarm" | "ast" | "board" | "list">("swarm");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const v = sp.get("view");
+      if (v === "swarm" || v === "ast" || v === "board" || v === "list") {
+        setGraphView(v as "swarm" | "ast" | "board" | "list");
+      }
+    }
+  }, []);
   const [addOpen, setAddOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -612,12 +625,14 @@ export function LatchProvider({ children }: { children: ReactNode }) {
       dashboard,
       selectedProjectId,
       tab,
+      graphView,
       addOpen,
       drawerOpen,
       loading,
       syncing,
       lastFetchedAt,
       setTab,
+      setGraphView,
       setAddOpen,
       setDrawerOpen,
       login,
@@ -639,7 +654,7 @@ export function LatchProvider({ children }: { children: ReactNode }) {
       dismissToast,
       joinRoom,
     }),
-    [user, users, projects, dashboard, selectedProjectId, tab, addOpen, drawerOpen, loading, syncing, lastFetchedAt, notices, toasts, unreadNotices]
+    [user, users, projects, dashboard, selectedProjectId, tab, graphView, addOpen, drawerOpen, loading, syncing, lastFetchedAt, notices, toasts, unreadNotices]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
