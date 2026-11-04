@@ -368,6 +368,17 @@ export function LatchProvider({ children }: { children: ReactNode }) {
           : d
       );
     });
+    ev.addEventListener("metrics", (e) => {
+      const data = JSON.parse((e as MessageEvent).data);
+      if (data.workspaceId && data.workspaceId !== selectedRef.current) return;
+      if (!data.collisions) return;
+      markLive("activity");
+      setDashboard((d) =>
+        d && d.project.id === selectedRef.current
+          ? { ...d, stats: { ...(d.stats || {}), collisions: data.collisions } }
+          : d
+      );
+    });
     ev.addEventListener("projects", (e) => {
       const data = JSON.parse((e as MessageEvent).data);
       if (data.projects) setProjects(dedupeProjects(data.projects));

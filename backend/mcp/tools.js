@@ -1,3 +1,4 @@
+const os = require('os');
 const path = require('path');
 /**
  * The MCP tool surface, with no transport attached.
@@ -139,7 +140,7 @@ function defaultCtx(overrides = {}) {
   return {
     workspace,
     projectId: resolveProjectId(workspace),
-    agentId: process.env.RELAY_AGENT_ID || "mcp:local:stdio",
+    agentId: process.env.RELAY_AGENT_ID || `mcp:${os.hostname()}:${process.pid}`,
     user: process.env.RELAY_USER || "local",
     owner: process.env.RELAY_OWNER || "local",
     centralProjectId: process.env.RELAY_CENTRAL_PROJECT_ID || null,

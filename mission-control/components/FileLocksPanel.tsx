@@ -159,10 +159,15 @@ export function FileLocksPanel({ isEmbed }: { isEmbed?: boolean } = {}) {
   const belongsToThisProject = (item: { workspaceId?: string | null }): boolean => {
     if (!item?.workspaceId) return true;
     const ws = item.workspaceId.toLowerCase().replace(/\\/g, "/");
-    return Boolean(ws === projectId || ws === projectPath || (projectPath && (ws.startsWith(projectPath + "/") || ws === projectPath)));
+    return Boolean(
+      ws === projectId ||
+      ws === projectPath ||
+      (projectPath && (ws.startsWith(projectPath + "/") || ws === projectPath)) ||
+      (ws.includes("appdata/local/programs") || ws.includes("program files") || ws.includes("antigravity"))
+    );
   };
-  const locks = (dashboard?.locks || []).filter((l) => belongsToThisProject(l));
-  const reads = (dashboard?.reads || []).filter((r) => belongsToThisProject(r));
+  const locks = (dashboard?.locks || []).filter((l) => !l.released && (l.expiresAt ? l.expiresAt > now : true) && belongsToThisProject(l));
+  const reads = (dashboard?.reads || []).filter((r) => (r.expiresAt ? r.expiresAt > now : true) && belongsToThisProject(r));
 
   const sessionMap = new Map<string, { id: string; label: string; sessionId?: string; ownerLogin?: string }>();
   for (const a of connected) {

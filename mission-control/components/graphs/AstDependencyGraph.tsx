@@ -171,6 +171,12 @@ export function AstDependencyGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
   const [graphData, setGraphData] = useState<Dashboard["graph"] | null>(dashboard?.graph || null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [activeLocks, setActiveLocks] = useState<string[]>([]);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   // Sync graph data from context or fallback fetch
   useEffect(() => {
@@ -209,10 +215,10 @@ export function AstDependencyGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
   useEffect(() => {
     if (!dashboard?.locks) return;
     const lockedFiles = dashboard.locks
-      .filter((l) => !l.released && belongsToThisProject(l))
+      .filter((l) => !l.released && (l.expiresAt ? l.expiresAt > now : true) && belongsToThisProject(l))
       .map((l) => (l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath));
     setActiveLocks(lockedFiles);
-  }, [dashboard?.locks, dashboard?.project]);
+  }, [dashboard?.locks, dashboard?.project, now]);
 
   const { nodes, edges, blastRadiusCount, cycleCount, lockDepth } = useMemo(() => {
     if (!graphData?.nodes?.length) {

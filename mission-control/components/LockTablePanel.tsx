@@ -45,7 +45,8 @@ export function LockTablePanel() {
     return Boolean(
       ws === projectId ||
       ws === projectPath ||
-      (projectPath && (ws.startsWith(projectPath + "/") || ws === projectPath))
+      (projectPath && (ws.startsWith(projectPath + "/") || ws === projectPath)) ||
+      (ws.includes("appdata/local/programs") || ws.includes("program files") || ws.includes("antigravity"))
     );
   };
 
@@ -81,9 +82,10 @@ export function LockTablePanel() {
   const filteredRows = useMemo(() => {
     return allRows.filter((item) => {
       // Status filter
-      if (filterMode === "active" && (item.released || item.mode === "read")) return false;
+      const isItemExpired = !item.released && item.mode !== "read" && item.expiresAt ? item.expiresAt <= now : false;
+      if (filterMode === "active" && (item.released || item.mode === "read" || isItemExpired)) return false;
       if (filterMode === "read" && item.mode !== "read") return false;
-      if (filterMode === "released" && !item.released) return false;
+      if (filterMode === "released" && !item.released && !isItemExpired) return false;
 
       // Search query
       if (!search.trim()) return true;
@@ -105,7 +107,7 @@ export function LockTablePanel() {
     });
   }, [allRows, filterMode, search]);
 
-  const activeWriteCount = rawLocks.filter((l) => !l.released && l.mode !== "read").length;
+  const activeWriteCount = rawLocks.filter((l) => !l.released && l.mode !== "read" && (l.expiresAt ? l.expiresAt > now : true)).length;
   const readCount = rawReads.length;
   const collisions = dashboard?.stats?.collisions;
 
@@ -269,6 +271,10 @@ export function LockTablePanel() {
                       <td className={styles.td}>
                         {row.released ? (
                           <span className={styles.badgeDone}>DONE</span>
+                        ) : (!row.released && row.mode !== "read" && row.expiresAt && row.expiresAt <= now) ? (
+                          <span className={styles.badgeDone} style={{ borderColor: "#52525b", color: "#a1a1aa" }}>
+                            EXPIRED
+                          </span>
                         ) : row.mode === "read" ? (
                           <span className={styles.badgeRead}>READ</span>
                         ) : (
@@ -355,6 +361,8 @@ export function LockTablePanel() {
                       <td className={styles.td}>
                         {row.released ? (
                           <span style={{ color: "var(--muted)", fontSize: 11 }}>Released</span>
+                        ) : (!row.released && row.mode !== "read" && row.expiresAt && row.expiresAt <= now) ? (
+                          <span style={{ color: "var(--muted)", fontSize: 11 }}>Expired</span>
                         ) : row.mode === "read" ? (
                           <span style={{ color: "var(--blue)", fontSize: 11, fontWeight: 700 }}>{secondsLeft}s read</span>
                         ) : (
@@ -415,6 +423,10 @@ export function LockTablePanel() {
 
                     {row.released ? (
                       <span className={styles.badgeDone}>DONE</span>
+                    ) : (!row.released && row.mode !== "read" && row.expiresAt && row.expiresAt <= now) ? (
+                      <span className={styles.badgeDone} style={{ borderColor: "#52525b", color: "#a1a1aa" }}>
+                        EXPIRED
+                      </span>
                     ) : row.mode === "read" ? (
                       <span className={styles.badgeRead}>READ</span>
                     ) : (

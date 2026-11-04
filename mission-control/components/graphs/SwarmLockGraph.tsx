@@ -460,13 +460,35 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
   const rawReads = (dashboard?.reads || []).filter((r) => (r.expiresAt ? r.expiresAt > now : true) && belongsToThisProject(r));
   const rawAgents = dashboard?.agents || [];
 
+  // Recent collision events (last 45s) for real-time contention visualization
+  const recentCollisions = useMemo(() => {
+    const cutoff = now - 45000;
+    const recent = dashboard?.stats?.collisions?.recent || [];
+    const list: Array<{ file: string; agentId: string; holder?: string; reason?: string; ts: number }> = [];
+    recent.forEach((c) => {
+      if (c.kind === "claim_blocked" && c.ts > cutoff && c.file) {
+        const norm = c.file.replace(/\\/g, "/").toLowerCase();
+        list.push({
+          file: norm,
+          agentId: c.agentId || "Agent",
+          holder: c.holder,
+          reason: c.reason,
+          ts: c.ts,
+        });
+      }
+    });
+    return list;
+  }, [dashboard?.stats?.collisions?.recent, now]);
+
   // Active connected agents - strictly from REAL locks, reads, or live connected sessions
   const activeAgents = useMemo(() => {
     const map = new Map<string, { id: string; label: string; model: string; status: "hold" | "clash" | "wait" | "read" | "idle" }>();
 
     // 1. From real active locks
     rawLocks.forEach((l) => {
-      const isContested = rawLocks.filter((other) => other.filePath === l.filePath).length > 1;
+      const cleanPath = (l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath).replace(/\\/g, "/").toLowerCase();
+      const hasCollision = recentCollisions.some((c) => c.file === cleanPath || cleanPath.endsWith(c.file) || c.file.endsWith(cleanPath));
+      const isContested = rawLocks.filter((other) => other.filePath === l.filePath).length > 1 || hasCollision;
       const label = l.holder?.label || l.agentId.split(":")[0] || "Agent";
       map.set(label.toLowerCase(), {
         id: `agent-${label.toLowerCase()}`,
@@ -474,6 +496,21 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
         model: l.source || "coordinator",
         status: isContested ? "clash" : "hold",
       });
+    });
+
+    // 1b. From contenders in recent collisions
+    recentCollisions.forEach((c) => {
+      const blockedLabel = c.agentId.split(":")[0] || "Contender";
+      const key = blockedLabel.toLowerCase();
+      const existing = map.get(key);
+      if (!existing || existing.status === "idle" || existing.status === "read") {
+        map.set(key, {
+          id: `agent-${key}`,
+          label: blockedLabel,
+          model: "Blocked Contender",
+          status: "clash",
+        });
+      }
     });
 
     // 2. From real active reads
@@ -502,9 +539,9 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
     });
 
     return Array.from(map.values());
-  }, [rawLocks, rawReads, rawAgents]);
+  }, [rawLocks, rawReads, rawAgents, recentCollisions]);
 
-  const hasActiveLocksOrReads = rawLocks.length > 0 || rawReads.length > 0;
+  const hasActiveLocksOrReads = rawLocks.length > 0 || rawReads.length > 0 || recentCollisions.length > 0;
 
   // Build Nodes & Edges strictly when there is real active activity
   const { nodes, edges, activeLockCount, collisionCount } = useMemo(() => {
@@ -568,14 +605,19 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
       readersCount: number;
       annotation?: string;
       associatedAgentId?: string;
+      contenderAgentId?: string;
     }> = [];
 
     rawLocks.forEach((lock) => {
-      const isContested = rawLocks.filter((other) => other.filePath === lock.filePath).length > 1;
       const cleanPath = lock.filePath.includes("::") ? lock.filePath.split("::")[1] : lock.filePath;
+      const normPath = cleanPath.replace(/\\/g, "/").toLowerCase();
+      const collision = recentCollisions.find((c) => c.file === normPath || normPath.endsWith(c.file) || c.file.endsWith(normPath));
+      const isContested = rawLocks.filter((other) => other.filePath === lock.filePath).length > 1 || Boolean(collision);
       const leftSec = Math.max(0, Math.ceil(((lock.expiresAt || 0) - now) / 1000));
       const holderLabel = lock.holder?.label || lock.agentId.split(":")[0] || "Agent";
       const agentNodeId = `agent-${holderLabel.toLowerCase()}`;
+      const contenderLabel = collision ? (collision.agentId.split(":")[0] || "Contender") : null;
+      const contenderNodeId = contenderLabel ? `agent-${contenderLabel.toLowerCase()}` : undefined;
 
       fileEntries.push({
         path: cleanPath,
@@ -585,6 +627,7 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
         readersCount: rawReads.filter((r) => r.filePath === lock.filePath).length,
         annotation: lock.annotation || undefined,
         associatedAgentId: agentNodeId,
+        contenderAgentId: contenderNodeId,
       });
     });
 
@@ -619,7 +662,7 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
         },
       });
 
-      // Agent -> File edge
+      // Holder Agent -> File edge
       if (file.associatedAgentId && generatedNodes.some((n) => n.id === file.associatedAgentId)) {
         generatedEdges.push({
           id: `edge-${file.associatedAgentId}-${fileNodeId}`,
@@ -632,6 +675,21 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
           },
         });
       }
+
+      // Contender Agent -> File edge (red dashed conflict link)
+      if (file.contenderAgentId && file.contenderAgentId !== file.associatedAgentId && generatedNodes.some((n) => n.id === file.contenderAgentId)) {
+        generatedEdges.push({
+          id: `edge-${file.contenderAgentId}-${fileNodeId}-conflict`,
+          source: file.contenderAgentId,
+          target: fileNodeId,
+          animated: true,
+          style: {
+            stroke: "#ef4444",
+            strokeDasharray: "5 5",
+            strokeWidth: 2.5,
+          },
+        });
+      }
     });
 
     return {
@@ -640,7 +698,7 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
       activeLockCount,
       collisionCount,
     };
-  }, [user, activeAgents, rawLocks, rawReads, hasActiveLocksOrReads, now, dashboard?.stats?.collisions]);
+  }, [user, activeAgents, rawLocks, rawReads, hasActiveLocksOrReads, now, dashboard?.stats?.collisions, recentCollisions]);
 
   const nodeTypes = useMemo(
     () => ({
