@@ -320,6 +320,24 @@ function getAgentLogo(label: string): string {
   return "/agents/antigravity.png";
 }
 
+function getAgentNodeId(agentId?: string | null, label?: string | null): string {
+  const raw = agentId || label || "agent";
+  return `agent-${raw.toLowerCase().replace(/[^a-z0-9_-]/g, "_")}`;
+}
+
+function getAgentDisplayLabel(agentId?: string | null, holderLabel?: string | null): string {
+  if (holderLabel && holderLabel.trim()) return holderLabel;
+  const parts = String(agentId || "").split(":");
+  if (parts.length >= 3 && parts[0] === "mcp") {
+    const pid = parts[parts.length - 1];
+    return `MCP (${pid})`;
+  }
+  if (parts.length === 2 && parts[0] === "mcp") {
+    return `MCP (${parts[1]})`;
+  }
+  return parts[0] || agentId || "Agent";
+}
+
 /* ------------------------------- Main Component ------------------------------- */
 
 
@@ -489,9 +507,10 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
       const cleanPath = (l.filePath.includes("::") ? l.filePath.split("::")[1] : l.filePath).replace(/\\/g, "/").toLowerCase();
       const hasCollision = recentCollisions.some((c) => c.file === cleanPath || cleanPath.endsWith(c.file) || c.file.endsWith(cleanPath));
       const isContested = rawLocks.filter((other) => other.filePath === l.filePath).length > 1 || hasCollision;
-      const label = l.holder?.label || l.agentId.split(":")[0] || "Agent";
-      map.set(label.toLowerCase(), {
-        id: `agent-${label.toLowerCase()}`,
+      const nodeId = getAgentNodeId(l.agentId, l.holder?.label);
+      const label = getAgentDisplayLabel(l.agentId, l.holder?.label);
+      map.set(nodeId, {
+        id: nodeId,
         label,
         model: l.source || "coordinator",
         status: isContested ? "clash" : "hold",
@@ -500,12 +519,12 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
 
     // 1b. From contenders in recent collisions
     recentCollisions.forEach((c) => {
-      const blockedLabel = c.agentId.split(":")[0] || "Contender";
-      const key = blockedLabel.toLowerCase();
-      const existing = map.get(key);
+      const nodeId = getAgentNodeId(c.agentId, c.holder);
+      const blockedLabel = getAgentDisplayLabel(c.agentId, c.holder);
+      const existing = map.get(nodeId);
       if (!existing || existing.status === "idle" || existing.status === "read") {
-        map.set(key, {
-          id: `agent-${key}`,
+        map.set(nodeId, {
+          id: nodeId,
           label: blockedLabel,
           model: "Blocked Contender",
           status: "clash",
@@ -515,10 +534,11 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
 
     // 2. From real active reads
     rawReads.forEach((r) => {
-      const label = r.holder?.label || r.agentId.split(":")[0] || "Agent";
-      if (!map.has(label.toLowerCase())) {
-        map.set(label.toLowerCase(), {
-          id: `agent-${label.toLowerCase()}`,
+      const nodeId = getAgentNodeId(r.agentId, r.holder?.label);
+      const label = getAgentDisplayLabel(r.agentId, r.holder?.label);
+      if (!map.has(nodeId)) {
+        map.set(nodeId, {
+          id: nodeId,
           label,
           model: "read-ast",
           status: "read",
@@ -528,9 +548,11 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
 
     // 3. From dashboard.agents (strictly connected agents)
     rawAgents.filter((a) => a.status === "connected").forEach((a) => {
-      if (!map.has(a.label.toLowerCase())) {
-        map.set(a.label.toLowerCase(), {
-          id: `agent-${a.label.toLowerCase()}`,
+      const rawId = a.id || a.label;
+      const nodeId = getAgentNodeId(rawId, a.label);
+      if (!map.has(nodeId)) {
+        map.set(nodeId, {
+          id: nodeId,
           label: a.label,
           model: a.sessionId ? `Session ${a.sessionId}` : "Connected Hook",
           status: "idle",
@@ -614,10 +636,9 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
       const collision = recentCollisions.find((c) => c.file === normPath || normPath.endsWith(c.file) || c.file.endsWith(normPath));
       const isContested = rawLocks.filter((other) => other.filePath === lock.filePath).length > 1 || Boolean(collision);
       const leftSec = Math.max(0, Math.ceil(((lock.expiresAt || 0) - now) / 1000));
-      const holderLabel = lock.holder?.label || lock.agentId.split(":")[0] || "Agent";
-      const agentNodeId = `agent-${holderLabel.toLowerCase()}`;
-      const contenderLabel = collision ? (collision.agentId.split(":")[0] || "Contender") : null;
-      const contenderNodeId = contenderLabel ? `agent-${contenderLabel.toLowerCase()}` : undefined;
+      const holderLabel = getAgentDisplayLabel(lock.agentId, lock.holder?.label);
+      const agentNodeId = getAgentNodeId(lock.agentId, lock.holder?.label);
+      const contenderNodeId = collision ? getAgentNodeId(collision.agentId, collision.holder) : undefined;
 
       fileEntries.push({
         path: cleanPath,
@@ -634,14 +655,13 @@ export function SwarmLockGraph({ isEmbed }: { isEmbed?: boolean } = {}) {
     rawReads.forEach((r) => {
       const cleanPath = r.filePath.includes("::") ? r.filePath.split("::")[1] : r.filePath;
       if (!fileEntries.find((f) => f.path === cleanPath)) {
-        const readerLabel = r.holder?.label || r.agentId.split(":")[0] || "Agent";
         fileEntries.push({
           path: cleanPath,
           holder: null,
           status: "reading",
           secondsLeft: 0,
           readersCount: 1,
-          associatedAgentId: `agent-${readerLabel.toLowerCase()}`,
+          associatedAgentId: getAgentNodeId(r.agentId, r.holder?.label),
         });
       }
     });
