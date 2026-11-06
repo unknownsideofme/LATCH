@@ -22,9 +22,12 @@ export const metadata: Metadata = {
   title: "LATCH — The Coordination Layer for AI Coding Agents",
   description: "Zero-collision coordination engine for machine-speed AI agents. Exclusive write locking, dependency blast radius checks, and live causal patch sync.",
   icons: {
-    icon: "/latch-logo.png",
-    shortcut: "/latch-logo.png",
-    apple: "/latch-logo.png",
+    icon: [
+      { url: "/latch-junction.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/latch-junction.svg",
+    apple: "/latch-junction.svg",
   },
 };
 
@@ -40,6 +43,8 @@ export default function RootLayout({
       className={`${newsreader.variable} ${library3am.variable} h-full antialiased`}
     >
       <head>
+        <link rel="icon" href="/latch-junction.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/latch-junction.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
