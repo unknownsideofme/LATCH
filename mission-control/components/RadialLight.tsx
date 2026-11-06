@@ -8,100 +8,100 @@ export interface RadialLightProps {
   className?: string;
 }
 
+/*
+ * Pre-baked soft gradients — no filter:blur() needed.
+ * The gradient stops are wide and feathered to produce the same visual
+ * softness without triggering expensive GPU blur compositing.
+ */
+const PALETTES = {
+  green: {
+    outer:
+      "radial-gradient(ellipse 70% 60% at 50% 48%, rgba(55,160,115,0.20) 0%, rgba(28,90,65,0.10) 30%, rgba(14,45,32,0.03) 55%, transparent 75%)",
+    inner:
+      "radial-gradient(ellipse 65% 55% at 52% 46%, rgba(85,200,148,0.32) 0%, rgba(52,150,108,0.16) 25%, rgba(25,85,60,0.06) 50%, transparent 72%)",
+  },
+  brown: {
+    outer:
+      "radial-gradient(ellipse 70% 60% at 50% 48%, rgba(150,105,80,0.22) 0%, rgba(100,74,64,0.11) 30%, rgba(55,38,30,0.03) 55%, transparent 75%)",
+    inner:
+      "radial-gradient(ellipse 65% 55% at 52% 46%, rgba(195,135,100,0.32) 0%, rgba(145,95,72,0.17) 25%, rgba(90,55,40,0.06) 50%, transparent 72%)",
+  },
+  red: {
+    outer:
+      "radial-gradient(ellipse 70% 60% at 50% 48%, rgba(229,77,46,0.20) 0%, rgba(160,45,30,0.10) 30%, rgba(80,20,15,0.03) 55%, transparent 75%)",
+    inner:
+      "radial-gradient(ellipse 65% 55% at 52% 46%, rgba(245,95,65,0.30) 0%, rgba(200,60,40,0.16) 25%, rgba(120,32,22,0.05) 50%, transparent 72%)",
+  },
+} as const;
+
 export function RadialLight({
   color = "green",
   position = "center",
   className = "",
 }: RadialLightProps) {
+  const palette = PALETTES[color];
+
   return (
     <div
       className={`fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden select-none ${className}`}
       aria-hidden="true"
       style={{ contain: "strict" }}
     >
-      {/* 
-        ============================================================
-        OUTER AURA ANCHOR (Large expansive green radius)
-        ============================================================
+      {/*
+        OUTER AURA — single element, pre-feathered gradient, zero blur filter.
       */}
       <div
         className="absolute top-[200px] sm:top-[260px] md:top-[300px] left-1/2 -translate-x-1/2 pointer-events-none"
-        style={{ willChange: "transform" }}
       >
         <div
-          className="w-[1450px] sm:w-[1850px] md:w-[2200px] h-[1050px] sm:h-[1350px] md:h-[1600px] pointer-events-none aura-outer"
+          className="radial-aura-outer w-[1800px] sm:w-[2200px] md:w-[2800px] h-[1300px] sm:h-[1600px] md:h-[1950px] pointer-events-none"
           style={{
-            background:
-              color === "green"
-                ? "radial-gradient(ellipse 65% 55% at 50% 48%, rgba(55, 160, 115, 0.22) 0%, rgba(28, 90, 65, 0.12) 38%, rgba(14, 45, 32, 0.03) 65%, rgba(0, 0, 0, 0) 82%)"
-                : "radial-gradient(ellipse 65% 55% at 50% 48%, rgba(150, 105, 80, 0.24) 0%, rgba(100, 74, 64, 0.13) 38%, rgba(55, 38, 30, 0.04) 65%, rgba(0, 0, 0, 0) 82%)",
-            filter: "blur(100px)",
+            background: palette.outer,
             transform: "translate(-50%, -50%)",
           }}
         />
       </div>
 
-      {/* 
-        ============================================================
-        INNER CORE ANCHOR (Concentrated green core)
-        ============================================================
+      {/*
+        INNER CORE — single element, pre-feathered gradient, zero blur filter.
       */}
       <div
         className="absolute top-[200px] sm:top-[260px] md:top-[300px] left-1/2 -translate-x-1/2 pointer-events-none"
-        style={{ willChange: "transform" }}
       >
         <div
-          className="w-[820px] sm:w-[1100px] md:w-[1360px] h-[600px] sm:h-[800px] md:h-[990px] pointer-events-none aura-inner"
+          className="radial-aura-inner w-[1050px] sm:w-[1350px] md:w-[1650px] h-[750px] sm:h-[980px] md:h-[1200px] pointer-events-none"
           style={{
-            background:
-              color === "green"
-                ? "radial-gradient(ellipse 60% 50% at 52% 46%, rgba(85, 200, 148, 0.36) 0%, rgba(52, 150, 108, 0.22) 30%, rgba(25, 85, 60, 0.09) 58%, rgba(10, 35, 24, 0) 78%)"
-                : "radial-gradient(ellipse 60% 50% at 52% 46%, rgba(195, 135, 100, 0.36) 0%, rgba(145, 95, 72, 0.23) 30%, rgba(90, 55, 40, 0.10) 58%, rgba(45, 25, 18, 0) 78%)",
-            filter: "blur(65px)",
+            background: palette.inner,
             transform: "translate(-50%, -50%)",
           }}
         />
       </div>
 
       <style jsx>{`
-        .aura-outer {
-          animation: morphOuter 18s ease-in-out infinite alternate;
+        .radial-aura-outer {
+          animation: morphOuter 20s ease-in-out infinite alternate;
           transform-origin: 50% 50%;
-          will-change: transform;
         }
-        .aura-inner {
-          animation: morphInner 12s ease-in-out infinite alternate;
+        .radial-aura-inner {
+          animation: morphInner 14s ease-in-out infinite alternate;
           transform-origin: 50% 50%;
-          will-change: transform;
         }
+
         @keyframes morphOuter {
-          0% {
-            transform: translate(-50%, -50%) rotate(0deg) scale(1, 0.85);
-          }
-          33% {
-            transform: translate(-50%, -50%) rotate(28deg) scale(1.12, 0.82);
-          }
-          66% {
-            transform: translate(-50%, -50%) rotate(-24deg) scale(0.92, 1.06);
-          }
-          100% {
-            transform: translate(-50%, -50%) rotate(18deg) scale(1.06, 0.88);
-          }
+          0%   { transform: translate(-50%, -50%) rotate(0deg) scale(1, 0.88); }
+          50%  { transform: translate(-50%, -50%) rotate(15deg) scale(1.08, 0.84); }
+          100% { transform: translate(-50%, -50%) rotate(-12deg) scale(0.95, 1.04); }
         }
+
         @keyframes morphInner {
-          0% {
-            transform: translate(-50%, -50%) rotate(0deg) scale(1, 0.86);
-          }
-          50% {
-            transform: translate(-50%, -50%) rotate(-32deg) scale(1.14, 0.80);
-          }
-          100% {
-            transform: translate(-50%, -50%) rotate(26deg) scale(0.90, 1.10);
-          }
+          0%   { transform: translate(-50%, -50%) rotate(0deg) scale(1, 0.90); }
+          50%  { transform: translate(-50%, -50%) rotate(-18deg) scale(1.10, 0.84); }
+          100% { transform: translate(-50%, -50%) rotate(14deg) scale(0.92, 1.06); }
         }
+
         @media (prefers-reduced-motion: reduce) {
-          .aura-outer,
-          .aura-inner {
+          .radial-aura-outer,
+          .radial-aura-inner {
             animation: none !important;
           }
         }
@@ -109,4 +109,3 @@ export function RadialLight({
     </div>
   );
 }
-
