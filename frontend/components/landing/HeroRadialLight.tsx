@@ -40,17 +40,30 @@ export function HeroRadialLight({
 
     measureLayout();
 
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const psTop = cachedPsTop - cachedWindowH * 0.45;
-      const archTop = cachedArchTop - cachedWindowH * 0.55;
+    let ticking = false;
+    let currentColor = "green";
 
-      if (scrollY >= archTop) {
-        setColorMode("brown");
-      } else if (scrollY >= psTop) {
-        setColorMode("red");
-      } else {
-        setColorMode("green");
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          const psTop = cachedPsTop - cachedWindowH * 0.45;
+          const archTop = cachedArchTop - cachedWindowH * 0.55;
+
+          let newMode: "green" | "red" | "brown" = "green";
+          if (scrollY >= archTop) {
+            newMode = "brown";
+          } else if (scrollY >= psTop) {
+            newMode = "red";
+          }
+
+          if (newMode !== currentColor) {
+            currentColor = newMode;
+            setColorMode(newMode);
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
@@ -110,7 +123,7 @@ export function HeroRadialLight({
           style={{
             background:
               "radial-gradient(ellipse 65% 55% at 50% 48%, rgba(55, 160, 115, 0.20) 0%, rgba(28, 90, 65, 0.11) 38%, rgba(14, 45, 32, 0.03) 65%, rgba(0, 0, 0, 0) 82%)",
-            filter: "blur(100px)",
+            filter: "blur(50px)",
             transform: "translate(-50%, -50%)",
           }}
         />
@@ -123,7 +136,7 @@ export function HeroRadialLight({
           style={{
             background:
               "radial-gradient(ellipse 65% 55% at 50% 48%, rgba(229, 77, 46, 0.22) 0%, rgba(160, 45, 30, 0.12) 38%, rgba(80, 20, 15, 0.03) 65%, rgba(0, 0, 0, 0) 82%)",
-            filter: "blur(100px)",
+            filter: "blur(50px)",
             transform: "translate(-50%, -50%)",
           }}
         />
@@ -136,7 +149,7 @@ export function HeroRadialLight({
           style={{
             background:
               "radial-gradient(ellipse 65% 55% at 50% 48%, rgba(150, 105, 80, 0.24) 0%, rgba(100, 74, 64, 0.13) 38%, rgba(55, 38, 30, 0.04) 65%, rgba(0, 0, 0, 0) 82%)",
-            filter: "blur(100px)",
+            filter: "blur(50px)",
             transform: "translate(-50%, -50%)",
           }}
         />
@@ -160,7 +173,7 @@ export function HeroRadialLight({
           style={{
             background:
               "radial-gradient(ellipse 60% 50% at 52% 46%, rgba(85, 200, 148, 0.32) 0%, rgba(52, 150, 108, 0.20) 30%, rgba(25, 85, 60, 0.08) 58%, rgba(10, 35, 24, 0) 78%)",
-            filter: "blur(65px)",
+            filter: "blur(35px)",
             transform: "translate(-50%, -50%)",
           }}
         />
@@ -173,7 +186,7 @@ export function HeroRadialLight({
           style={{
             background:
               "radial-gradient(ellipse 60% 50% at 52% 46%, rgba(245, 95, 65, 0.35) 0%, rgba(200, 60, 40, 0.22) 30%, rgba(120, 32, 22, 0.09) 58%, rgba(40, 10, 8, 0) 78%)",
-            filter: "blur(65px)",
+            filter: "blur(35px)",
             transform: "translate(-50%, -50%)",
           }}
         />
@@ -186,7 +199,7 @@ export function HeroRadialLight({
           style={{
             background:
               "radial-gradient(ellipse 60% 50% at 52% 46%, rgba(195, 135, 100, 0.36) 0%, rgba(145, 95, 72, 0.23) 30%, rgba(90, 55, 40, 0.10) 58%, rgba(45, 25, 18, 0) 78%)",
-            filter: "blur(65px)",
+            filter: "blur(35px)",
             transform: "translate(-50%, -50%)",
           }}
         />

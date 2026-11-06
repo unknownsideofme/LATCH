@@ -5,7 +5,6 @@ import Image from "next/image";
 import { AnimatedBeam } from "@/components/ui/klyv-animated-beam";
 import {
   IconAgentSwarm,
-  IconSocketDaemon,
   IconCoordinationShield,
   IconMutexLock,
   IconAstTree,
@@ -106,7 +105,7 @@ export function ArchitectureFlow() {
                   alt="Cursor IDE"
                   width={28}
                   height={28}
-                  className="object-contain"
+                  className="object-contain invert dark:invert-0"
                 />
               </div>
               <div className="min-w-0 flex-1">
@@ -156,8 +155,14 @@ export function ArchitectureFlow() {
               ref={daemonRef}
               className="relative p-7 sm:p-9 md:p-10 rounded-2xl bg-background border-2 border-primary/50 shadow-md max-w-[280px] sm:max-w-[310px] md:max-w-[330px] w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-card border border-primary/40 mx-auto flex items-center justify-center text-primary mb-4 mt-1 shadow-inner">
-                <IconSocketDaemon className="w-8 h-8 sm:w-9 sm:h-9" />
+              <div className="w-20 h-16 sm:w-24 sm:h-18 rounded-2xl bg-card border border-primary/40 mx-auto flex items-center justify-center px-3 mb-4 mt-1 shadow-inner group">
+                <Image
+                  src="/latch-logo.png"
+                  alt="Latch Core Daemon"
+                  width={90}
+                  height={24}
+                  className="h-6 sm:h-7 w-auto object-contain dark:invert transition-transform duration-300 group-hover:scale-105"
+                />
               </div>
 
               <h3 className="text-base sm:text-lg md:text-xl font-bold font-[var(--font-display)] text-foreground">
