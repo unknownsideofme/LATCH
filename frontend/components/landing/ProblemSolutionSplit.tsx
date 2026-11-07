@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -277,18 +277,21 @@ export function ProblemSolutionSplit() {
           transition={{ duration: 0.3 }}
           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-card border border-border text-[11px] font-mono text-primary uppercase tracking-wider mb-3 shadow-xs"
         >
-          
+          <Zap className="w-3.5 h-3.5" />
+          <span>Interactive Architectural Sandbox</span>
         </motion.div>
 
         {/* Heading restoring the original font-library3am styling */}
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground font-sans leading-snug">
-         Switch between <br className="hidden sm:inline" />
+          Humans commit minutes apart. <br className="hidden sm:inline" />
           <span className="text-primary font-library3am tracking-wide uppercase">
-             Failing blind agents  vs. Coordinated Swarms
+            AI agents commit milliseconds apart.
           </span>
         </h2>
 
-       
+        <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+          Toggle between the failure mode of blind agent swarms and Latch&apos;s machine-speed mutex coordination layer.
+        </p>
 
         {/* Animated Segmented Mode Switcher */}
         <div className="mt-6 inline-flex p-1 rounded-xl bg-card border border-border shadow-sm relative">
