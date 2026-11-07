@@ -27,10 +27,13 @@ export function LandingHeader() {
 
         {/* Navigation Links */}
         <nav className="hidden md:flex items-center gap-7 text-xs font-medium text-muted-foreground">
-          <a href="#problem-solution" className="hover:text-foreground transition-colors">
+          <Link href="/quickstart" className="hover:text-foreground transition-colors">
+            Quickstart
+          </Link>
+          <a href="/#problem-solution" className="hover:text-foreground transition-colors">
             Coordination
           </a>
-          <a href="#features" className="hover:text-foreground transition-colors">
+          <a href="/#features" className="hover:text-foreground transition-colors">
             Architecture
           </a>
           <Link href="/dashboard" className="text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1">
