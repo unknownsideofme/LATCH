@@ -134,21 +134,7 @@ latch --version
 #3. login using your github
 latch login  #follow the prompts 
 
-#4. Add the mcp and instructions file 
-latch add . 
-latch init
-
-#5 Start the server 
-latch serve
-
-#6 Push and pull the changes from the server
-latch clone 
-latch pull 
-latch push 
-
 ```
-
----
 
 ## Quickstart: Getting Started in 3 Minutes
 
