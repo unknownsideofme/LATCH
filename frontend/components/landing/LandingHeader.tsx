@@ -50,7 +50,7 @@ export function LandingHeader() {
               Sign In
             </DecoButton>
           </Link>
-          <Link href="/signup">
+          <Link href="/quickstart">
             <DecoButton variant="solid" size="sm">
               Start Free
             </DecoButton>

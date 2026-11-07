@@ -82,7 +82,7 @@ export function PricingTiers() {
             </ul>
           </div>
 
-          <Link href="/signup?plan=free" className="w-full">
+          <Link href="/quickstart" className="w-full">
             <DecoButton variant="outline" size="default" className="w-full">
               <span className="inline-flex items-center gap-1">
                 <span>Get Started Free</span>
